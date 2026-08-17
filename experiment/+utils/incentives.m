@@ -1,0 +1,140 @@
+function out = incentives(action, varargin)
+%UTILS.INCENTIVES  Toggleable payment module.
+%
+%   cfg  = utils.incentives('config')
+%   txt  = utils.incentives('instructions', domain, cfg)
+%   bonus = utils.incentives('compute', sess, dataMat, cfg)
+%
+%   Design note. The grant's scheme pays a weighted sum of attribute values
+%   using the participant's own self-reported importance weights. That gives
+%   participants a reason to misreport those weights at elicitation -- and
+%   those same weights are what you validate the model's estimated weights
+%   against. It's an effort payment wearing an incentive's clothes.
+%
+%   What's implemented instead: the auction's existing accept/reject rule is
+%   already a BDM-style mechanism (bid at or above threshold wins), which IS
+%   incentive-compatible. This just attaches money to it, paid on ONE
+%   randomly selected trial. Random-incentivised-trial is standard and
+%   avoids hedging and wealth effects across trials.
+
+switch lower(char(action))
+
+case 'config'
+    out.enabled      = false;   % master switch
+    out.showRunning  = false;   % running total during trials -- see below
+    out.showAtBreaks = true;    % running total between blocks (safe)
+    out.basePayment  = 10.00;   % guaranteed, for showing up
+    out.bonusMin     = 0.00;
+    out.bonusMax     = 10.00;
+    out.houseScale   = 1 / 20000;   % $1 bonus per $20k of surplus
+    out.wageScale    = 0.50;        % $0.50 bonus per $1/hr above reservation
+    out.currency     = 'USD';
+    % showRunning defaults OFF because a live earnings counter on the trial
+    % screen is exactly the kind of off-task, changing, high-salience
+    % element that pulls gaze away from the stimuli.
+    return
+
+case 'instructions'
+    domain = varargin{1};
+    cfg    = varargin{2};
+    isHouse = strcmpi(domain, 'houses');
+
+    if ~cfg.enabled
+        if isHouse
+            out = ['In this task you will search for a house to buy.\n\n' ...
+                   'Options will appear and disappear as they come on and off ' ...
+                   'the market. Inspect any option that interests you, and make ' ...
+                   'an offer when you find one you want.\n\n' ...
+                   'Please treat each decision as though the money were real.'];
+        else
+            out = ['In this task you will search for a job.\n\n' ...
+                   'Openings will appear and disappear as they are posted and ' ...
+                   'filled. Inspect any opening that interests you, and name your ' ...
+                   'salary requirement when you find one you want.\n\n' ...
+                   'Please treat each decision as though the job were real.'];
+        end
+    else
+        if isHouse
+            out = sprintf([ ...
+                'In this task you will search for a house to buy.\n\n' ...
+                'Options appear and disappear as they come on and off the market. ' ...
+                'Inspect any option that interests you, and make an offer when you ' ...
+                'find one you want.\n\n' ...
+                'YOUR PAYMENT\n' ...
+                'You are guaranteed $%.2f for taking part.\n\n' ...
+                'At the end, ONE of your successful purchases will be chosen at ' ...
+                'random. If you bought that house for less than it was worth, you ' ...
+                'earn a bonus based on the difference, up to $%.2f.\n\n' ...
+                'This means it is in your interest to offer the least you think ' ...
+                'will be accepted -- but if you offer too little, the seller will ' ...
+                'reject it and you move on with nothing from that house.'], ...
+                cfg.basePayment, cfg.bonusMax);
+        else
+            out = sprintf([ ...
+                'In this task you will search for a job.\n\n' ...
+                'Openings appear and disappear as they are posted and filled. ' ...
+                'Inspect any opening that interests you, and name your salary ' ...
+                'requirement when you find one you want.\n\n' ...
+                'YOUR PAYMENT\n' ...
+                'You are guaranteed $%.2f for taking part.\n\n' ...
+                'At the end, ONE of the jobs you accepted will be chosen at ' ...
+                'random. The more that job pays above the minimum wage you told ' ...
+                'us you would accept, the larger your bonus, up to $%.2f.\n\n' ...
+                'This means it is in your interest to ask for the most you think ' ...
+                'the employer will agree to -- but if you ask too much, they will ' ...
+                'withdraw the offer and you move on with nothing from that job.'], ...
+                cfg.basePayment, cfg.bonusMax);
+        end
+    end
+    return
+
+case 'compute'
+    sess = varargin{1};
+    dataMat = varargin{2};
+    cfg = varargin{3};
+
+    out = struct('enabled', cfg.enabled, 'base', 0, 'bonus', 0, 'total', 0, ...
+                 'selectedTrial', [], 'surplus', NaN, 'explanation', '');
+
+    if ~cfg.enabled
+        out.explanation = 'No performance payment in this version.';
+        return
+    end
+
+    out.base = cfg.basePayment;
+
+    wins = utils.collectWins(dataMat);      % see helper below
+    if isempty(wins)
+        out.total = out.base;
+        out.explanation = sprintf(['You did not complete any successful ' ...
+            'acquisitions, so there is no bonus. Your payment is $%.2f.'], out.base);
+        return
+    end
+
+    pick = wins(randi(numel(wins)));
+    out.selectedTrial = pick;
+
+    if strcmpi(pick.domain, 'houses')
+        out.surplus = pick.trueValue - pick.pricePaid;
+        raw = out.surplus * cfg.houseScale;
+    else
+        out.surplus = pick.wageObtained - pick.reservationWage;
+        raw = out.surplus * cfg.wageScale;
+    end
+
+    out.bonus = min(max(raw, cfg.bonusMin), cfg.bonusMax);
+    out.total = out.base + out.bonus;
+    out.explanation = sprintf([ ...
+        'Randomly selected: %s, block %d.\n' ...
+        'Surplus: %s\nBonus: $%.2f\nTotal payment: $%.2f'], ...
+        pick.domain, pick.block, ...
+        utils.formatCurrency(out.surplus, ...
+            utils.ternary(strcmpi(pick.domain,'houses'), 'total', 'hourly')), ...
+        out.bonus, out.total);
+    return
+
+otherwise
+    error('hw:incentives:badAction', 'Unknown action "%s".', action);
+end
+
+end

@@ -1,0 +1,45 @@
+# Stimuli: ~605MB of house images. Needed to run the experiment, too big for
+# git. See STIMULI.md.
+experiment/stimuli/
+**/stimuli/house_images/
+
+# Participant data
+experiment/Data/
+!experiment/Data/README.md
+
+# MATLAB
+*.asv
+*.mat
+*.fig
+
+# Analysis outputs
+*.jasp
+*.omv
+outputs/
+figures/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# OneDrive sync-conflict copies
+*-ASCPSY-*
+*[Cc]onflicted*
+* - Copy.*
+~$*
+
+# NTFS alternate data streams
+*:*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ...but the stimulus lists define the design, so they are tracked
+!experiment/stimuli/*.csv
+
+# Literature: other peoples
+
+# Literature: other people's papers. The reading list survives; the PDFs do not.
+docs/articles/**/*.pdf
