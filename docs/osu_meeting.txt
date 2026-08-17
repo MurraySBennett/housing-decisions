@@ -1,0 +1,24 @@
+OSU lab meeting: 25/7/2024
+
+Check the shared google drive document for a list of the current/ongoing projects
+
+expectations about expectations : 2nd order expectations
+how much money do you expect to make in a year. t's distributions over distributions. If you enter a comp you have a prob of ewinning. You needmultiple payoffs to earn money over the year. So you're making 2nd order prob judgement when you're estimating how much you'll make in ayear. 
+Guy at OSU studies expecdtations about outcomes that mightbe more optimistic than ..
+doing this with minor and major league baseball and nwith college applicaitons. Also has data on esports players and other groups. Peter is very interested. Nobody really does a lot of second order probs. An interesting thing: if you're estimating what others will get in a year, ther eral dist is some decreasing monotonix function : some people make an amoubnt, most earn nothing. But, if you ask people what they'll make in a year, it's not skewed in the same way - it's often unimodal. The mean isn't acutally that much higher. But it's interesting because you mightget that pattern of beh if you apply prob weighting to the true distribution. When you estimate what others do, we estimate the distribution of other's payoffs well. When we do it for ourselves, we're applying some weighting. We overweight small and underweight high distributions.
+It's a hard judgment: i'm playing in 10 competitions, I have x probabilities of winning each year, now come up with a guess of how much you'll make on the year. 
+
+Konstantina is working on autoencoder. Data passed through a bottleneck. Can you reduce the data to 2-5 dimensions. If you do that, how well can you reproduce it. If you can do that, the latent dimensions should capture information about it. It's exploratory model building. If you have a model that can reproduce the data through 3 dimensions, you can recreate the data. Is that coherent in any way, maybe not, maybe yes.
+Has put in a grant with health related stuff, but generelaises -- this could be an interesting approach to explore (cognitive control data set, substance use data set). If you have multiple tasks or mulptiple measures, what latent mdimensions do you extract.
+
+Welcome to work on whatever.
+Andy has continuous tasks -- move ship around a screen and attack/protect/herd etc. At some point, want to move it into a human-ai team. Can you have a little AI assistant thtat helps witha  goal. Then into more practical scenarios, like driving/merging into traffic etc. 
+ 
+Konstantina - applying for jobs this year. Do a practice talk. 
+
+Decisions from Description vs experience: 
+If you have people make risky choices, usually by description (told the prob and told the outcome). Another paradigm, that reflects how people learn from the real world, where you have to sample. You have two decks of cards, one has 10% 3$ cards, another has 100% 30c cards. THey have to learn the probs and the outcomes. Sometimes they'll miss cards, over and under sample. The pattern tends to be ( in terms of probabilit weighting ): if you tell them the probs, people underweight high and overweight low (compress to the mean), but if you let them experience it, they'll do the opposite: Overweight high and underweight low. One thing Peter and lab have found in their experiments (e.g., Andy) -- if you ask somet=ome to assign a price to something (eg here's a ticket with 70% chance of winning, what would you pay for it), they find that prob weightings are more linear -- people do a good job of dealing with and integrating prices into the judgementst hey make. The Question is: does that happen if you have to assign a price to an experience. How much would you bid for a draw from this deck? and do you then elimiinate the description-experience gap by this design. Do they actually sample more/gather more information when they're trying to come up with a price. 
+When peopple have to make a continuous judgment, assess the value of something, they tend to sample a lot more compraed to when they have to decide betweent wo things: a polarisation thing. When estimating the value of something, low variance information is ujseful information to build precision. 
+
+SOmething he'd like to do -- apply this to voting. With different candidates, pick between two vs use of cardinal voting or approval voting. Can you incentivise people to search for more information.
+
