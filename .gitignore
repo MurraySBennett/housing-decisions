@@ -43,3 +43,8 @@ desktop.ini
 
 # Literature: other people's papers. The reading list survives; the PDFs do not.
 docs/articles/**/*.pdf
+
+# Raw data and media live here but are not tracked. CDMLab_HouseAuctionEyeTracking.mp4
+# alone is 33MB, and GitHub rejects pushes over 100MB per file. Data belongs in
+# the project that produced it, but not in its git history.
+data/
