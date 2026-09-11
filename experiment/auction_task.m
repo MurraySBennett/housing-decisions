@@ -79,7 +79,9 @@ try
     utils.trace('eye tracker setup done (connected=%d)', et.enabled);
     dataMat.eyeTracking = struct('enabled', et.enabled, ...
                                  'analyzable', et.analyzable, ...
-                                 'mediaMode', et.showGaze);
+                                 'mediaMode', et.showGaze, ...
+                                 'requestedSampleRateHz', et.requestedSampleRateHz, ...
+                                 'actualSampleRateHz', et.actualSampleRateHz);
 
     % =============================================== per domain
     for d = 1:numel(domainList)
@@ -127,7 +129,7 @@ try
                 inds = unique(stimuli.industry);
                 [industryRatings, ~, ~] = utils.elicitVAS(window, cfg, cellstr(inds), ...
                     'How likely would you be to apply for a job in each of these industries?', ...
-                    {'Entirely unlikely', 'Extremely likely'});
+                    {'Entirely unlikely', 'Extremely likely'}, rs);
                 [~, ord] = sort(industryRatings, 'descend');
                 keepIndustries = cellstr(inds(ord(1:min(cfg.sampling.nTopIndustries, numel(ord)))));
                 stimuli = stimuli(ismember(stimuli.industry, keepIndustries), :);
@@ -136,7 +138,7 @@ try
 
             [poolRatings, attrRTs, ~] = utils.elicitVAS(window, cfg, {A.pool.label}, ...
                 'How important is each of these to you?', ...
-                {'Entirely unimportant', 'Extremely important'});
+                {'Entirely unimportant', 'Extremely important'}, rs);
 
             capture = struct();
             capture.anchor          = anchor;
@@ -195,6 +197,10 @@ try
         % ---- instructions -----------------------------------------
         if ~(cfg.testing.enabled && cfg.testing.skipInstructions)
             showInstructions(window, cfg, domain);
+            comprehension = runComprehensionChecks(window, cfg, domain);
+        else
+            comprehension = struct('shown', false, 'passed', true, ...
+                'responses', {{}}, 'attempts', []);
         end
 
         % ---- layout + AOI validation ------------------------------
@@ -207,11 +213,25 @@ try
             warning('hw:auction:aoiTooClose', ...
                 'Some AOIs are below the minimum separation -- see report above.');
         end
+        detailAOIs = layoutDetailAOIs(winRect, cfg, sel);
+        [detailAoiOK, detailAoiReport] = utils.checkAOIs( ...
+            detailAOIs.rects, detailAOIs.names, geom, true);
+        if ~detailAoiOK && strcmp(cfg.aoiEnforcement, 'strict')
+            warning('hw:auction:detailAoiTooClose', ...
+                'Some detail-view AOIs are below the minimum separation -- see report above.');
+        end
 
         % ---- run trials -------------------------------------------
         trials = struct([]);
         log = utils.eventLog('init', 20000);
         gazeStore = utils.gazeBuffer('init');
+        clockSync = struct('start', utils.clockSync(et), 'end', []);
+        if ~(cfg.testing.enabled && cfg.testing.skipInstructions)
+            [practiceTrial, log, gazeStore] = runPracticeEpisode( ...
+                window, cfg, geom, L, et, log, gazeStore, ...
+                inWindow, tex, sel, A, domain, plan(1), rs, win);
+            trials = practiceTrial;
+        end
 
         utils.trace('domain %s: starting %d trials', domain, numel(plan));
         for t = 1:numel(plan)
@@ -242,21 +262,28 @@ try
         dataMat.(domain).window          = win;
         dataMat.(domain).stimuliShown    = inWindow;
         dataMat.(domain).plan            = plan;
+        dataMat.(domain).comprehension   = comprehension;
         dataMat.(domain).trials          = trials;
         dataMat.(domain).events          = utils.eventLog('table', log);
         dataMat.(domain).aoiRects        = L.aoiRects;
         dataMat.(domain).aoiNames        = L.aoiNames;
         dataMat.(domain).aoiReport       = aoiReport;
+        dataMat.(domain).detailAoiRects   = detailAOIs.rects;
+        dataMat.(domain).detailAoiNames   = detailAOIs.names;
+        dataMat.(domain).detailAoiReport  = detailAoiReport;
 
         % Gaze goes to its own file: it is orders of magnitude larger than
         % everything else and does not belong in the behavioural .mat.
+        clockSync.end = utils.clockSync(et);
         gaze = utils.gazeBuffer('flush', et, gazeStore);
         if ~isempty(gaze)
             gazeFile = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
-            save(gazeFile, 'gaze', '-v7.3');
+            eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
+            save(gazeFile, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
             dataMat.(domain).gazeFile = gazeFile;
             fprintf('Saved %d gaze samples to %s\n', numel(gaze), gazeFile);
         end
+        dataMat.(domain).clockSync = clockSync;
 
         Screen('Close', struct2texlist(tex));
     end
@@ -319,6 +346,7 @@ trial.competition = planRow.competition;
 trial.stimIdx     = planRow.stimIdx;
 trial.repIdx      = planRow.repIdx;
 trial.nAttrs      = numel(sel.shown);
+trial.practice    = isfield(planRow, 'practice') && planRow.practice;
 
 % Arrival schedule. Competition drives turnover: under high competition
 % options come and go faster, so there is more pressure to decide.
@@ -345,6 +373,7 @@ trial.pricePaid   = NaN;
 trial.threshold   = NaN;
 trial.trueValue   = NaN;
 trial.bidStimIdx  = NaN;
+trial.bidRT       = NaN;
 trial.endReason   = 'exhausted';
 
 % Fixation-start gate: sets a known gaze anchor before the episode begins,
@@ -502,11 +531,16 @@ while true
         break
     else
         boxStim(b) = NaN;
+        now = GetSecs - t0;
         boxVacantUntil(b) = now + utils.gammaSample( ...
             cfg.auction.vacancyShape, ...
             cfg.auction.vacancyGapMean/cfg.auction.vacancyShape, 1, rs);
         showOutcome(window, cfg, false, domain, threshold, bid);
     end
+end
+
+if ~strcmp(trial.endReason, 'accepted')
+    showMarketClosed(window, cfg, trial.endReason);
 end
 
 trial.duration    = GetSecs - t0;
@@ -515,6 +549,26 @@ trial.rejected    = rejected;
 trial.nPresented  = numel(presented);
 trial.nRejected   = numel(rejected);
 trial.inspections = inspections;
+
+end
+
+
+%% ======================================================================
+function [trial, log, gazeStore] = runPracticeEpisode(window, cfg, geom, L, et, ...
+    log, gazeStore, stimTbl, tex, sel, A, domain, planRow, rs, win)
+%RUNPRACTICEEPISODE  One saved, flagged practice market before real data.
+
+practiceRow = planRow;
+practiceRow.trial = 0;
+practiceRow.practice = true;
+practiceRow.stimIdx = planRow.stimIdx(1:min(numel(planRow.stimIdx), size(L.boxRects, 2)));
+practiceRow.repIdx = planRow.repIdx(1:numel(practiceRow.stimIdx));
+
+showClickMessage(window, cfg, ['Practice round\n\nTry inspecting, rejecting, and making ' ...
+    'or cancelling an offer. This round is marked as practice in the data.\n\nClick to begin.']);
+[trial, log, gazeStore] = runSearchEpisode(window, cfg, geom, L, et, log, ...
+    gazeStore, stimTbl, tex, sel, A, domain, practiceRow, 1, rs, win);
+trial.practice = true;
 
 end
 
@@ -533,7 +587,7 @@ W = winRect(3); H = winRect(4);
 hudH = s.hud.enabled * s.hud.heightPx;
 
 nCols = 3; nRows = 2;
-pad = 18;
+pad = 48;
 cellW = floor(W / nCols);
 cellH = floor((H - hudH) / nRows);
 
@@ -555,8 +609,8 @@ L.aoiNames = cell(1, 2*size(L.boxRects,2));
 for k = 1:size(L.boxRects,2)
     bx = L.boxRects(:,k);
     bw = bx(3)-bx(1); bh = bx(4)-bx(2);
-    L.imgRects(:,k) = [bx(1)+16; bx(2)+16; bx(3)-16; bx(2)+round(bh*0.58)];
-    L.txtRects(:,k) = [bx(1)+16; bx(2)+round(bh*0.66); bx(3)-16; bx(4)-16];
+    L.imgRects(:,k) = [bx(1)+16; bx(2)+16; bx(3)-16; bx(2)+round(bh*0.48)];
+    L.txtRects(:,k) = [bx(1)+16; bx(2)+round(bh*0.68); bx(3)-16; bx(4)-16];
     L.aoiRects(:, 2*k-1) = L.imgRects(:,k);
     L.aoiRects(:, 2*k)   = L.txtRects(:,k);
     L.aoiNames{2*k-1} = sprintf('box%d_img', k);
@@ -613,37 +667,19 @@ end
 
 %% ======================================================================
 function [action, gazeStore, log] = showDetail(window, cfg, geom, et, log, ...
-    gazeStore, stimTbl, tex, sel, A, idx, domain, hud)
+    gazeStore, stimTbl, tex, sel, A, idx, domain, hud) %#ok<INUSD>
 %SHOWDETAIL  Full-width attribute panel for one option.
 %
-%   The old version drew into the LEFT HALF of the screen only and left the
-%   right half empty, while cramming six images and six text rows into
-%   960 px -- gaps of 28 px, about 0.74 deg. Using the full width is what
-%   makes the AOI separation achievable at all.
+%   Fixed-size identity photo grid and fixed attribute-slot positions,
+%   shared with continuous_DC_task's card -- a house's photos and
+%   attribute layout look identical regardless of which task or screen
+%   they're shown on.
 
-s = cfg.style;
 winRect = Screen('Rect', window);
-W = winRect(3); H = winRect(4);
-hudH = s.hud.enabled * s.hud.heightPx;
-
+s = cfg.style;
+H = winRect(4);
 n = numel(sel.shown);
-nCols = min(n, 4);
-nRows = ceil(n / nCols);
-
-gap  = geom.targetSepPx;
-marg = 60;
-panelW = floor((W - 2*marg - (nCols-1)*gap) / nCols);
-
-% Identity images (houses: all six photos) get their own reserved strip
-% above the attribute grid, shown ALWAYS regardless of attribute-count
-% level -- zero height if this domain's identity has no images (jobs).
-hasIdentityImages = any(strcmp({sel.identity.kind}, 'image'));
-stripH = utils.ternary(hasIdentityImages, 170, 0);
-idRect = [marg, hudH + 70, W - marg, hudH + 70 + stripH];
-gridTop = hudH + 100 + stripH;
-
-availH = H - hudH - 220 - stripH;
-panelH = floor((availH - (nRows-1)*gap) / nRows);
+detailAOIs = layoutDetailAOIs(winRect, cfg, sel);
 
 action = '';
 while true
@@ -653,35 +689,39 @@ while true
 
     Screen('TextFont', window, s.fontContent);
     Screen('TextSize', window, s.sizeHeading);
-    utils.drawIdentityStrip(window, cfg, tex, sel, idx, idRect);
+    contentRect = utils.drawIdentityStrip(window, cfg, tex, sel, idx, detailAOIs.idRect);
+
     idText = identityString(stimTbl, sel, idx);
+    textTop = contentRect(2) + 8;
     if ~isempty(idText)
-        DrawFormattedText(window, idText, 'center', hudH + 52, s.text);
+        DrawFormattedText(window, idText, 'center', textTop + 20, s.text);
+        textTop = textTop + 34;
     end
 
     for k = 1:n
-        c = mod(k-1, nCols); r = floor((k-1)/nCols);
-        px = marg + c*(panelW+gap);
-        py = gridTop + r*(panelH+gap);
-        pr = [px, py, px+panelW, py+panelH];
-
+        pr = detailAOIs.rects(:, k)';
         Screen('FillRect',  window, s.bgPanel, pr);
         Screen('FrameRect', window, s.border, pr, 2);
 
         attr = sel.shown(k);
         Screen('TextSize', window, s.sizeLabel);
-        DrawFormattedText(window, attr.label, px+12, py+28, s.textDim, 30, 0, 0, 1.2);
+        DrawFormattedText(window, attr.label, pr(1)+12, pr(2)+24, s.textDim, ...
+            floor((pr(3)-pr(1))/8), 0, 0, 1.15);
 
+        % Value follows the label closely -- fixed offset, not
+        % bottom-anchored to a variable-height cell -- so the gap between
+        % title and value stays the same regardless of attribute count.
+        valueY = pr(2) + 50;
         if strcmp(attr.kind, 'image')
-            if isfield(tex, attr.var) && ~isnan(tex.(attr.var)(idx))
-                imr = [px+12, py+46, px+panelW-12, py+panelH-12];
-                Screen('DrawTexture', window, tex.(attr.var)(idx), [], imr);
+            if isfield(tex, attr.var) && idx <= numel(tex.(attr.var)) && isfinite(tex.(attr.var)(idx))
+                Screen('DrawTexture', window, tex.(attr.var)(idx), [], ...
+                    [pr(1)+12, valueY, pr(3)-12, pr(4)-8]);
             end
         else
             Screen('TextSize', window, s.sizeContent);
             col = utils.ternary(strcmp(attr.var, A.valueVar), s.money, s.text);
             DrawFormattedText(window, valueString(stimTbl, attr, idx), ...
-                px+12, py + panelH/2 + 12, col, 26, 0, 0, 1.3);
+                pr(1)+12, valueY, col);
         end
     end
 
@@ -703,6 +743,37 @@ while true
         while any(buttons), [~,~,buttons] = utils.getMouse(window); end
         return
     end
+end
+
+end
+
+
+%% ======================================================================
+function aoi = layoutDetailAOIs(winRect, cfg, sel)
+%LAYOUTDETAILAOIS  Auction detail-view AOIs for saved gaze analysis.
+
+s = cfg.style;
+W = winRect(3); H = winRect(4);
+hudH = s.hud.enabled * s.hud.heightPx;
+marg = 60;
+
+aoi.idRect = [marg, hudH + 70, W - marg, H - 40];
+contentRect = reserveIdentityStrip(cfg, sel, aoi.idRect);
+textTop = contentRect(2) + 8;
+if hasTextIdentity(sel)
+    textTop = textTop + 34;
+end
+
+g = cfg.style.attrGrid;
+attrGridW = g.nCols*g.cellW + (g.nCols-1)*g.gap;
+attrOx = (W - attrGridW) / 2;
+slots = utils.attrSlotRects(cfg, attrOx, textTop + 10);
+
+n = numel(sel.shown);
+aoi.rects = slots(:, 1:n);
+aoi.names = cell(1, n);
+for k = 1:n
+    aoi.names{k} = sprintf('detail_%s', sel.shown(k).var);
 end
 
 end
@@ -786,13 +857,15 @@ while true
 
     px = cx + innerR*cos(pi + frac*pi);
     py = cy + innerR*sin(pi + frac*pi);
-    Screen('DrawLine', window, s.interactive, cx, cy, px, py, 4);
     Screen('DrawDots', window, [px; py], 20, s.interactive, [], 2);
 
     Screen('TextSize', window, s.sizeTitle);
     txt = utils.formatCurrency(curVal, A.priceStyle);
     bnd = Screen('TextBounds', window, txt);
     DrawFormattedText(window, txt, cx - bnd(3)/2, cy - 60, s.money);
+    Screen('TextSize', window, s.sizeLabel);
+    DrawFormattedText(window, 'LEFT CLICK to submit     RIGHT CLICK to go back', ...
+        'center', H - 48, s.textDim);
 
     gazeStore = utils.gazeBuffer('poll', et, gazeStore);
     if et.showGaze && ~isempty(gazeStore.latest)
@@ -808,7 +881,7 @@ while true
         log = utils.eventLog('add', log, 'bid_made', GetSecs, ...
             struct('stimIdx', idx, 'trial', planRow.trial, 'bid', bid, 'rt', rt));
         return
-    elseif buttons(2)
+    elseif buttons(3)
         while any(buttons), [~,~,buttons] = utils.getMouse(window); end
         return
     end
@@ -877,6 +950,88 @@ end
 
 
 %% ======================================================================
+function result = runComprehensionChecks(window, cfg, domain)
+%RUNCOMPREHENSIONCHECKS  Confirm the auction mouse controls before practice.
+
+isHouse = strcmpi(domain, 'houses');
+item = utils.ternary(isHouse, 'option', 'opening');
+
+checks(1).question = sprintf('How do you reject an %s from the market?', item);
+checks(1).choices = {'Left-click it', 'Right-click it'};
+checks(1).correct = 2;
+
+checks(2).question = 'How do you leave the offer screen without submitting?';
+checks(2).choices = {'Right-click to go back', 'Wait for the next listing'};
+checks(2).correct = 1;
+
+responses = cell(1, numel(checks));
+attempts = zeros(1, numel(checks));
+for k = 1:numel(checks)
+    while true
+        attempts(k) = attempts(k) + 1;
+        choice = askComprehension(window, cfg, checks(k).question, checks(k).choices);
+        responses{k} = checks(k).choices{choice};
+        if choice == checks(k).correct
+            break
+        end
+        showMessage(window, cfg, 'Not quite. Please try that one again.', 1.2);
+    end
+end
+
+result = struct('shown', true, 'passed', true, ...
+    'responses', {responses}, 'attempts', attempts);
+showMessage(window, cfg, 'Good. Next is one practice round.', 1.2);
+
+end
+
+
+%% ======================================================================
+function choice = askComprehension(window, cfg, question, choices)
+s = cfg.style;
+scr = Screen('Rect', window);
+W = scr(3); H = scr(4);
+boxW = min(520, W * 0.34);
+boxH = 110;
+gap = 60;
+top = H * 0.56;
+left1 = W/2 - boxW - gap/2;
+left2 = W/2 + gap/2;
+rects = [left1 left2; top top; left1+boxW left2+boxW; top+boxH top+boxH];
+
+choice = NaN;
+while isnan(choice)
+    Screen('FillRect', window, s.bg);
+    Screen('TextFont', window, s.fontContent);
+    Screen('TextSize', window, s.sizeHeading);
+    DrawFormattedText(window, question, 'center', H * 0.32, s.text, 60, 0, 0, 1.5);
+
+    for k = 1:2
+        r = rects(:, k)';
+        Screen('FillRect', window, s.bgPanel, r);
+        Screen('FrameRect', window, s.interactive, r, s.borderWidthPx);
+        Screen('TextSize', window, s.sizeContent);
+        DrawFormattedText(window, choices{k}, 'center', r(2) + 62, s.text, 45, 0, 0, 1.2, [], r);
+    end
+
+    Screen('Flip', window);
+    utils.checkForQuit;
+
+    [mx, my, buttons] = utils.getMouse(window);
+    if any(buttons)
+        for k = 1:2
+            r = rects(:, k);
+            if mx >= r(1) && mx <= r(3) && my >= r(2) && my <= r(4)
+                choice = k;
+            end
+        end
+        while any(buttons), [~,~,buttons] = utils.getMouse(window); end
+    end
+end
+
+end
+
+
+%% ======================================================================
 function showPayout(window, cfg, payout)
 s = cfg.style;
 Screen('FillRect', window, s.bg);
@@ -897,6 +1052,29 @@ Screen('TextSize', window, s.sizeHeading);
 DrawFormattedText(window, msg, 'center', 'center', s.text, 55, 0, 0, 1.6);
 Screen('Flip', window);
 WaitSecs(secs);
+end
+
+
+%% ======================================================================
+function showClickMessage(window, cfg, msg)
+s = cfg.style;
+Screen('FillRect', window, s.bg);
+Screen('TextFont', window, s.fontContent);
+Screen('TextSize', window, s.sizeHeading);
+DrawFormattedText(window, msg, 'center', 'center', s.text, 55, 0, 0, 1.6);
+Screen('Flip', window);
+utils.waitForClick(window);
+end
+
+
+%% ======================================================================
+function showMarketClosed(window, cfg, reason)
+if strcmp(reason, 'timeout')
+    msg = 'The market has closed.';
+else
+    msg = 'There are no more options in this market.';
+end
+showMessage(window, cfg, msg, 1.4);
 end
 
 
@@ -924,8 +1102,14 @@ end
 
 %% ======================================================================
 function str = identityString(stimTbl, sel, idx)
+% Text header for identity attributes. Image-kind identity attributes are
+% SKIPPED: they're rendered as pictures by utils.drawIdentityStrip, and
+% their column values are filenames -- including them here printed
+% "ext1.png - kit1.png - bed1.png ..." as the header, which is what the
+% stray label text under the photos actually was.
 parts = {};
 for k = 1:numel(sel.identity)
+    if strcmp(sel.identity(k).kind, 'image'), continue; end
     v = sel.identity(k).var;
     if ismember(v, stimTbl.Properties.VariableNames)
         val = stimTbl.(v)(idx);
@@ -936,6 +1120,35 @@ for k = 1:numel(sel.identity)
     end
 end
 if isempty(parts), str = ''; else, str = strjoin(parts, '  -  '); end
+end
+
+
+%% ======================================================================
+function tf = hasTextIdentity(sel)
+tf = false;
+for k = 1:numel(sel.identity)
+    if ~strcmp(sel.identity(k).kind, 'image')
+        tf = true;
+        return
+    end
+end
+end
+
+
+%% ======================================================================
+function contentRect = reserveIdentityStrip(cfg, sel, rect)
+imgAttrs = sel.identity(strcmp({sel.identity.kind}, 'image'));
+if isempty(imgAttrs)
+    contentRect = rect;
+    return
+end
+
+g = cfg.style.identityGrid;
+gridW = g.nCols * g.cellW + (g.nCols - 1) * g.gap;
+gridH = g.nRows * g.cellH + (g.nRows - 1) * g.gap;
+availW = rect(3) - rect(1);
+scale = min(1, availW / gridW);
+contentRect = [rect(1), rect(2) + gridH * scale, rect(3), rect(4)];
 end
 
 
@@ -986,16 +1199,16 @@ for d = 1:numel(dataMat.domains)
     if ~isfield(dataMat, dom) || ~isfield(dataMat.(dom), 'trials'), continue; end
     Tr = dataMat.(dom).trials;
     for t = 1:numel(Tr)
-        rows{end+1} = { dom, Tr(t).trial, Tr(t).competition, Tr(t).nAttrs, ...
+        rows{end+1} = { dom, Tr(t).trial, Tr(t).practice, Tr(t).competition, Tr(t).nAttrs, ...
             Tr(t).nPresented, Tr(t).nRejected, Tr(t).duration, ...
-            Tr(t).bidAccepted, Tr(t).bid, Tr(t).threshold, Tr(t).pricePaid, ...
+            Tr(t).bidAccepted, Tr(t).bid, Tr(t).bidRT, Tr(t).threshold, Tr(t).pricePaid, ...
             Tr(t).trueValue, Tr(t).bidStimIdx, Tr(t).endReason, ...
             dataMat.(dom).anchor }; %#ok<AGROW>
     end
 end
 if isempty(rows), T = table(); return; end
 M = vertcat(rows{:});
-T = cell2table(M, 'VariableNames', {'domain','trial','competition','nAttrs', ...
-    'nPresented','nRejected','durationSec','bidAccepted','bid','threshold', ...
+T = cell2table(M, 'VariableNames', {'domain','trial','practice','competition','nAttrs', ...
+    'nPresented','nRejected','durationSec','bidAccepted','bid','bidRT','threshold', ...
     'pricePaid','trueValue','bidStimIdx','endReason','anchor'});
 end

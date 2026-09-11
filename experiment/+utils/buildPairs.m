@@ -1,4 +1,4 @@
-function pairs = buildPairs(stimTbl, sel, A, nPairs, rngStream)
+function [pairs, usedIdx] = buildPairs(stimTbl, sel, A, nPairs, rngStream, excludeIdx)
 %UTILS.BUILDPAIRS  Construct money-vs-quality option pairs.
 %
 %   pairs = utils.buildPairs(stimTbl, sel, A, nPairs)
@@ -22,6 +22,13 @@ function pairs = buildPairs(stimTbl, sel, A, nPairs, rngStream)
 %   contrast score is returned so weak pairs can be excluded in analysis.
 
 if nargin < 5 || isempty(rngStream), rngStream = RandStream.getGlobalStream; end
+if nargin < 6, excludeIdx = []; end
+excludeIdx = excludeIdx(:)';
+
+%   excludeIdx: stimulus indices that must NOT be used in these pairs --
+%   pass the union of everything already used at other attribute levels to
+%   stop a participant seeing the same house/job at more than one level.
+%   Returns usedIdx so the caller can accumulate across levels.
 
 n = height(stimTbl);
 if n < 4
@@ -92,6 +99,7 @@ pairs = struct('moneyIdx', {}, 'qualityIdx', {}, 'contrast', {}, ...
 for r = 1:size(best, 1)
     if numel(pairs) >= nPairs, break; end
     i = best(r,1); j = best(r,2);
+    if any(i == excludeIdx) || any(j == excludeIdx), continue; end
     if use(i) >= maxUse || use(j) >= maxUse, continue; end
 
     if money(i) > money(j), mi = i; qi = j; else, mi = j; qi = i; end
@@ -107,9 +115,20 @@ for r = 1:size(best, 1)
 end
 
 if numel(pairs) < nPairs
-    warning('hw:buildPairs:short', ...
-        'Requested %d pairs but only %d opposed pairs available.', nPairs, numel(pairs));
+    warning('utils:buildPairs:short', ...
+        ['Requested %d pairs but only %d could be built from %d stimuli ' ...
+         '(%d already used at other attribute levels). Either lower ' ...
+         'cfg.contdc.nPairs for this domain, widen cfg.sampling.spread, or ' ...
+         'allow cross-level reuse via cfg.contdc.allowCrossLevelReuse.'], ...
+        nPairs, numel(pairs), n, numel(excludeIdx));
 end
+
+usedIdx = [];
+for k = 1:numel(pairs)
+    usedIdx(end+1) = pairs(k).moneyIdx;   %#ok<AGROW>
+    usedIdx(end+1) = pairs(k).qualityIdx; %#ok<AGROW>
+end
+usedIdx = unique(usedIdx);
 
 % Randomise which side each option lands on, per pair
 for k = 1:numel(pairs)

@@ -44,19 +44,10 @@ FORCE_DOMAIN = '';      % '' = use PLAN as written | 'jobs' | 'houses'
                         % for real sessions -- it silently overrides your
                         % carefully-assigned PLAN if left on by accident.
 
-% Each row: which task, which domain(s), and which session number it
-% belongs to. Rows with the same session number run back to back in one
-% sitting; different session numbers are for a between-session design and
-% are simply run on separate days by calling this script again with the
-% same participant ID -- utils.startSession resumes from the manifest.
-PLAN = { ...
-    struct('task', 'auction', 'domains', {{'jobs'}},   'session', 1), ...
-    struct('task', 'contdc',  'domains', {{'jobs'}},   'session', 1), ...
-    struct('task', 'auction', 'domains', {{'houses'}}, 'session', 2), ...
-    struct('task', 'contdc',  'domains', {{'houses'}}, 'session', 2), ...
-};
-
-COUNTERBAL = true;   % flip within-session task order for odd participants
+% The concrete PLAN lives in utils.batteryPlan so preflight.m and the live
+% run resolve the same rows. Rows with the same session number run back to
+% back in one sitting; different session numbers are run on separate days
+% with the same participant ID.
 EYETRACKING = true;
 SHOW_EYEPOS = false; % gaze dot overlay -- demo only, off for testing
 
@@ -74,25 +65,10 @@ sess = utils.startSession( ...
                           % Passing anything just skips a prompt that would
                           % otherwise ask a question with no effect.
 
-thisSession = PLAN(cellfun(@(r) r.session == sess.sessionNum, PLAN));
-if isempty(thisSession)
-    error('run_battery:noPlanForSession', ...
-        'No PLAN rows have session == %d. Check PLAN or the session number entered.', ...
-        sess.sessionNum);
-end
-
+thisSession = utils.batteryPlan(sess.participant, sess.sessionNum, FORCE_DOMAIN);
 if ~isempty(FORCE_DOMAIN)
-    assert(ismember(FORCE_DOMAIN, {'jobs','houses'}), ...
-        'FORCE_DOMAIN must be '''', ''jobs'', or ''houses''.');
-    for k = 1:numel(thisSession)
-        thisSession{k}.domains = {FORCE_DOMAIN};
-    end
     fprintf('*** FORCE_DOMAIN active: every run this session uses "%s" regardless of PLAN. ***\n', ...
         FORCE_DOMAIN);
-end
-
-if COUNTERBAL && numel(thisSession) > 1 && mod(sess.participant, 2) == 1
-    thisSession = fliplr(thisSession);
 end
 
 fprintf('Session %d plan: ', sess.sessionNum);

@@ -39,7 +39,7 @@ else
 end
 
 cfg = sess.cfg;
-rs  = RandStream.getGlobalStream;
+rs  = RandStream('twister', 'Seed', run.seed);
 
 dataMat = struct();
 dataMat.domains = domainList;
@@ -82,7 +82,9 @@ try
     et = utils.setupEyeTracker(cfg, window, ~cfg.testing.enabled);
     utils.trace('eye tracker setup done (connected=%d)', et.enabled);
     dataMat.eyeTracking = struct('enabled', et.enabled, ...
-        'analyzable', et.analyzable, 'mediaMode', et.showGaze);
+        'analyzable', et.analyzable, 'mediaMode', et.showGaze, ...
+        'requestedSampleRateHz', et.requestedSampleRateHz, ...
+        'actualSampleRateHz', et.actualSampleRateHz);
 
     % =============================================== per domain
     for d = 1:numel(domainList)
@@ -127,16 +129,16 @@ try
             keepIndustries = {};
             if strcmpi(domain, 'jobs')
                 inds = unique(stimuli.industry);
-                industryRatings = utils.elicitVAS(window, cfg, cellstr(inds), ...
+                [industryRatings, ~, ~] = utils.elicitVAS(window, cfg, cellstr(inds), ...
                     'How likely would you be to apply for a job in each of these industries?', ...
-                    {'Entirely unlikely', 'Extremely likely'});
+                    {'Entirely unlikely', 'Extremely likely'}, rs);
                 [~, ord] = sort(industryRatings, 'descend');
                 keepIndustries = cellstr(inds(ord(1:min(cfg.sampling.nTopIndustries, numel(ord)))));
                 stimuli = stimuli(ismember(stimuli.industry, keepIndustries), :);
             end
-            [poolRatings, attrRTs] = utils.elicitVAS(window, cfg, {A.pool.label}, ...
+            [poolRatings, attrRTs, ~] = utils.elicitVAS(window, cfg, {A.pool.label}, ...
                 'How important is each of these to you?', ...
-                {'Entirely unimportant', 'Extremely important'});
+                {'Entirely unimportant', 'Extremely important'}, rs);
 
             capture = struct();
             capture.anchor          = anchor;
@@ -167,24 +169,44 @@ try
         % lazily inside the block loop -- this is what lets us know the
         % full set of stimuli that will ever be shown BEFORE loading any
         % images, instead of loading per block.
-        nPairsThisRun = cfg.contdc.nPairs;
+        nPairsThisRun = cfg.contdc.nPairs.(lower(domain));
         if cfg.testing.enabled
             nPairsThisRun = cfg.testing.nTrialsPerType;
         end
         pairsByLevel = struct();
         selByLevel = struct();
         neededIdx = [];
+        usedAcrossLevels = [];   % grows as each level claims its stimuli
         for lvl = unique(levels)
             key = sprintf('lvl%d', lvl);
             selByLevel.(key) = utils.selectAttributes(A, lvl, poolRatings, ...
                 cfg.attrMethod, lvl == max(levels) && cfg.lateAtMaxOnly);
-            pairsByLevel.(key) = utils.buildPairs(inWindow, selByLevel.(key), ...
-                A, nPairsThisRun, rs);
+
+            % Exclude stimuli already claimed by an earlier level, so a
+            % participant never values the same house/job twice under
+            % different information loads. Reuse WITHIN a level (choose
+            % between a pair, then price each of its two options) is
+            % required by the paradigm and is unaffected by this.
+            if cfg.contdc.allowCrossLevelReuse
+                exclude = [];
+            else
+                exclude = usedAcrossLevels;
+            end
+
+            [pairsByLevel.(key), claimed] = utils.buildPairs(inWindow, ...
+                selByLevel.(key), A, nPairsThisRun, rs, exclude);
+            usedAcrossLevels = unique([usedAcrossLevels, claimed]);
+
             for pk = 1:numel(pairsByLevel.(key))
                 neededIdx(end+1) = pairsByLevel.(key)(pk).moneyIdx;   %#ok<AGROW>
                 neededIdx(end+1) = pairsByLevel.(key)(pk).qualityIdx; %#ok<AGROW>
             end
         end
+
+        utils.trace('domain %s: %d distinct stimuli claimed across %d levels (reuse %s)', ...
+            domain, numel(usedAcrossLevels), numel(unique(levels)), ...
+            utils.ternary(cfg.contdc.allowCrossLevelReuse, 'allowed', 'blocked'));
+        aoiLayouts = buildAoiLayouts(winRect, cfg, geom, selByLevel, levels);
 
         if ~(cfg.testing.enabled && cfg.testing.skipInstructions)
             showInstructions(window, cfg, domain);
@@ -202,6 +224,7 @@ try
 
         log = utils.eventLog('init', 20000);
         gazeStore = utils.gazeBuffer('init');
+        clockSync = struct('start', utils.clockSync(et), 'end', []);
         trials = struct([]);
 
         for b = 1:numel(blocks)
@@ -283,14 +306,18 @@ try
         dataMat.(domain).trials        = trials;
         dataMat.(domain).events        = utils.eventLog('table', log);
         dataMat.(domain).reversals     = scoreReversals(trials);
+        dataMat.(domain).aoiLayouts    = aoiLayouts;
 
+        clockSync.end = utils.clockSync(et);
         gaze = utils.gazeBuffer('flush', et, gazeStore);
         if ~isempty(gaze)
             gf = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
-            save(gf, 'gaze', '-v7.3');
+            eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
+            save(gf, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
             dataMat.(domain).gazeFile = gf;
             fprintf('Saved %d gaze samples.\n', numel(gaze));
         end
+        dataMat.(domain).clockSync = clockSync;
     end
 
     showMessage(window, cfg, 'Thank you. That is the end of this task.', 2.5);
@@ -473,9 +500,12 @@ log = utils.eventLog('add', log, 'price_onset', GetSecs, ...
 scaleMin = win.scaleMin;
 scaleMax = win.scaleMax;
 
-cx = winRect(3)/2;
-cy = winRect(4) * 0.90;
-outerR = min(winRect(3)*0.36, winRect(4)*0.34);
+% Arc lives entirely within its own zone from layoutPriceCard -- side by
+% side with the card, not stacked beneath it, so there is no vertical
+% competition between the price scale and the attribute content.
+cx = (L.arcLeft + L.arcRight) / 2;
+cy = L.arcBot - 60;
+outerR = min((L.arcRight - L.arcLeft)/2 - 30, (L.arcBot - L.arcTop) * 0.55);
 innerR = outerR * 0.80;
 nTicks = 7;
 tickVals = linspace(scaleMin, scaleMax, nTicks);
@@ -527,7 +557,6 @@ while true
 
     px = cx + innerR*cos(pi + frac*pi);
     py = cy + innerR*sin(pi + frac*pi);
-    Screen('DrawLine', window, s.interactive, cx, cy, px, py, 4);
     Screen('DrawDots', window, [px; py], 18, s.interactive, [], 2);
 
     Screen('TextSize', window, s.sizeTitle);
@@ -591,21 +620,87 @@ W = winRect(3); H = winRect(4);
 hudH = s.hud.enabled * s.hud.heightPx;
 
 L.promptY = hudH + 40;
-cardW = round(W * 0.62);
-cardH = round(H * 0.40);
-x = (W - cardW)/2;
-y = hudH + 78;
-L.cardRect = [x; y; x+cardW; y+cardH];
-% Two attribute columns so the rows stay far enough apart vertically once
-% the pricing arc has taken the lower half of the screen.
+
+marg = 50;
+top  = hudH + 90;
+bot  = H - 40;
+
+% Card (photos + attributes) on the LEFT, pricing arc on the RIGHT --
+% side by side rather than stacked. Stacking put the price scale's tick
+% labels directly beneath the attribute card with no reliable gap between
+% them, and the fixed-size photo/attribute grids need more vertical room
+% than a stacked layout could spare once the arc claimed the bottom of the
+% screen. Side by side gives both components their own clear zone.
+cardW = min(650, round(W * 0.40));
+L.cardRect = [marg; top; marg+cardW; bot];
+
+gap = max(60, geom.targetSepPx);
+L.arcLeft  = marg + cardW + gap;
+L.arcRight = W - marg;
+L.arcTop   = top;
+L.arcBot   = bot;
+
 L.nCols = 2;
 L.nAttrs = nAttrs;
 end
 
 
 %% ======================================================================
-function aoi = drawCard(window, cfg, rect, stimTbl, tex, sel, A, idx, domain, L)
-%DRAWCARD  One option, with attribute rows laid out on a validated grid.
+function layouts = buildAoiLayouts(winRect, cfg, geom, selByLevel, levels)
+layouts = struct();
+for lvl = unique(levels)
+    key = sprintf('lvl%d', lvl);
+    sel = selByLevel.(key);
+
+    choiceL = layoutTwoCards(winRect, cfg, geom, numel(sel.shown));
+    left = cardAOIs(cfg, choiceL.cardRects(:,1), sel, 'choice_left');
+    right = cardAOIs(cfg, choiceL.cardRects(:,2), sel, 'choice_right');
+    choice.rects = [left.rects, right.rects];
+    choice.names = [left.names, right.names];
+    [choice.ok, choice.report] = utils.checkAOIs(choice.rects, choice.names, geom, true);
+    if ~choice.ok && strcmp(cfg.aoiEnforcement, 'strict')
+        warning('hw:contdc:choiceAoiTooClose', ...
+            'Some choice-card AOIs are below the minimum separation -- see report above.');
+    end
+
+    priceL = layoutPriceCard(winRect, cfg, geom, numel(sel.shown));
+    price = cardAOIs(cfg, priceL.cardRect, sel, 'price');
+    [price.ok, price.report] = utils.checkAOIs(price.rects, price.names, geom, true);
+    if ~price.ok && strcmp(cfg.aoiEnforcement, 'strict')
+        warning('hw:contdc:priceAoiTooClose', ...
+            'Some price-card AOIs are below the minimum separation -- see report above.');
+    end
+
+    layouts.(key) = struct('choice', choice, 'price', price);
+end
+end
+
+
+%% ======================================================================
+function aoi = cardAOIs(cfg, rect, sel, prefix)
+rect = rect(:)';
+pad = 18;
+innerRect = [rect(1)+pad, rect(2)+pad, rect(3)-pad, rect(4)-pad];
+contentRect = reserveIdentityStrip(cfg, sel, innerRect);
+x0 = contentRect(1);
+y0 = contentRect(2) + 8;
+if hasTextIdentity(sel)
+    y0 = y0 + 30;
+end
+
+slots = utils.attrSlotRects(cfg, x0, y0);
+n = numel(sel.shown);
+aoi.rects = slots(:, 1:n);
+aoi.names = cell(1, n);
+for k = 1:n
+    aoi.names{k} = sprintf('%s_%s', prefix, sel.shown(k).var);
+end
+end
+
+
+%% ======================================================================
+function aoi = drawCard(window, cfg, rect, stimTbl, tex, sel, A, idx, domain, L) %#ok<INUSD>
+%DRAWCARD  One option: fixed-size identity photo grid, fixed attribute slots.
 
 s = cfg.style;
 rect = rect(:)';
@@ -616,48 +711,58 @@ pad = 18;
 innerRect = [rect(1)+pad, rect(2)+pad, rect(3)-pad, rect(4)-pad];
 
 % Identity images (houses: all six photos) are drawn first, in their own
-% strip, ALWAYS -- regardless of the attribute-count level for this trial.
-% Falls through unchanged if this domain's identity has no images (jobs).
+% FIXED-SIZE grid, ALWAYS -- regardless of the attribute-count level for
+% this trial. Falls through unchanged if this domain's identity has no
+% images (jobs).
 contentRect = utils.drawIdentityStrip(window, cfg, tex, sel, idx, innerRect);
-x0 = contentRect(1); x1 = contentRect(3);
-y0 = contentRect(2); y1 = contentRect(4);
+x0 = contentRect(1);
+y0 = contentRect(2) + 8;
 
 % Identity text header (jobs: industry/title; empty for houses now that
-% their images live in the strip above instead of here)
+% their images live in the grid above instead of here)
 Screen('TextFont', window, s.fontContent);
 Screen('TextSize', window, s.sizeLabel);
-DrawFormattedText(window, identityString(stimTbl, sel, idx), x0, y0 + 22, ...
-    s.textDim, 40, 0, 0, 1.2);
+idText = identityString(stimTbl, sel, idx);
+if ~isempty(idText)
+    DrawFormattedText(window, idText, x0, y0 + 16, s.textDim, 60, 0, 0, 1.2);
+    y0 = y0 + 30;
+end
 
-headerH = 54;
+% Attribute cells: FIXED slot positions from cfg.style.attrGrid, not
+% recomputed from how many attributes this trial happens to show. A
+% 2-attribute trial occupies slots 1-2 and leaves the rest blank; a
+% 6-attribute trial occupies slots 1-6. Slot 1 is always the same screen
+% position either way.
+slots = utils.attrSlotRects(cfg, x0, y0);
 n = numel(sel.shown);
-nCols = max(1, L.nCols);
-nRows = ceil(n / nCols);
-cellW = floor((x1 - x0) / nCols);
-cellH = floor((y1 - (y0 + headerH)) / nRows);
-
 aoi = zeros(4, n);
+
 for k = 1:n
-    c = mod(k-1, nCols); r = floor((k-1)/nCols);
-    cx0 = x0 + c*cellW;
-    cy0 = y0 + headerH + r*cellH;
-    aoi(:,k) = [cx0; cy0; cx0+cellW; cy0+cellH];
+    cellRect = slots(:, k)';
+    aoi(:, k) = cellRect';
+    cx0 = cellRect(1); cy0 = cellRect(2);
+    cellW = cellRect(3) - cellRect(1);
 
     attr = sel.shown(k);
     Screen('TextSize', window, s.sizeLabel);
-    DrawFormattedText(window, attr.label, cx0 + 6, cy0 + 24, s.textDim, ...
-        floor(cellW/9), 0, 0, 1.15);
+    DrawFormattedText(window, attr.label, cx0 + 6, cy0 + 20, s.textDim, ...
+        floor(cellW/8), 0, 0, 1.1);
+
+    % Value follows the label closely (fixed offset, not bottom-anchored
+    % to a variable-height cell) so the gap between title and value stays
+    % the same regardless of how many attributes are on screen.
+    valueY = cy0 + 46;
 
     if strcmp(attr.kind, 'image')
-        if isfield(tex, attr.var) && ~isnan(tex.(attr.var)(idx))
+        if isfield(tex, attr.var) && idx <= numel(tex.(attr.var)) && isfinite(tex.(attr.var)(idx))
             Screen('DrawTexture', window, tex.(attr.var)(idx), [], ...
-                [cx0+6, cy0+34, cx0+cellW-10, cy0+cellH-8]);
+                [cx0+6, valueY, cellRect(3)-10, cellRect(4)-8]);
         end
     else
         Screen('TextSize', window, s.sizeContent);
         col = utils.ternary(strcmp(attr.var, A.valueVar), s.money, s.text);
         DrawFormattedText(window, valueString(stimTbl, attr, idx), ...
-            cx0 + 6, cy0 + cellH - 18, col);
+            cx0 + 6, valueY, col);
     end
 end
 
@@ -683,6 +788,9 @@ for L = levels
     pr  = sub(strcmp({sub.taskType}, 'price'));
 
     for k = 1:numel(ch)
+        if ch(k).timedOut || isnan(ch(k).choseMoney)
+            continue
+        end
         pIdx = ch(k).pairIdx;
         pp = pr([pr.pairIdx] == pIdx);
         if numel(pp) < 2, continue; end
@@ -795,8 +903,14 @@ end
 
 %% ======================================================================
 function str = identityString(stimTbl, sel, idx)
+% Text header for identity attributes. Image-kind identity attributes are
+% SKIPPED: they're rendered as pictures by utils.drawIdentityStrip, and
+% their column values are filenames -- including them here printed
+% "ext1.png - kit1.png - bed1.png ..." as the card header, which is what
+% the stray label text under the photos actually was.
 parts = {};
 for k = 1:numel(sel.identity)
+    if strcmp(sel.identity(k).kind, 'image'), continue; end
     v = sel.identity(k).var;
     if ismember(v, stimTbl.Properties.VariableNames)
         val = stimTbl.(v)(idx);
@@ -805,6 +919,35 @@ for k = 1:numel(sel.identity)
     end
 end
 if isempty(parts), str = ''; else, str = strjoin(parts, '  -  '); end
+end
+
+
+%% ======================================================================
+function tf = hasTextIdentity(sel)
+tf = false;
+for k = 1:numel(sel.identity)
+    if ~strcmp(sel.identity(k).kind, 'image')
+        tf = true;
+        return
+    end
+end
+end
+
+
+%% ======================================================================
+function contentRect = reserveIdentityStrip(cfg, sel, rect)
+imgAttrs = sel.identity(strcmp({sel.identity.kind}, 'image'));
+if isempty(imgAttrs)
+    contentRect = rect;
+    return
+end
+
+g = cfg.style.identityGrid;
+gridW = g.nCols * g.cellW + (g.nCols - 1) * g.gap;
+gridH = g.nRows * g.cellH + (g.nRows - 1) * g.gap;
+availW = rect(3) - rect(1);
+scale = min(1, availW / gridW);
+contentRect = [rect(1), rect(2) + gridH * scale, rect(3), rect(4)];
 end
 
 

@@ -1,4 +1,4 @@
-function [ratings, rts, order] = elicitVAS(window, cfg, items, prompt, anchors)
+function [ratings, rts, order] = elicitVAS(window, cfg, items, prompt, anchors, rngStream)
 %UTILS.ELICITVAS  Visual analogue rating of a set of items on one line.
 %
 %   ratings : 1 x nItems, NORMALISED 0-1 in the order of `items`
@@ -29,7 +29,10 @@ lineLen   = lineRight - lineLeft;
 n = numel(items);
 ratings = nan(1, n);
 rts     = nan(1, n);
-order   = randperm(n);
+if nargin < 6 || isempty(rngStream)
+    rngStream = RandStream.getGlobalStream;
+end
+order   = randperm(rngStream, n);
 
 placedX = [];
 placedLabel = {};

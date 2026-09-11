@@ -19,7 +19,8 @@ if nargin < 4 || isempty(minN),       minN = 12;          end
 if nargin < 5, hardBounds = [-Inf Inf];                   end
 
 values = values(:);
-values = values(~isnan(values));
+valid = ~isnan(values);
+usable = values(valid);
 
 widen = 1.0;
 maxWiden = 6.0;
@@ -29,7 +30,7 @@ while true
     lo = max(lo, hardBounds(1));
     hi = min(hi, hardBounds(2));
 
-    inWindow = values >= lo & values <= hi;
+    inWindow = usable >= lo & usable <= hi;
     if sum(inWindow) >= minN || widen >= maxWiden
         break
     end
@@ -38,7 +39,7 @@ end
 
 w.lo        = lo;
 w.hi        = hi;
-w.idx       = find(values >= lo & values <= hi);
+w.idx       = find(valid & values >= lo & values <= hi);
 w.n         = numel(w.idx);
 w.anchor    = anchor;
 w.widenBy   = widen;

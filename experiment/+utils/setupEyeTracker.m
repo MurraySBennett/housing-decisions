@@ -12,6 +12,8 @@ et.mediaMode   = cfg.et.mediaMode;
 et.showGaze    = cfg.et.mediaMode && cfg.et.showGaze;
 et.calibrated  = false;
 et.analyzable  = true;
+et.requestedSampleRateHz = cfg.et.sampleRateHz;
+et.actualSampleRateHz = NaN;
 
 if ~et.enabled
     fprintf('Eye tracking disabled.\n');
@@ -41,6 +43,11 @@ try
     end
     et.obj = trackers(1);
     fprintf('Connected: %s (%s)\n', et.obj.Name, et.obj.SerialNumber);
+
+    try
+        et.actualSampleRateHz = et.obj.get_gaze_output_frequency();
+    catch
+    end
 
     if doCalibrate
         et.calibrated = utils.calibrate(et, window, cfg);

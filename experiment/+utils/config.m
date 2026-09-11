@@ -171,11 +171,37 @@ cfg.auction.compLow        = 0.90;
 cfg.auction.thresholdNoise = 0.12;   % without this, high comp guarantees a loss
 
 % --- Continuous / discrete-choice task ---------------------------------
-% THIS SECTION WAS MISSING. continuous_DC_task.m referenced cfg.contdc.* in
-% five places (nPairs, driftEvery, choiceTimeoutSec, priceTimeoutSec,
-% itiSec); with no such field in config.m every one of those would have
-% thrown "reference to non-existent field" on first use.
-cfg.contdc.nPairs            = 10;   % opposed money-vs-quality pairs, per attr level
+% nPairs is PER DOMAIN because the two domains have very different
+% stimulus supply, and because reuse costs more in one than the other.
+%
+% Each level needs nPairs x 2 distinct stimuli, and by default a stimulus
+% is never reused ACROSS attribute levels (see allowCrossLevelReuse). So
+% the requirement is nLevels x nPairs x 2 distinct stimuli per domain.
+%
+% Houses: 80 total, but a budget-centred window holds only ~23-39 of them
+% (23 at a $250k anchor, 38-39 mid-range, 28 at $900k). At 3 levels,
+% 6 pairs needs 36 distinct houses -- feasible mid-range, tight at the
+% extremes. 10 pairs would need 60, which no window can supply, forcing
+% reuse. Hence 6.
+%
+% Jobs: 128 total, ~96 in a typical window, and a job is a handful of
+% numeric ratings rather than six photographs -- far less episodically
+% memorable, so a repeat is much less likely to be recognised. 10 pairs
+% (60 distinct) fits comfortably.
+cfg.contdc.nPairs.houses     = 6;
+cfg.contdc.nPairs.jobs       = 10;
+
+% Cross-level reuse. FALSE (default) means a given house/job appears at
+% exactly one attribute level for a given participant, so their valuation
+% at level 6 can't be contaminated by having already priced that same item
+% at level 2. TRUE relaxes this when supply is tight -- reuse then gets
+% logged per trial so it can be tested or excluded in analysis.
+%
+% Note this is about reuse ACROSS LEVELS only. Reuse WITHIN a level (the
+% same pair being both chosen between and priced) is required by the
+% preference-reversal paradigm and always happens.
+cfg.contdc.allowCrossLevelReuse = false;
+
 cfg.contdc.choiceTimeoutSec  = 15;
 cfg.contdc.priceTimeoutSec   = 25;
 cfg.contdc.itiSec            = 0.6;
