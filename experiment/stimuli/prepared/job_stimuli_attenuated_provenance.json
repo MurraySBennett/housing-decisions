@@ -1,0 +1,283 @@
+{
+  "generated_utc": "2026-07-22T00:23:18+00:00",
+  "script": "prepare_stimuli.py",
+  "script_version": "1.0.0",
+  "python": "3.13.9",
+  "numpy": "2.3.5",
+  "pandas": "2.3.3",
+  "config_file": "stimgen\\configs\\jobs_attenuated.json",
+  "config_sha": "3ff6951333f2cb88",
+  "config": {
+    "seed": 20260721,
+    "input_file": "C:\\Users\\bennett.1755\\OneDrive - The Ohio State University\\projects\\housing_wages\\experiment\\stimuli\\job_stimuli.csv",
+    "id_columns": [
+      "industry",
+      "title",
+      "company"
+    ],
+    "group_column": "industry",
+    "attribute_columns": [
+      "workLife",
+      "culture",
+      "compensationBenefits",
+      "management",
+      "jobSecurityAdvancement",
+      "wage"
+    ],
+    "attributes": {
+      "workLife": {
+        "kind": "rating",
+        "range": [
+          1,
+          5
+        ],
+        "decimals": 1
+      },
+      "culture": {
+        "kind": "rating",
+        "range": [
+          1,
+          5
+        ],
+        "decimals": 1
+      },
+      "compensationBenefits": {
+        "kind": "rating",
+        "range": [
+          1,
+          5
+        ],
+        "decimals": 1
+      },
+      "management": {
+        "kind": "rating",
+        "range": [
+          1,
+          5
+        ],
+        "decimals": 1
+      },
+      "jobSecurityAdvancement": {
+        "kind": "rating",
+        "range": [
+          1,
+          5
+        ],
+        "decimals": 1
+      },
+      "wage": {
+        "kind": "currency",
+        "range": [
+          8,
+          140
+        ],
+        "decimals": 0,
+        "jitter_scale": "relative"
+      }
+    },
+    "impute": {
+      "jitter_sd": 0.15,
+      "min_donors": 3
+    },
+    "generate": {
+      "commuteMinutes": {
+        "kind": "numeric",
+        "range": [
+          5,
+          60
+        ],
+        "sd": 9.0,
+        "decimals": 0,
+        "group_means": {
+          "Agriculture": 35,
+          "Business Services": 28,
+          "Construction": 30,
+          "Education": 20,
+          "Healthcare": 25,
+          "Manufacturing": 30,
+          "Real Estate": 25,
+          "Retail": 18
+        }
+      },
+      "ptoDays": {
+        "kind": "numeric",
+        "range": [
+          5,
+          28
+        ],
+        "sd": 4.0,
+        "decimals": 0,
+        "group_means": {
+          "Agriculture": 10,
+          "Business Services": 18,
+          "Construction": 10,
+          "Education": 25,
+          "Healthcare": 16,
+          "Manufacturing": 14,
+          "Real Estate": 12,
+          "Retail": 9
+        }
+      },
+      "hoursPerWeek": {
+        "kind": "numeric",
+        "range": [
+          32,
+          55
+        ],
+        "sd": 4.0,
+        "decimals": 0,
+        "group_means": {
+          "Agriculture": 46,
+          "Business Services": 42,
+          "Construction": 45,
+          "Education": 38,
+          "Healthcare": 44,
+          "Manufacturing": 42,
+          "Real Estate": 43,
+          "Retail": 38
+        }
+      },
+      "workArrangement": {
+        "kind": "categorical",
+        "levels": [
+          "Onsite",
+          "Hybrid",
+          "Remote"
+        ],
+        "balanced": false,
+        "group_mixes": {
+          "Agriculture": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "Construction": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "Healthcare": [
+            0.9,
+            0.1,
+            0.0
+          ],
+          "Retail": [
+            0.95,
+            0.05,
+            0.0
+          ],
+          "Manufacturing": [
+            0.9,
+            0.1,
+            0.0
+          ],
+          "Education": [
+            0.75,
+            0.25,
+            0.0
+          ],
+          "Real Estate": [
+            0.4,
+            0.5,
+            0.1
+          ],
+          "Business Services": [
+            0.3,
+            0.45,
+            0.25
+          ]
+        }
+      }
+    },
+    "column_order": [
+      "industry",
+      "title",
+      "company",
+      "workLife",
+      "culture",
+      "compensationBenefits",
+      "management",
+      "jobSecurityAdvancement",
+      "wage",
+      "commuteMinutes",
+      "ptoDays",
+      "hoursPerWeek",
+      "workArrangement"
+    ],
+    "name": "jobs_attenuated",
+    "mode": "permuted",
+    "output_file": "C:\\Users\\bennett.1755\\OneDrive - The Ohio State University\\projects\\housing_wages\\experiment\\stimuli\\prepared\\job_stimuli_attenuated.csv",
+    "attenuate": {
+      "enabled": true,
+      "target_max_r": 0.5,
+      "within_group": true,
+      "iterations": 60000
+    },
+    "_note": "Middle ground. Values and group means are exactly those of the real data; only the row-wise pairing is permuted, attenuating cross-attribute r to 0.5 (a 1.3x trial cost). Describe as 'constructed from real listings', not 'real listings'."
+  },
+  "seed": 20260721,
+  "input_sha": "fbd1a1344738aa67",
+  "output_file": "C:\\Users\\bennett.1755\\OneDrive - The Ohio State University\\projects\\housing_wages\\experiment\\stimuli\\prepared\\job_stimuli_attenuated.csv",
+  "output_sha": "49783a3eb3055f96",
+  "output_rows": 128,
+  "output_columns": [
+    "industry",
+    "title",
+    "company",
+    "workLife",
+    "culture",
+    "compensationBenefits",
+    "management",
+    "jobSecurityAdvancement",
+    "wage",
+    "commuteMinutes",
+    "ptoDays",
+    "hoursPerWeek",
+    "workArrangement"
+  ],
+  "steps": {
+    "impute": {
+      "n_imputed": 13,
+      "jitter_sd": 0.15
+    },
+    "before_attenuation": {
+      "max_abs_r": 0.9490055579963754,
+      "vif": {
+        "workLife": 4.7415929054601325,
+        "culture": 12.355868792786247,
+        "compensationBenefits": 2.8196325109242575,
+        "management": 11.81119898728485,
+        "jobSecurityAdvancement": 6.231271775932735,
+        "wage": 1.0904031341494576
+      }
+    },
+    "attenuate": {
+      "final_max_r": 0.4960886298285411,
+      "swaps_kept": 92,
+      "iterations": 136,
+      "enabled": true
+    },
+    "generate": {
+      "generated": [
+        "commuteMinutes",
+        "ptoDays",
+        "hoursPerWeek",
+        "workArrangement"
+      ]
+    },
+    "final": {
+      "max_abs_r": 0.4960886298285412,
+      "vif": {
+        "workLife": 1.397060381447929,
+        "culture": 1.7491329779551614,
+        "compensationBenefits": 1.475115986417031,
+        "management": 1.5259258433406833,
+        "jobSecurityAdvancement": 1.3473322620267443,
+        "wage": 1.071076916485433,
+        "commuteMinutes": 1.210888440120926,
+        "ptoDays": 1.2459734921857533,
+        "hoursPerWeek": 1.2868021469990658
+      }
+    }
+  }
+}

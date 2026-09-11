@@ -1,0 +1,129 @@
+industry,title,company,workLife,culture,compensationBenefits,management,jobSecurityAdvancement,wage,commuteMinutes,ptoDays,hoursPerWeek,workArrangement
+Education,Subsitute teacher,1,3.8,3.6,3.2,3.1,3.5,8.0,19,27,44,Onsite
+Education,Subsitute teacher,2,4.1,3.6,2.8,3.4,3.0,9.0,35,22,38,Onsite
+Agriculture,Farm Laborer,2,4.0,2.9,3.7,3.6,3.4,10.0,36,5,53,Onsite
+Agriculture,Farm Laborer,1,4.1,3.6,3.4,2.7,3.4,12.0,33,15,53,Onsite
+Healthcare,Optical Administrator,1,3.5,3.6,3.6,3.2,3.2,12.0,33,25,44,Onsite
+Agriculture,Groundskeeper,2,3.4,3.3,3.5,3.7,3.2,13.0,36,16,41,Onsite
+Healthcare,Optical Administrator,2,3.5,2.9,3.6,3.2,3.2,14.0,18,14,45,Hybrid
+Real Estate,Leasing agent,1,3.1,2.8,3.3,2.9,2.2,14.0,43,13,43,Onsite
+Agriculture,Groundskeeper,1,4.1,4.0,3.8,3.8,3.5,15.0,45,13,44,Onsite
+Education,Tutor,1,3.9,3.3,3.1,3.6,3.3,25.0,33,27,32,Onsite
+Retail,Sales Associate,2,3.1,3.6,3.4,2.6,3.8,15.0,15,11,34,Onsite
+Healthcare,Registered Nurse,1,3.2,3.2,3.4,2.8,3.1,16.0,31,12,41,Onsite
+Real Estate,Leasing agent,2,3.1,3.0,2.9,2.8,2.8,16.0,40,10,46,Onsite
+Retail,Sales Associate,1,3.9,3.1,2.9,2.7,2.8,16.0,21,5,34,Onsite
+Business Services,Security services,1,3.2,3.7,2.8,2.9,2.9,17.0,28,17,50,Onsite
+Construction,Ironworker,1,3.5,3.4,3.2,3.4,3.2,17.0,25,17,48,Onsite
+Manufacturing,Production Worker,1,3.4,3.4,3.9,3.3,3.2,17.0,30,9,46,Onsite
+Manufacturing,Production Worker,2,3.9,3.8,4.1,3.1,3.0,17.0,28,5,48,Onsite
+Retail,Merchandiser,2,3.0,2.9,2.7,2.8,2.5,23.0,25,10,40,Onsite
+Healthcare,Medical Assistant,2,4.0,3.4,3.4,3.1,4.2,18.0,20,23,46,Onsite
+Construction,Flooring Installer,1,3.3,2.8,2.7,2.7,2.6,27.0,24,6,49,Onsite
+Real Estate,Foreclosure specialist,2,3.6,2.4,3.5,2.9,3.3,19.0,25,9,45,Onsite
+Retail,Customer Service Representative,1,3.0,3.8,4.0,3.6,3.1,19.0,32,5,32,Onsite
+Construction,Crane Operator,2,3.5,3.4,3.4,3.1,3.4,20.0,27,5,44,Onsite
+Healthcare,Medical Assistant,1,3.4,3.8,4.0,3.6,3.8,20.0,31,13,46,Onsite
+Real Estate,Home inspector,1,3.2,3.5,2.2,2.8,2.9,20.0,36,16,43,Hybrid
+Agriculture,Farm Equipment Mechanic,1,3.2,3.2,3.0,3.3,3.2,21.0,55,13,42,Onsite
+Business Services,Tech support services,2,3.9,3.1,3.5,3.5,3.3,21.0,5,19,47,Hybrid
+Construction,Glazier,2,3.4,3.2,3.8,3.2,3.1,22.0,26,5,44,Onsite
+Education,College admissions counselor,2,3.2,3.9,3.3,3.2,3.0,22.0,5,24,43,Onsite
+Real Estate,Escrow officer,2,3.4,3.2,3.2,2.9,2.9,22.0,28,14,39,Onsite
+Retail,Customer Service Representative,2,3.1,3.1,3.3,3.0,3.1,22.0,15,9,40,Onsite
+Agriculture,Irrigation Specialist,1,3.2,4.2,3.8,3.2,3.7,23.0,34,6,42,Onsite
+Construction,Glazier,1,3.5,3.2,3.1,3.4,2.9,23.0,30,11,46,Onsite
+Construction,Plumber,2,3.1,3.6,3.0,3.0,3.3,23.0,29,10,43,Onsite
+Education,College admissions counselor,1,3.2,3.1,3.3,2.9,3.2,23.0,18,27,36,Onsite
+Retail,Loss Prevention Specialist,1,3.6,3.2,3.2,3.7,3.0,17.0,12,5,44,Onsite
+Retail,Store Manager,1,3.5,3.4,2.7,3.4,3.0,23.0,15,7,45,Onsite
+Agriculture,Agronomist,2,3.9,3.1,3.8,3.4,3.7,25.0,29,9,46,Onsite
+Construction,Brick Mason,1,3.5,3.9,3.7,3.7,3.6,25.0,37,6,48,Onsite
+Construction,Roofer,1,3.5,3.7,3.6,3.4,3.4,42.0,33,10,43,Onsite
+Education,ESL teacher,1,3.0,3.2,3.5,3.5,3.2,25.0,7,23,34,Onsite
+Education,ESL teacher,2,4.1,3.9,3.8,3.8,3.7,15.0,8,24,34,Onsite
+Education,Tutor,2,4.4,3.5,3.4,3.9,3.3,25.0,5,28,37,Hybrid
+Retail,Ecommerce Specialist,1,3.8,2.9,3.5,3.4,2.6,25.0,11,8,42,Onsite
+Retail,Merchandiser,1,2.6,2.7,3.3,2.5,3.9,25.0,16,10,38,Onsite
+Agriculture,EHSS Specialist,1,3.9,3.5,3.6,3.1,3.7,26.0,35,10,44,Onsite
+Business Services,Tech support services,1,3.2,3.1,3.6,2.8,3.4,26.0,27,22,35,Remote
+Real Estate,Escrow officer,1,3.8,3.4,3.7,3.2,2.7,43.0,16,15,40,Hybrid
+Real Estate,Title examiner,1,4.5,3.6,3.6,3.4,3.3,26.0,35,17,44,Hybrid
+Retail,Inventory Specialist,1,3.4,3.3,3.1,3.3,3.4,26.0,13,10,40,Onsite
+Agriculture,Farm Equipment Mechanic,2,3.2,4.0,3.7,3.5,3.4,27.0,40,10,44,Onsite
+Agriculture,Food Safety Manager,2,3.0,3.0,3.0,3.0,3.6,27.0,32,11,49,Onsite
+Construction,Brick Mason,2,3.3,3.3,3.7,3.7,2.8,19.0,34,18,49,Onsite
+Manufacturing,Quality Assurance Inspector,2,3.4,3.2,3.4,3.0,2.8,41.0,20,14,46,Onsite
+Agriculture,Farm Manager,2,3.8,3.3,3.7,3.1,3.0,32.0,42,6,43,Onsite
+Education,Elementary teacher,2,2.7,3.1,3.5,3.0,3.1,28.0,12,19,32,Onsite
+Real Estate,Foreclosure specialist,1,3.4,3.2,3.1,3.1,3.0,28.0,40,12,46,Hybrid
+Retail,Loss Prevention Specialist,2,3.2,3.7,3.7,3.5,3.0,28.0,21,8,40,Onsite
+Manufacturing,Production Supervisor,1,2.7,3.1,3.9,3.4,3.1,29.0,24,17,41,Onsite
+Real Estate,Home inspector,2,3.8,3.3,3.4,3.0,3.3,29.0,19,6,41,Hybrid
+Real Estate,Title examiner,2,3.0,3.1,3.6,4.4,2.8,17.0,30,12,47,Hybrid
+Construction,Ironworker,2,3.7,3.6,3.3,3.6,3.1,30.0,23,12,42,Onsite
+Construction,Crane Operator,1,3.7,3.7,3.7,3.5,2.9,31.0,47,13,42,Onsite
+Healthcare,Medical Laboratory Technician,2,4.0,4.0,4.0,3.7,3.9,31.0,29,7,50,Onsite
+Agriculture,EHSS Specialist,2,3.0,3.1,3.6,2.9,3.0,32.0,29,12,46,Onsite
+Agriculture,Farm Manager,1,3.0,3.9,3.7,2.9,3.2,32.0,38,6,46,Onsite
+Agriculture,Irrigation Specialist,2,3.1,3.3,3.8,3.8,2.9,28.0,24,5,39,Onsite
+Business Services,Software service,1,3.8,3.1,3.3,2.9,3.0,32.0,30,23,42,Hybrid
+Education,Librarian,1,3.5,3.5,3.5,3.0,3.2,32.0,29,27,33,Onsite
+Healthcare,Registered Nurse,2,3.0,2.9,3.1,2.7,3.2,33.0,29,17,49,Onsite
+Education,Guidance counseler,1,3.7,3.2,3.7,3.3,3.2,34.0,6,26,42,Onsite
+Manufacturing,CNC Machinist,1,4.1,3.9,4.1,3.6,3.2,34.0,32,10,40,Onsite
+Manufacturing,Operations Manager,1,3.3,3.2,3.6,3.6,3.2,34.0,20,17,46,Onsite
+Education,Elementary teacher,1,3.8,3.6,3.2,3.5,3.0,44.0,5,26,37,Onsite
+Healthcare,Occupational Therapist,1,2.9,2.9,2.7,2.6,3.1,35.0,37,12,40,Onsite
+Construction,Constructon Inspector,1,3.7,3.6,3.7,3.1,3.2,36.0,26,15,46,Onsite
+Manufacturing,Production Supervisor,2,3.1,3.8,3.9,3.2,3.3,45.0,38,16,37,Onsite
+Business Services,Legal services (legal secretary),1,3.7,3.8,3.4,3.5,3.3,37.0,25,18,36,Onsite
+Manufacturing,Manufacturing Engineer,1,3.1,2.8,3.5,3.2,2.5,37.0,25,16,37,Onsite
+Construction,Plumber,1,3.2,3.3,3.4,3.1,3.1,38.0,41,13,51,Onsite
+Healthcare,Physical Therapist,1,4.1,3.8,4.0,3.6,3.8,38.0,39,13,44,Onsite
+Business Services,Security services,2,3.2,3.7,3.5,3.6,2.9,39.0,29,19,38,Hybrid
+Manufacturing,Mechanical Engineer,2,3.7,3.5,3.7,3.0,3.2,40.0,26,13,44,Onsite
+Education,Guidance counseler,2,3.7,3.4,3.5,3.3,2.8,41.0,23,20,36,Onsite
+Manufacturing,CNC Machinist,2,3.3,3.4,3.9,3.1,3.1,27.0,27,23,40,Onsite
+Retail,Retail Buyer,1,3.2,3.3,3.1,3.0,3.1,41.0,29,5,42,Onsite
+Construction,Constructon Inspector,2,4.0,3.1,3.8,3.4,3.3,25.0,23,8,49,Onsite
+Healthcare,Medical Laboratory Technician,1,3.2,3.0,3.0,2.9,2.7,42.0,5,16,38,Onsite
+Manufacturing,Mechanical Engineer,1,3.3,2.7,2.7,2.6,2.4,42.0,23,5,50,Onsite
+Agriculture,Food Safety Manager,1,3.4,3.7,3.8,3.2,3.4,43.0,42,9,43,Onsite
+Education,Principal,1,3.7,3.5,3.3,3.3,3.3,43.0,10,28,34,Onsite
+Healthcare,Occupational Therapist,2,3.9,4.2,4.0,4.2,2.7,43.0,25,12,43,Onsite
+Real Estate,Realtor,1,4.5,4.3,4.4,2.5,4.3,26.0,23,21,44,Onsite
+Education,Librarian,2,3.7,4.0,3.5,3.3,3.4,35.0,14,22,35,Onsite
+Manufacturing,Manufacturing Engineer,2,3.4,3.6,3.8,3.2,3.7,36.0,39,14,44,Onsite
+Manufacturing,Supply Chain Manager,1,3.2,3.2,2.9,3.0,3.1,46.0,41,13,47,Onsite
+Business Services,Legal services (legal secretary),2,3.7,3.7,4.0,3.7,3.6,17.0,12,20,39,Hybrid
+Construction,Roofer,2,3.9,4.0,3.0,3.9,3.8,47.0,31,18,54,Onsite
+Business Services,Software service,2,3.8,3.4,3.7,3.2,2.9,48.0,29,16,45,Onsite
+Healthcare,Physical Therapist,2,3.7,4.2,4.4,3.9,2.6,48.0,31,10,50,Onsite
+Retail,Store Manager,2,3.6,3.6,3.1,3.2,3.2,48.0,9,9,34,Onsite
+Real Estate,Realtor,2,4.2,4.3,3.7,4.0,3.7,50.0,17,9,45,Onsite
+Healthcare,Nurse Practitioner,2,3.1,2.9,3.5,2.8,2.6,51.0,13,12,38,Onsite
+Retail,Ecommerce Specialist,2,3.4,3.3,3.5,3.0,3.0,52.0,33,5,38,Onsite
+Retail,Inventory Specialist,2,4.1,4.0,4.0,2.7,2.6,52.0,21,6,38,Onsite
+Agriculture,Agronomist,1,3.5,3.4,3.3,3.2,3.5,53.0,27,5,46,Onsite
+Manufacturing,Supply Chain Manager,2,3.4,3.3,3.6,2.6,2.9,53.0,36,12,39,Onsite
+Manufacturing,Quality Assurance Inspector,1,3.9,3.2,4.1,3.6,3.6,54.0,26,11,37,Onsite
+Retail,Retail Buyer,2,3.4,3.7,2.6,3.2,3.0,55.0,15,10,47,Onsite
+Manufacturing,Operations Manager,2,2.6,2.8,3.9,2.6,3.6,62.0,34,11,32,Onsite
+Education,Principal,2,4.0,3.8,3.7,3.6,3.6,69.0,20,27,39,Onsite
+Healthcare,Nurse Practitioner,1,3.5,3.7,4.1,3.5,4.1,71.0,13,20,43,Onsite
+Healthcare,Physician,2,3.1,3.6,3.4,2.8,4.4,85.0,23,11,48,Onsite
+Healthcare,Physician,1,3.9,2.8,3.3,2.6,2.6,132.0,31,5,39,Onsite
+Business Services,Event planning services,1,3.7,3.9,3.3,3.4,3.0,37.0,16,14,38,Hybrid
+Business Services,Event planning services,2,3.8,3.7,3.1,3.6,3.5,34.0,25,17,40,Remote
+Business Services,Finance services,1,3.6,3.6,3.5,3.9,3.2,40.0,38,19,46,Remote
+Business Services,Finance services,2,3.1,3.0,3.8,2.9,3.1,33.0,29,20,42,Onsite
+Business Services,Marketing services,1,3.8,3.8,3.4,3.6,2.8,35.0,13,20,39,Hybrid
+Business Services,Marketing services,2,3.2,3.0,3.4,2.7,2.7,29.0,28,13,40,Onsite
+Business Services,Waste management services,1,4.0,3.5,3.4,3.6,3.2,24.0,24,13,36,Hybrid
+Business Services,Waste management services,2,3.3,3.2,3.0,2.8,2.7,47.0,37,23,36,Remote
+Construction,Flooring Installer,2,3.5,3.7,3.5,3.1,3.3,19.0,42,14,47,Onsite
+Real Estate,Mortage broker,1,3.7,4.3,4.4,4.4,4.3,60.0,42,8,41,Onsite
+Real Estate,Mortage broker,2,3.0,3.2,2.9,3.0,2.8,29.0,32,6,48,Onsite
+Real Estate,Real estate developer,1,4.5,4.2,4.4,4.4,4.2,47.0,38,5,45,Hybrid
+Real Estate,Real estate developer,2,3.4,2.9,3.4,3.3,2.6,15.0,26,12,42,Onsite

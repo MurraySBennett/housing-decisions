@@ -1,6 +1,6 @@
 # Stimuli: ~605MB of house images. Needed to run the experiment, too big for
 # git. See STIMULI.md.
-experiment/stimuli/
+experiment/stimuli/*
 **/stimuli/house_images/
 
 # Participant data
@@ -38,6 +38,14 @@ desktop.ini
 
 # ...but the stimulus lists define the design, so they are tracked
 !experiment/stimuli/*.csv
+!experiment/stimuli/README.md
+!experiment/stimuli/prepare_stimuli.py
+!experiment/stimuli/prepared/
+!experiment/stimuli/prepared/*.csv
+!experiment/stimuli/prepared/*.json
+!experiment/stimuli/stimgen/
+!experiment/stimuli/stimgen/configs/
+!experiment/stimuli/stimgen/configs/*.json
 
 # Literature: other peoples
 

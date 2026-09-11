@@ -1,0 +1,81 @@
+Zone,nBeds,nBaths,sqft,lotSize,yearBuilt,listPrice,extPic,kitPic,bedPic,bathPic,livPic,outPic
+Panhandle,3,3,2100,1.5,1960,258000,.\Stimuli\Images\ext1.png,.\Stimuli\Images\kit1.png,.\Stimuli\Images\bed1.png,.\Stimuli\Images\bath1.png,.\Stimuli\Images\liv1.png,.\Stimuli\Images\out1.png
+Panhandle,3,4,2974,28,1998,780000,.\Stimuli\Images\ext2.png,.\Stimuli\Images\kit2.png,.\Stimuli\Images\bed2.png,.\Stimuli\Images\bath2.png,.\Stimuli\Images\liv2.png,.\Stimuli\Images\out2.png
+Panhandle,5,3,3356,0.47,2020,874000,.\Stimuli\Images\ext3.png,.\Stimuli\Images\kit3.png,.\Stimuli\Images\bed3.png,.\Stimuli\Images\bath3.png,.\Stimuli\Images\liv3.png,.\Stimuli\Images\out3.png
+Panhandle,5,3,3077,0.27,2020,478000,.\Stimuli\Images\ext4.png,.\Stimuli\Images\kit4.png,.\Stimuli\Images\bed4.png,.\Stimuli\Images\bath4.png,.\Stimuli\Images\liv4.png,.\Stimuli\Images\out4.png
+Panhandle,4,2,2297,0.72,1920,299990,.\Stimuli\Images\ext5.png,.\Stimuli\Images\kit5.png,.\Stimuli\Images\bed5.png,.\Stimuli\Images\bath5.png,.\Stimuli\Images\liv5.png,.\Stimuli\Images\out5.png
+Panhandle,3,2,1560,0.26,2000,307000,.\Stimuli\Images\ext6.png,.\Stimuli\Images\kit6.png,.\Stimuli\Images\bed6.png,.\Stimuli\Images\bath6.png,.\Stimuli\Images\liv6.png,.\Stimuli\Images\out6.png
+Panhandle,3,2,1174,1.3,2002,289900,.\Stimuli\Images\ext7.png,.\Stimuli\Images\kit7.png,.\Stimuli\Images\bed7.png,.\Stimuli\Images\bath7.png,.\Stimuli\Images\liv7.png,.\Stimuli\Images\out7.png
+Panhandle,4,5,3359,1.83,2008,3499000,.\Stimuli\Images\ext8.png,.\Stimuli\Images\kit8.png,.\Stimuli\Images\bed8.png,.\Stimuli\Images\bath8.png,.\Stimuli\Images\liv8.png,.\Stimuli\Images\out8.png
+Panhandle,7,9,5623,0.27,1895,9975000,.\Stimuli\Images\ext9.png,.\Stimuli\Images\kit9.png,.\Stimuli\Images\bed9.png,.\Stimuli\Images\bath9.png,.\Stimuli\Images\liv9.png,.\Stimuli\Images\out9.png
+Panhandle,4,3,3777,0.4,1974,689000,.\Stimuli\Images\ext10.png,.\Stimuli\Images\kit10.png,.\Stimuli\Images\bed10.png,.\Stimuli\Images\bath10.png,.\Stimuli\Images\liv10.png,.\Stimuli\Images\out10.png
+Panhandle,3,3,1822,1.83,2007,1125000,.\Stimuli\Images\ext11.png,.\Stimuli\Images\kit11.png,.\Stimuli\Images\bed11.png,.\Stimuli\Images\bath11.png,.\Stimuli\Images\liv11.png,.\Stimuli\Images\out11.png
+Panhandle,2,1,888,1.21,2018,95000,.\Stimuli\Images\ext12.png,.\Stimuli\Images\kit12.png,.\Stimuli\Images\bed12.png,.\Stimuli\Images\bath12.png,.\Stimuli\Images\liv12.png,.\Stimuli\Images\out12.png
+Panhandle,3,4,2922,0.45,2002,500000,.\Stimuli\Images\ext13.png,.\Stimuli\Images\kit13.png,.\Stimuli\Images\bed13.png,.\Stimuli\Images\bath13.png,.\Stimuli\Images\liv13.png,.\Stimuli\Images\out13.png
+Panhandle,3,2,1404,1,1986,165000,.\Stimuli\Images\ext14.png,.\Stimuli\Images\kit14.png,.\Stimuli\Images\bed14.png,.\Stimuli\Images\bath14.png,.\Stimuli\Images\liv14.png,.\Stimuli\Images\out14.png
+Panhandle,9,11,5625,0.34,2021,7350000,.\Stimuli\Images\ext15.png,.\Stimuli\Images\kit15.png,.\Stimuli\Images\bed15.png,.\Stimuli\Images\bath15.png,.\Stimuli\Images\liv15.png,.\Stimuli\Images\out15.png
+Panhandle,1,1,616,1.99,1998,87900,.\Stimuli\Images\ext16.png,.\Stimuli\Images\kit16.png,.\Stimuli\Images\bed16.png,.\Stimuli\Images\bath16.png,.\Stimuli\Images\liv16.png,.\Stimuli\Images\out16.png
+Panhandle,4,5,3369,0.66,1933,450000,.\Stimuli\Images\ext17.png,.\Stimuli\Images\kit17.png,.\Stimuli\Images\bed17.png,.\Stimuli\Images\bath17.png,.\Stimuli\Images\liv17.png,.\Stimuli\Images\out10.png
+Panhandle,3,2,1387,1.08,2005,334500,.\Stimuli\Images\ext18.png,.\Stimuli\Images\kit18.png,.\Stimuli\Images\bed18.png,.\Stimuli\Images\bath18.png,.\Stimuli\Images\liv18.png,.\Stimuli\Images\out10.png
+Panhandle,4,3,2381,0.36,1997,599000,.\Stimuli\Images\ext19.png,.\Stimuli\Images\kit19.png,.\Stimuli\Images\bed19.png,.\Stimuli\Images\bath19.png,.\Stimuli\Images\liv19.png,.\Stimuli\Images\out19.png
+Panhandle,3,4,1604,2,2008,339700,.\Stimuli\Images\ext20.png,.\Stimuli\Images\kit20.png,.\Stimuli\Images\bed20.png,.\Stimuli\Images\bath20.png,.\Stimuli\Images\liv20.png,.\Stimuli\Images\out20.png
+Panhandle,2,1,650,0.5,1960,79000,.\Stimuli\Images\ext21.png,.\Stimuli\Images\kit21.png,.\Stimuli\Images\bed21.png,.\Stimuli\Images\bath21.png,.\Stimuli\Images\liv21.png,.\Stimuli\Images\out21.png
+Panhandle,3,2,1949,5,1998,233000,.\Stimuli\Images\ext22.png,.\Stimuli\Images\kit22.png,.\Stimuli\Images\bed22.png,.\Stimuli\Images\bath22.png,.\Stimuli\Images\liv22.png,.\Stimuli\Images\out22.png
+Panhandle,3,2,936,0.38,1973,425000,.\Stimuli\Images\ext23.png,.\Stimuli\Images\kit23.png,.\Stimuli\Images\bed23.png,.\Stimuli\Images\bath23.png,.\Stimuli\Images\liv23.png,.\Stimuli\Images\out23.png
+Panhandle,6,5,3250,28.27,2014,845000,.\Stimuli\Images\ext24.png,.\Stimuli\Images\kit24.png,.\Stimuli\Images\bed24.png,.\Stimuli\Images\bath24.png,.\Stimuli\Images\liv24.png,.\Stimuli\Images\out24.png
+Panhandle,4,4,2100,0.3,2022,2899000,.\Stimuli\Images\ext25.png,.\Stimuli\Images\kit25.png,.\Stimuli\Images\bed25.png,.\Stimuli\Images\bath25.png,.\Stimuli\Images\liv25.png,.\Stimuli\Images\out25.png
+Panhandle,9,7,3400,0.34,1960,3599000,.\Stimuli\Images\ext26.png,.\Stimuli\Images\kit26.png,.\Stimuli\Images\bed26.png,.\Stimuli\Images\bath26.png,.\Stimuli\Images\liv26.png,.\Stimuli\Images\out26.png
+Panhandle,3,3,2809,1.53,1996,949000,.\Stimuli\Images\ext27.png,.\Stimuli\Images\kit27.png,.\Stimuli\Images\bed27.png,.\Stimuli\Images\bath27.png,.\Stimuli\Images\liv27.png,.\Stimuli\Images\out27.png
+Panhandle,3,2,1907,0.6,1957,499900,.\Stimuli\Images\ext28.png,.\Stimuli\Images\kit28.png,.\Stimuli\Images\bed28.png,.\Stimuli\Images\bath28.png,.\Stimuli\Images\liv28.png,.\Stimuli\Images\out28.png
+Panhandle,3,4,5500,1.08,2019,2160000,.\Stimuli\Images\ext29.png,.\Stimuli\Images\kit29.png,.\Stimuli\Images\bed29.png,.\Stimuli\Images\bath29.png,.\Stimuli\Images\liv29.png,.\Stimuli\Images\out29.png
+Panhandle,4,4,2820,1.84,1962,495000,.\Stimuli\Images\ext30.png,.\Stimuli\Images\kit30.png,.\Stimuli\Images\bed30.png,.\Stimuli\Images\bath30.png,.\Stimuli\Images\liv30.png,.\Stimuli\Images\out30.png
+Panhandle,3,3,2612,0.85,1974,1325000,.\Stimuli\Images\ext31.png,.\Stimuli\Images\kit31.png,.\Stimuli\Images\bed31.png,.\Stimuli\Images\bath31.png,.\Stimuli\Images\liv31.png,.\Stimuli\Images\out31.png
+Panhandle,2,3,1404,0.24,1986,887000,.\Stimuli\Images\ext32.png,.\Stimuli\Images\kit32.png,.\Stimuli\Images\bed32.png,.\Stimuli\Images\bath32.png,.\Stimuli\Images\liv32.png,.\Stimuli\Images\out32.png
+Panhandle,3,2,1728,0.26,1998,695000,.\Stimuli\Images\ext33.png,.\Stimuli\Images\kit33.png,.\Stimuli\Images\bed33.png,.\Stimuli\Images\bath33.png,.\Stimuli\Images\liv33.png,.\Stimuli\Images\out33.png
+Panhandle,3,3,2262,5.53,1995,369000,.\Stimuli\Images\ext34.png,.\Stimuli\Images\kit34.png,.\Stimuli\Images\bed34.png,.\Stimuli\Images\bath34.png,.\Stimuli\Images\liv34.png,.\Stimuli\Images\out34.png
+Panhandle,3,3,2663,199.04,2003,1793000,.\Stimuli\Images\ext35.png,.\Stimuli\Images\kit35.png,.\Stimuli\Images\bed35.png,.\Stimuli\Images\bath35.png,.\Stimuli\Images\liv35.png,.\Stimuli\Images\out35.png
+Panhandle,4,3,1835,0.97,1978,348000,.\Stimuli\Images\ext36.png,.\Stimuli\Images\kit36.png,.\Stimuli\Images\bed36.png,.\Stimuli\Images\bath36.png,.\Stimuli\Images\liv36.png,.\Stimuli\Images\out36.png
+Panhandle,4,3,2555,0.62,1989,329500,.\Stimuli\Images\ext37.png,.\Stimuli\Images\kit37.png,.\Stimuli\Images\bed37.png,.\Stimuli\Images\bath37.png,.\Stimuli\Images\liv37.png,.\Stimuli\Images\out37.png
+Panhandle,3,2,1743,4.43,1985,292000,.\Stimuli\Images\ext38.png,.\Stimuli\Images\kit38.png,.\Stimuli\Images\bed38.png,.\Stimuli\Images\bath38.png,.\Stimuli\Images\liv38.png,.\Stimuli\Images\out38.png
+Panhandle,1,1,288,3.07,2010,249900,.\Stimuli\Images\ext39.png,.\Stimuli\Images\kit39.png,.\Stimuli\Images\bed39.png,.\Stimuli\Images\bath39.png,.\Stimuli\Images\liv39.png,.\Stimuli\Images\out39.png
+Panhandle,2,1,800,0.33,1978,79500,.\Stimuli\Images\ext40.png,.\Stimuli\Images\kit40.png,.\Stimuli\Images\bed40.png,.\Stimuli\Images\bath40.png,.\Stimuli\Images\liv40.png,.\Stimuli\Images\out40.png
+North Florida,3,3,2171,0.2,2005,569500,.\Stimuli\Images\ext42.png,.\Stimuli\Images\kit42.png,.\Stimuli\Images\bed42.png,.\Stimuli\Images\bath42.png,.\Stimuli\Images\liv42.png,.\Stimuli\Images\out42.png
+North Florida,4,2,1694,0.25,1958,275000,.\Stimuli\Images\ext43.png,.\Stimuli\Images\kit43.png,.\Stimuli\Images\bed43.png,.\Stimuli\Images\bath43.png,.\Stimuli\Images\liv43.png,.\Stimuli\Images\out43.png
+North Florida,4,2,2434,0.22,2000,439000,.\Stimuli\Images\ext44.png,.\Stimuli\Images\kit44.png,.\Stimuli\Images\bed44.png,.\Stimuli\Images\bath44.png,.\Stimuli\Images\liv44.png,.\Stimuli\Images\out44.png
+North Florida,4,3,2780,0.24,2016,784999,.\Stimuli\Images\ext45.png,.\Stimuli\Images\kit45.png,.\Stimuli\Images\bed45.png,.\Stimuli\Images\bath45.png,.\Stimuli\Images\liv45.png,.\Stimuli\Images\out45.png
+North Florida,4,4,3087,0.25,2020,1070000,.\Stimuli\Images\ext46.png,.\Stimuli\Images\kit46.png,.\Stimuli\Images\bed46.png,.\Stimuli\Images\bath46.png,.\Stimuli\Images\liv46.png,.\Stimuli\Images\out46.png
+North Florida,8,9,13602,3.59,2003,7750000,.\Stimuli\Images\ext47.png,.\Stimuli\Images\kit47.png,.\Stimuli\Images\bed47.png,.\Stimuli\Images\bath47.png,.\Stimuli\Images\liv47.png,.\Stimuli\Images\out47.png
+North Florida,3,2,2509,2.48,1994,595000,.\Stimuli\Images\ext48.png,.\Stimuli\Images\kit48.png,.\Stimuli\Images\bed48.png,.\Stimuli\Images\bath48.png,.\Stimuli\Images\liv48.png,.\Stimuli\Images\out48.png
+North Florida,5,4,4064,1.6,1952,649000,.\Stimuli\Images\ext49.png,.\Stimuli\Images\kit49.png,.\Stimuli\Images\bed49.png,.\Stimuli\Images\bath49.png,.\Stimuli\Images\liv49.png,.\Stimuli\Images\out49.png
+North Florida,4,2,2073,1,1986,490000,.\Stimuli\Images\ext50.png,.\Stimuli\Images\kit50.png,.\Stimuli\Images\bed50.png,.\Stimuli\Images\bath50.png,.\Stimuli\Images\liv50.png,.\Stimuli\Images\out50.png
+North Florida,5,6,5862,1.8,2013,960595,.\Stimuli\Images\ext51.png,.\Stimuli\Images\kit51.png,.\Stimuli\Images\bed51.png,.\Stimuli\Images\bath51.png,.\Stimuli\Images\liv51.png,.\Stimuli\Images\out51.png
+North Florida,6,4,3642,2,2006,500000,.\Stimuli\Images\ext52.png,.\Stimuli\Images\kit52.png,.\Stimuli\Images\bed52.png,.\Stimuli\Images\bath52.png,.\Stimuli\Images\liv52.png,.\Stimuli\Images\out52.png
+North Florida,7,4,2710,0.34,1953,330000,.\Stimuli\Images\ext53.png,.\Stimuli\Images\kit53.png,.\Stimuli\Images\bed53.png,.\Stimuli\Images\bath53.png,.\Stimuli\Images\liv53.png,.\Stimuli\Images\out53.png
+North Florida,5,4,3632,1.09,1990,788000,.\Stimuli\Images\ext54.png,.\Stimuli\Images\kit54.png,.\Stimuli\Images\bed54.png,.\Stimuli\Images\bath54.png,.\Stimuli\Images\liv54.png,.\Stimuli\Images\out54.png
+North Florida,6,7,5015,0.48,1999,1650000,.\Stimuli\Images\ext55.png,.\Stimuli\Images\kit55.png,.\Stimuli\Images\bed55.png,.\Stimuli\Images\bath55.png,.\Stimuli\Images\liv55.png,.\Stimuli\Images\out55.png
+North Florida,3,2,1367,0.35,1988,254900,.\Stimuli\Images\ext56.png,.\Stimuli\Images\kit56.png,.\Stimuli\Images\bed56.png,.\Stimuli\Images\bath56.png,.\Stimuli\Images\liv56.png,.\Stimuli\Images\out56.png
+North Florida,5,5,5006,2.73,2009,1100000,.\Stimuli\Images\ext57.png,.\Stimuli\Images\kit57.png,.\Stimuli\Images\bed57.png,.\Stimuli\Images\bath57.png,.\Stimuli\Images\liv57.png,.\Stimuli\Images\out57.png
+North Florida,5,7,3370,0.5,1990,1085000,.\Stimuli\Images\ext58.png,.\Stimuli\Images\kit58.png,.\Stimuli\Images\bed58.png,.\Stimuli\Images\bath58.png,.\Stimuli\Images\liv58.png,.\Stimuli\Images\out58.png
+North Florida,4,4,3584,17.41,1974,575000,.\Stimuli\Images\ext59.png,.\Stimuli\Images\kit59.png,.\Stimuli\Images\bed59.png,.\Stimuli\Images\bath59.png,.\Stimuli\Images\liv59.png,.\Stimuli\Images\out59.png
+North Florida,3,2,1128,0.52,1910,225000,.\Stimuli\Images\ext60.png,.\Stimuli\Images\kit60.png,.\Stimuli\Images\bed60.png,.\Stimuli\Images\bath60.png,.\Stimuli\Images\liv60.png,.\Stimuli\Images\out60.png
+North Florida,6,7,10150,1.53,1994,3600000,.\Stimuli\Images\ext61.png,.\Stimuli\Images\kit61.png,.\Stimuli\Images\bed61.png,.\Stimuli\Images\bath61.png,.\Stimuli\Images\liv61.png,.\Stimuli\Images\out61.png
+North Florida,3,2,1568,0.45,1990,95000,.\Stimuli\Images\ext62.png,.\Stimuli\Images\kit62.png,.\Stimuli\Images\bed62.png,.\Stimuli\Images\bath62.png,.\Stimuli\Images\liv62.png,.\Stimuli\Images\out62.png
+North Florida,4,3,2436,1.09,1980,365000,.\Stimuli\Images\ext63.png,.\Stimuli\Images\kit63.png,.\Stimuli\Images\bed63.png,.\Stimuli\Images\bath63.png,.\Stimuli\Images\liv63.png,.\Stimuli\Images\out63.png
+North Florida,3,2,1412,0.14,2008,174900,.\Stimuli\Images\ext64.png,.\Stimuli\Images\kit64.png,.\Stimuli\Images\bed64.png,.\Stimuli\Images\bath64.png,.\Stimuli\Images\liv64.png,.\Stimuli\Images\out64.png
+North Florida,4,2,2336,0.4,1983,410000,.\Stimuli\Images\ext65.png,.\Stimuli\Images\kit65.png,.\Stimuli\Images\bed65.png,.\Stimuli\Images\bath65.png,.\Stimuli\Images\liv65.png,.\Stimuli\Images\out65.png
+North Florida,3,3,2495,1.78,2015,700000,.\Stimuli\Images\ext66.png,.\Stimuli\Images\kit66.png,.\Stimuli\Images\bed66.png,.\Stimuli\Images\bath66.png,.\Stimuli\Images\liv66.png,.\Stimuli\Images\out66.png
+North Florida,4,3,2497,0.2,2019,809500,.\Stimuli\Images\ext67.png,.\Stimuli\Images\kit67.png,.\Stimuli\Images\bed67.png,.\Stimuli\Images\bath67.png,.\Stimuli\Images\liv67.png,.\Stimuli\Images\out67.png
+North Florida,3,3,2045,0.2,2021,524900,.\Stimuli\Images\ext68.png,.\Stimuli\Images\kit68.png,.\Stimuli\Images\bed68.png,.\Stimuli\Images\bath68.png,.\Stimuli\Images\liv68.png,.\Stimuli\Images\out68.png
+North Florida,4,3,2656,5,2020,695000,.\Stimuli\Images\ext69.png,.\Stimuli\Images\kit69.png,.\Stimuli\Images\bed69.png,.\Stimuli\Images\bath69.png,.\Stimuli\Images\liv69.png,.\Stimuli\Images\out69.png
+North Florida,3,2,1666,0.23,2016,359900,.\Stimuli\Images\ext70.png,.\Stimuli\Images\kit70.png,.\Stimuli\Images\bed70.png,.\Stimuli\Images\bath70.png,.\Stimuli\Images\liv70.png,.\Stimuli\Images\out70.png
+North Florida,2,2,1200,0.54,1999,249900,.\Stimuli\Images\ext71.png,.\Stimuli\Images\kit71.png,.\Stimuli\Images\bed71.png,.\Stimuli\Images\bath71.png,.\Stimuli\Images\liv71.png,.\Stimuli\Images\out71.png
+North Florida,4,3,2759,0.4,2013,699000,.\Stimuli\Images\ext72.png,.\Stimuli\Images\kit72.png,.\Stimuli\Images\bed72.png,.\Stimuli\Images\bath72.png,.\Stimuli\Images\liv72.png,.\Stimuli\Images\out72.png
+North Florida,3,2,1612,0.81,1980,930000,.\Stimuli\Images\ext73.png,.\Stimuli\Images\kit73.png,.\Stimuli\Images\bed73.png,.\Stimuli\Images\bath73.png,.\Stimuli\Images\liv73.png,.\Stimuli\Images\out73.png
+North Florida,4,2,1884,0.23,2021,490000,.\Stimuli\Images\ext74.png,.\Stimuli\Images\kit74.png,.\Stimuli\Images\bed74.png,.\Stimuli\Images\bath74.png,.\Stimuli\Images\liv74.png,.\Stimuli\Images\out74.png
+North Florida,4,2,2335,0.8,1925,495000,.\Stimuli\Images\ext75.png,.\Stimuli\Images\kit75.png,.\Stimuli\Images\bed75.png,.\Stimuli\Images\bath75.png,.\Stimuli\Images\liv75.png,.\Stimuli\Images\out75.png
+North Florida,5,4,3834,10,2007,625000,.\Stimuli\Images\ext76.png,.\Stimuli\Images\kit76.png,.\Stimuli\Images\bed76.png,.\Stimuli\Images\bath76.png,.\Stimuli\Images\liv76.png,.\Stimuli\Images\out76.png
+North Florida,2,2,3259,2,2010,650000,.\Stimuli\Images\ext77.png,.\Stimuli\Images\kit77.png,.\Stimuli\Images\bed77.png,.\Stimuli\Images\bath77.png,.\Stimuli\Images\liv77.png,.\Stimuli\Images\out77.png
+North Florida,3,2,1504,5.35,2005,219000,.\Stimuli\Images\ext78.png,.\Stimuli\Images\kit78.png,.\Stimuli\Images\bed78.png,.\Stimuli\Images\bath78.png,.\Stimuli\Images\liv78.png,.\Stimuli\Images\out78.png
+North Florida,4,2,2100,0.67,2022,474900,.\Stimuli\Images\ext79.png,.\Stimuli\Images\kit79.png,.\Stimuli\Images\bed79.png,.\Stimuli\Images\bath79.png,.\Stimuli\Images\liv79.png,.\Stimuli\Images\out79.png
+North Florida,3,2,1682,0.13,2016,387000,.\Stimuli\Images\ext80.png,.\Stimuli\Images\kit80.png,.\Stimuli\Images\bed80.png,.\Stimuli\Images\bath80.png,.\Stimuli\Images\liv80.png,.\Stimuli\Images\out80.png
+North Florida,4,3,2258,26,1985,639000,.\Stimuli\Images\ext81.png,.\Stimuli\Images\kit81.png,.\Stimuli\Images\bed81.png,.\Stimuli\Images\bath81.png,.\Stimuli\Images\liv81.png,.\Stimuli\Images\out81.png
