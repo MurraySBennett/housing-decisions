@@ -55,10 +55,11 @@ for k = 1:n
         Screen('TextSize', window, s.sizeTitle);
         DrawFormattedText(window, items{idx}, 'center', cy - 120, s.text);
 
-        % The line
-        Screen('DrawLine', window, s.border, lineLeft, lineY, lineRight, lineY, 4);
-        Screen('DrawLine', window, s.border, lineLeft, lineY-16, lineLeft, lineY+16, 4);
-        Screen('DrawLine', window, s.border, lineRight, lineY-16, lineRight, lineY+16, 4);
+        % The line. s.track, not s.border: this line IS the response
+        % scale, so it must stay legible even when decorative edges go soft.
+        Screen('DrawLine', window, s.track, lineLeft, lineY, lineRight, lineY, 3);
+        Screen('DrawLine', window, s.track, lineLeft, lineY-16, lineLeft, lineY+16, 3);
+        Screen('DrawLine', window, s.track, lineRight, lineY-16, lineRight, lineY+16, 3);
 
         Screen('TextSize', window, s.sizeLabel);
         DrawFormattedText(window, anchors{1}, lineLeft - 40, lineY + 56, s.textDim);

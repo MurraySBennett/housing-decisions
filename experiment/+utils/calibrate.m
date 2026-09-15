@@ -27,7 +27,7 @@ for k = 1:size(pts, 1)
     % Shrink the target to pull fixation to its centre
     for r = linspace(30, 8, 20)
         Screen('FillRect', window, s.bg);
-        Screen('DrawDots', window, [px; py], r*2, s.interactive, [], 2);
+        Screen('DrawDots', window, [px; py], r*2, s.target, [], 2);
         Screen('DrawDots', window, [px; py], 4,  s.bg, [], 2);
         Screen('Flip', window);
     end

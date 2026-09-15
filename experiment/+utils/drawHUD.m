@@ -29,12 +29,22 @@ utils.roundRect(window, panel, s.radiusPanel, s.bgPanel, s.border, s.hairlinePx)
 oldFont = Screen('TextFont', window, s.fontChrome);
 Screen('TextSize', window, s.sizeLabel);
 
+% The uppercase, zero-padded forms existed to suit a pixel font that
+% only really worked in caps. s.hudUppercase keeps them under the arcade
+% theme and drops them elsewhere -- shouting reads as harsh, and the HUD
+% is the one piece of chrome the participant sees on every single screen.
 left = '';
 if s.hud.showBlock && isfield(info, 'trial')
-    left = sprintf('TRIAL %02d/%02d', info.trial, info.nTrials);
+    if s.hudUppercase
+        left = sprintf('TRIAL %02d/%02d', info.trial, info.nTrials);
+    else
+        left = sprintf('Trial %d of %d', info.trial, info.nTrials);
+    end
 end
 mid = '';
-if isfield(info, 'label'), mid = upper(info.label); end
+if isfield(info, 'label')
+    mid = utils.ternary(s.hudUppercase, upper(info.label), info.label);
+end
 right = '';
 if s.hud.showEarnings && isfield(info, 'earnings')
     right = sprintf('$%.2f', info.earnings);

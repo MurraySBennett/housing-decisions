@@ -47,9 +47,11 @@ while true
 
     % Crosshair target
     armLen = 18;
-    Screen('DrawLine', window, s.interactive, cx-armLen, cy, cx+armLen, cy, 4);
-    Screen('DrawLine', window, s.interactive, cx, cy-armLen, cx, cy+armLen, 4);
-    Screen('FrameOval', window, s.border, [cx-hitR cy-hitR cx+hitR cy+hitR], 2);
+    Screen('DrawLine', window, s.interactive, cx-armLen, cy, cx+armLen, cy, 3);
+    Screen('DrawLine', window, s.interactive, cx, cy-armLen, cx, cy+armLen, 3);
+    % hitR is click geometry -- do not change it. Only the stroke changes.
+    Screen('FrameOval', window, s.borderStrong, ...
+        [cx-hitR cy-hitR cx+hitR cy+hitR], s.hairlinePx);
 
     Screen('TextFont', window, s.fontContent);
     Screen('TextSize', window, s.sizeLabel);

@@ -18,7 +18,7 @@ s = cfg.style;
 Screen('FillRect', window, s.bg);
 Screen('TextSize', window, s.sizeContent);
 DrawFormattedText(window, 'Please look at the dot.', 'center', cy - 160, s.textDim);
-Screen('DrawDots', window, [cx; cy], 18, s.interactive, [], 2);
+Screen('DrawDots', window, [cx; cy], 18, s.target, [], 2);
 Screen('DrawDots', window, [cx; cy], 5,  s.bg, [], 2);
 Screen('Flip', window);
 WaitSecs(0.6);

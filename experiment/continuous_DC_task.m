@@ -544,9 +544,10 @@ while true
 
     % Arc
     a = linspace(pi, 2*pi, 160);
+    % s.track, not s.border -- see the matching note in auction_task.m.
     Screen('DrawLines', window, ...
         [reshape([cx+outerR*cos(a); cx+innerR*cos(a)],1,[]); ...
-         reshape([cy+outerR*sin(a); cy+innerR*sin(a)],1,[])], 3, s.border);
+         reshape([cy+outerR*sin(a); cy+innerR*sin(a)],1,[])], 4, s.track);
 
     Screen('TextSize', window, s.sizeLabel);
     for k = 1:nTicks

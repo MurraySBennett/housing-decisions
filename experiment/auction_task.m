@@ -850,8 +850,11 @@ while true
     a = linspace(pi, 2*pi, 180);
     ax = cx + outerR*cos(a);  ay = cy + outerR*sin(a);
     bx = cx + innerR*cos(a);  by = cy + innerR*sin(a);
+    % s.track, not s.border: this arc IS the scale the participant sets a
+    % bid on. The soft decorative edge colour is not readable enough for a
+    % stroke that carries the response.
     Screen('DrawLines', window, [reshape([ax;bx],1,[]); reshape([ay;by],1,[])], ...
-        3, s.border);
+        4, s.track);
 
     % Ticks and labels
     Screen('TextSize', window, s.sizeLabel);
@@ -859,7 +862,7 @@ while true
         ang = pi + (k-1)/(nTicks-1) * pi;
         tx1 = cx + innerR*cos(ang); ty1 = cy + innerR*sin(ang);
         tx2 = cx + outerR*cos(ang); ty2 = cy + outerR*sin(ang);
-        Screen('DrawLine', window, s.textDim, tx1, ty1, tx2, ty2, 3);
+        Screen('DrawLine', window, s.textDim, tx1, ty1, tx2, ty2, 2);
 
         lbl = utils.formatCurrency(tickVals(k), 'compact');
         lx = cx + (outerR+42)*cos(ang); ly = cy + (outerR+42)*sin(ang);

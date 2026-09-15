@@ -61,7 +61,9 @@ for k = 1:n
         % Texture failed to load (missing file, bad path, etc.) -- a
         % visible placeholder is more useful for catching that than blank
         % space that looks like "nothing selected here."
-        Screen('FrameRect', window, s.border, imr, 1);
+        % Left square deliberately: a rounded frame among square
+        % thumbnails would read as a design element rather than a fault.
+        Screen('FrameRect', window, s.rejected, imr, 1);
     end
 end
 

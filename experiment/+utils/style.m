@@ -38,7 +38,7 @@ if nargin < 1 || isempty(themeName)
     themeName = getenv('HW_THEME');
 end
 if isempty(themeName)
-    themeName = 'arcade';
+    themeName = 'warm';
 end
 s.themeName = lower(char(themeName));
 
