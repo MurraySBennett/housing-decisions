@@ -6,6 +6,12 @@ project: housing-decisions
 
 ## Now
 
+**Code is deployed to the lab share and the RA-facing work is half done.** The
+share now carries the current experiment code plus the R analysis; the RA deck
+is written but stayed local because it needs another pass. The deploy was a
+manual explicit-manifest copy, which is a stopgap — see the `infra` stream, and
+do not let it become the normal way code reaches that machine.
+
 **The experiment is code-complete; a demo path, an analysis path, and an RA
 guide now exist alongside it.** New on 2026-09-15: `experiment/demo_battery.m`
 (every participant-facing element in ~6 min, into a sandbox that is never the
@@ -30,6 +36,27 @@ that **it has to run seamlessly and pleasantly.**
   Then `Rscript analysis/R/run_all.R --data experiment/Data_demo` to confirm the
   real saved CSVs parse the way the simulated ones do
 - [ ] later (S) re-verify parity against the kvam.4 lab drive after the design is frozen — `docs/shared-drive-parity-2026-09-10.md` is the record of the last pass
+
+### infra
+- [x] 2026-09-15 deployed the current code to the lab share by explicit-manifest
+  copy (`scripts/deploy_to_share.ps1`): 61 files replaced, 10 added, previous
+  `Experiment\` tree backed up to `Archive\Experiment_pre-2026-09-15` (66
+  files). `Data\`, `stimuli\house_images\`, `Experiment\archive\` and the
+  share-only stimulus files were excluded by name and verified untouched
+  afterwards. The RA deck was deliberately NOT copied — it needs work first
+- [ ] now (M) **this copy is a stopgap and recreates the divergence problem.**
+  Git is not installed on the lab machine. Get it installed, clone the repo
+  over the share copy, and delete `scripts/deploy_to_share.ps1` — then
+  `git status` on the share becomes the parity check and
+  `docs/shared-drive-parity-2026-09-10.md` stops needing to be redone by hand
+- [ ] next (S) `cfg.paths.data` points inside the code tree
+  (`Experiment/Data`). If the share becomes a git clone, `git clean -fdx`
+  there would delete every participant. Move it to a sibling of the checkout
+  before cloning, not after
+- [ ] next (S) `config.m` hardcodes the OSU UNC as `projRoot`, which is why
+  `demo_battery.m` has to re-point every path by hand on WSL. `STIMULI.md`
+  already documents a `$DATA_ROOT` env-var convention that nothing reads.
+  Make `projRoot` read an env var with the current UNC as fallback
 
 ### admin
 - [ ] now (M) set up REP for the study — the OSU participant system. Named by Murray as a prerequisite for collection this semester and not started
