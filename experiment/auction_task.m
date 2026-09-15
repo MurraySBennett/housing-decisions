@@ -719,7 +719,11 @@ while true
             end
         else
             Screen('TextSize', window, s.sizeContent);
-            col = utils.ternary(strcmp(attr.var, A.valueVar), s.money, s.text);
+            % Not emphasised inside the grid -- see the matching note in
+            % continuous_DC_task.m. The search-grid preview tile (drawGrid)
+            % deliberately KEEPS s.money: there it is the only price
+            % information on screen and participants have to find it.
+            col = s.text;
             DrawFormattedText(window, valueString(stimTbl, attr, idx), ...
                 pr(1)+12, valueY, col);
         end

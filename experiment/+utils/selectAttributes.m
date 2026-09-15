@@ -29,11 +29,23 @@ function sel = selectAttributes(A, nAttrs, poolRatings, method, isMaxLevel)
 if nargin < 4 || isempty(method),     method = 'stratified'; end
 if nargin < 5 || isempty(isMaxLevel), isMaxLevel = false;    end
 
-nFromPool = nAttrs - A.nCore;
+% The late tier is RESERVED inside nAttrs, not bolted on after it. It used
+% to be appended once the count was already assigned, so an attribute level
+% of 6 rendered seven cells: the manipulation was mislabelled in the data,
+% and the seventh cell landed alone on row 4 of a 2-column grid -- always
+% the same attribute (Region / Work arrangement), always in a visually
+% unique isolated position. That is a position confound on precisely the
+% attribute the design expects to dominate choice.
+nLate = 0;
+if isMaxLevel && ~isempty(A.late)
+    nLate = numel(A.late);
+end
+
+nFromPool = nAttrs - A.nCore - nLate;
 if nFromPool < 0
     error('hw:selectAttributes:tooFew', ...
-        'nAttrs=%d is below the %d core attributes for %s.', ...
-        nAttrs, A.nCore, A.domain);
+        'nAttrs=%d is below the %d always-shown attributes (%d core + %d late) for %s.', ...
+        nAttrs, A.nCore + nLate, A.nCore, nLate, A.domain);
 end
 if nFromPool > A.nPool
     error('hw:selectAttributes:tooMany', ...
@@ -88,11 +100,13 @@ sel.ranks    = [nan(1, A.nCore), ranks(pick)];
 sel.method   = method;
 sel.nAttrs   = nAttrs;
 
-if isMaxLevel && ~isempty(A.late)
+if nLate > 0
+    % nAttrs is NOT incremented here -- the late slot was already reserved
+    % out of nFromPool above, so sel.nAttrs == nAttrs at every level and
+    % numel(sel.shown) == nAttrs always.
     sel.shown   = [sel.shown, A.late];
     sel.ratings = [sel.ratings, nan(1, numel(A.late))];
     sel.ranks   = [sel.ranks,   nan(1, numel(A.late))];
-    sel.nAttrs  = sel.nAttrs + numel(A.late);
 end
 
 sel.meanRank = mean(sel.ranks(~isnan(sel.ranks)));

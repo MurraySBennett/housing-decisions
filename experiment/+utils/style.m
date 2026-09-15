@@ -106,15 +106,21 @@ s.identityGrid.cellW = 180;
 s.identityGrid.cellH = 135;   % 4:3, close to a real-estate photo's shape
 s.identityGrid.gap   = 10;
 
-% Attribute-SLOT grid: enough slots for the max ever shown (core + full
-% pool + late tier = 7 for both domains), 2 columns. Attribute #1 always
-% lands in slot 1, #2 in slot 2, etc, regardless of how many total
-% attributes THIS trial shows -- a 2-attribute trial does not restretch
+% Attribute-SLOT grid: enough slots for the max ever shown, 2 columns. As
+% of 2026-09-15 the late tier is reserved INSIDE nAttrs rather than added
+% on top of it (see utils.selectAttributes), so the maximum is 6, not 7,
+% and every attribute level fills whole rows -- no cell is ever left alone
+% on a final row. The grid keeps 8 slots: slots 1-6 compute to identical
+% coordinates either way, and shrinking it would disturb geometry that
+% preflight.m mirrors by hand.
+%
+% Attribute #1 always lands in slot 1, #2 in slot 2, etc, regardless of how
+% many attributes THIS trial shows -- a 2-attribute trial does not restretch
 % into the space a 6-attribute trial uses; it just leaves the remaining
 % slots empty. Fixed position is the whole point: visual layout should not
 % itself carry information about the attribute-count condition.
 s.attrGrid.nCols = 2;
-s.attrGrid.nRows = 4;    % 8 slots for up to 7 attributes, one spare
+s.attrGrid.nRows = 4;    % 8 slots; max shown is 6, so two spare
 s.attrGrid.cellW = 260;
 s.attrGrid.cellH = 76;
 s.attrGrid.gap   = 80;

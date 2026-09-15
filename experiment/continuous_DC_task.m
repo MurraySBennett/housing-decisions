@@ -760,7 +760,13 @@ for k = 1:n
         end
     else
         Screen('TextSize', window, s.sizeContent);
-        col = utils.ternary(strcmp(attr.var, A.valueVar), s.money, s.text);
+        % The value attribute is NOT emphasised inside the grid. It is
+        % already guaranteed present on every trial as the core tier, so
+        % colouring it differently was an emphasis the design does not
+        % intend. s.money is kept for numbers the participant is actively
+        % SETTING (the price/bid arcs, the anchor box) -- an affordance,
+        % not an emphasis.
+        col = s.text;
         DrawFormattedText(window, valueString(stimTbl, attr, idx), ...
             cx0 + 6, valueY, col);
     end
