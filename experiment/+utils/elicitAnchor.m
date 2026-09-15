@@ -39,8 +39,8 @@ while true
     DrawFormattedText(window, prompt, 'center', cy - 200, s.text, 60, 0, 0, 1.6);
 
     box = [cx - 220, cy + 60, cx + 220, cy + 140];
-    Screen('FillRect',  window, s.bgPanel, box);
-    Screen('FrameRect', window, s.interactive, box, s.borderWidthPx);
+    utils.roundRect(window, box, s.radiusPanel, s.bgPanel, ...
+        s.interactive, s.borderWidthPx);
 
     Screen('TextSize', window, s.sizeTitle);
     shown = ['$' str];

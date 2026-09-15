@@ -102,10 +102,16 @@ DrawFormattedText(window, 'FETCHING PHOTOS...', 'center', cy - 50, s.money);
 
 barW = 420; barH = 22;
 frac = min(1, done / max(total, 1));
-Screen('FrameRect', window, s.border, [cx-barW/2, cy, cx+barW/2, cy+barH], 2);
+% s.borderStrong, not s.border: this is a functional indicator, and the
+% soft decorative edge colour is too faint to read as one. The fill is the
+% only varying-width rect in the migration -- utils.roundRect clamps the
+% radius to half the width, so it stays a well-formed pill as frac -> 0.
+utils.roundRect(window, [cx-barW/2, cy, cx+barW/2, cy+barH], ...
+    s.radiusPill, s.bg, s.borderStrong, s.hairlinePx);
 if frac > 0
-    Screen('FillRect', window, s.interactive, ...
-        [cx-barW/2, cy, cx-barW/2 + barW*frac, cy+barH]);
+    utils.roundRect(window, ...
+        [cx-barW/2, cy, cx-barW/2 + barW*frac, cy+barH], ...
+        s.radiusPill, s.interactive);
 end
 
 Screen('TextFont', window, s.fontContent);

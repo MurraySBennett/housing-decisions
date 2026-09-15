@@ -17,8 +17,14 @@ w = scr(3);
 hgt = s.hud.heightPx;
 rect = [0 0 w hgt];
 
-Screen('FillRect', window, s.bgPanel, rect);
-Screen('FrameRect', window, s.border, rect, s.borderWidthPx);
+% The HUD band is flush to three screen edges, and a rounded rect glued to
+% the screen edge looks broken. So inset the DRAWN panel inside the band
+% rather than rounding the band itself. s.hud.heightPx is unchanged, which
+% is what makes this safe: hudH feeds every layout function in both tasks
+% AND preflight.m's hand-copied mirrors of them, so changing it would move
+% every AOI in the battery. Changing only the painted inset moves nothing.
+panel = [12, 6, w - 12, hgt - 6];
+utils.roundRect(window, panel, s.radiusPanel, s.bgPanel, s.border, s.hairlinePx);
 
 oldFont = Screen('TextFont', window, s.fontChrome);
 Screen('TextSize', window, s.sizeLabel);

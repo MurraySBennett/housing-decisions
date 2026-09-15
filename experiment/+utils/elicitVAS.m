@@ -68,7 +68,7 @@ for k = 1:n
         % Previously placed items stay visible
         for p = 1:numel(placedX)
             Screen('DrawLine', window, s.textDim, placedX(p), lineY-12, placedX(p), lineY+12, 3);
-            Screen('TextSize', window, 14);
+            Screen('TextSize', window, s.sizeMicro);
             bb = Screen('TextBounds', window, placedLabel{p});
             yOff = lineY + 24 + mod(p, 3) * 22;
             DrawFormattedText(window, placedLabel{p}, placedX(p) - bb(3)/2, yOff, s.textDim);

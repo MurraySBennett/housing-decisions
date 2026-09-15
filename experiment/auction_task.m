@@ -633,13 +633,16 @@ Screen('FillRect', window, s.bg);
 for b = 1:size(L.boxRects, 2)
     r = L.boxRects(:,b)';
     if isnan(boxStim(b))
-        Screen('FrameRect', window, s.bgPanel, r, 2);
+        % Ghost outline for an empty slot. Filled with s.bg -- the ground
+        % it is drawn over -- so it shares a silhouette with a filled tile
+        % instead of reading as a different shape.
+        utils.roundRect(window, r, s.radiusPanel, s.bg, s.bgPanel, s.hairlinePx);
         continue
     end
     idx = boxStim(b);
 
-    Screen('FillRect',  window, s.bgPanel, r);
-    Screen('FrameRect', window, s.interactive, r, s.borderWidthPx);
+    utils.roundRect(window, r, s.radiusPanel, s.bgPanel, ...
+        s.interactive, s.borderWidthPx);
 
     % Preview image (houses only)
     if strcmpi(domain, 'houses') && isfield(tex, 'extPic') && ~isnan(tex.extPic(idx))
@@ -700,8 +703,11 @@ while true
 
     for k = 1:n
         pr = detailAOIs.rects(:, k)';
-        Screen('FillRect',  window, s.bgPanel, pr);
-        Screen('FrameRect', window, s.border, pr, 2);
+        % pr IS an AOI rect. Painting it rounded is fine -- the rect
+        % itself is untouched and still what layoutDetailAOIs and
+        % preflight.m's mirror of it both compute.
+        utils.roundRect(window, pr, s.radiusCell, s.bgPanel, ...
+            s.border, s.hairlinePx);
 
         attr = sel.shown(k);
         Screen('TextSize', window, s.sizeLabel);
@@ -1011,8 +1017,8 @@ while isnan(choice)
 
     for k = 1:2
         r = rects(:, k)';
-        Screen('FillRect', window, s.bgPanel, r);
-        Screen('FrameRect', window, s.interactive, r, s.borderWidthPx);
+        utils.roundRect(window, r, s.radiusPanel, s.bgPanel, ...
+            s.interactive, s.borderWidthPx);
         Screen('TextSize', window, s.sizeContent);
         DrawFormattedText(window, choices{k}, 'center', r(2) + 62, s.text, 45, 0, 0, 1.2, [], r);
     end

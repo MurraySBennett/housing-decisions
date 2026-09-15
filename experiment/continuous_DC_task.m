@@ -704,8 +704,8 @@ function aoi = drawCard(window, cfg, rect, stimTbl, tex, sel, A, idx, domain, L)
 
 s = cfg.style;
 rect = rect(:)';
-Screen('FillRect',  window, s.bgPanel, rect);
-Screen('FrameRect', window, s.interactive, rect, s.borderWidthPx);
+utils.roundRect(window, rect, s.radiusPanel, s.bgPanel, ...
+    s.interactive, s.borderWidthPx);
 
 pad = 18;
 innerRect = [rect(1)+pad, rect(2)+pad, rect(3)-pad, rect(4)-pad];
