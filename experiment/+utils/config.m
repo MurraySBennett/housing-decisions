@@ -250,8 +250,11 @@ cfg.testing.participant      = 9999;
 cfg.incentives = utils.incentives('config');
 
 % --- Styling ------------------------------------------------------------
+% utils.style reads $HW_THEME. This is the only place it is built; the
+% one place it is later MUTATED is utils.resolveFonts, called once per
+% task after the window opens. Everything else reads cfg.style at draw time.
 cfg.style = utils.style();
 
-cfg.codeVersion = 'hw-2026.07';
+cfg.codeVersion = 'hw-2026.09';
 
 end

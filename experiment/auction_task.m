@@ -38,6 +38,9 @@ rs  = RandStream('twister', 'Seed', run.seed);
 
 dataMat = struct();
 dataMat.domains = domainList;
+% Which visual theme this run was collected under. Without it a
+% session that was rolled back mid-way cannot be stratified later.
+dataMat.theme   = cfg.style.themeName;
 window = [];
 et = struct('enabled', false, 'obj', [], 'showGaze', false, 'analyzable', false);
 
@@ -62,6 +65,15 @@ try
     end
     utils.trace('window opened, handle=%g rect=[%s]', window, mat2str(winRect));
     Screen('BlendFunction', window, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');
+
+    % The window exists but nothing has been drawn yet, which is the
+    % only point at which fonts can be probed. This is the sole place
+    % cfg.style is mutated after utils.config builds it -- safe, since
+    % every consumer reads cfg.style at draw time.
+    cfg.style = utils.resolveFonts(window, cfg.style);
+    utils.trace('fonts: content=%s chrome=%s', ...
+        cfg.style.fontContent, cfg.style.fontChrome);
+
     Priority(MaxPriority(window));
     % Cursor stays visible throughout -- almost every screen in this task
     % is click-driven (grid boxes, detail panel, pricing arc / choice
