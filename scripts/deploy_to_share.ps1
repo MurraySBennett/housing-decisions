@@ -21,8 +21,23 @@
       - Nothing outside housing_wages\ is touched. The sibling directories on
         that share are other people's projects.
 
-    Run from Windows PowerShell:
-        powershell -ExecutionPolicy Bypass -File <this file>
+    Run from Windows PowerShell. NOT with -ExecutionPolicy Bypass -File:
+    this machine has MachinePolicy = AllSigned, which refuses that, and a
+    local -ExecutionPolicy argument cannot override a machine policy. Pipe
+    the text in as a command instead:
+
+        $PS = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+        & $PS -NoProfile -Command "Invoke-Expression (Get-Content -Raw -LiteralPath '<this file>')"
+
+    From WSL, where the repo lives, the same thing:
+
+        PS=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+        $PS -NoProfile -Command "Invoke-Expression (Get-Content -Raw -LiteralPath '\\\\wsl.localhost\\Ubuntu\\home\\msb\\projects\\housing-decisions\\scripts\\deploy_to_share.ps1')"
+
+    The share is reachable from Windows (the UNC resolves, nothing is
+    mapped) but NOT from WSL, which only has C: mounted -- so the copy has
+    to be driven from the Windows side, reading the repo over
+    \\wsl.localhost.
 #>
 
 $ErrorActionPreference = 'Stop'
