@@ -44,6 +44,11 @@ session-end rewrite — are in the global working agreement, not restated here.
   stimulus files to that allow-list rather than loosening the rule.
 - **Participant data never enters git.** `data/` is ignored and holds gaze and
   session files.
+- **Demo, analysis, and the RA guide are new surfaces.**
+  `experiment/demo_battery.m` walks every element in ~6 min into a sandbox
+  (`experiment/Data_demo/`), never the real `Data/` tree. `analysis/` is R and
+  reads the run CSVs only — see `analysis/README.md`. `docs/ra-setup-deck.html`
+  is the RA-facing session guide.
 - **This machine cannot run the experiment.** Verification here is static —
   `scripts/verify_static.sh` and `scripts/verify_matlab.m`. Anything needing
   Psychtoolbox, the eye tracker, or the rig display is lab work, and `WORK.md`

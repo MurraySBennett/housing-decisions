@@ -56,3 +56,11 @@ docs/articles/**/*.pdf
 # alone is 33MB, and GitHub rejects pushes over 100MB per file. Data belongs in
 # the project that produced it, but not in its git history.
 data/
+
+# Demo and analysis output. demo_battery.m writes a throwaway session tree;
+# run_all.R writes figures and combined CSVs. Both are regenerable from the
+# scripts that produce them, and the demo tree holds fake participant 9999
+# runs that must never be mistaken for data.
+experiment/Data_demo/
+analysis/Data_simulated/
+analysis/output/
