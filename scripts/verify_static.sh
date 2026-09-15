@@ -88,6 +88,45 @@ check_grep 'cfg\.auction\.nTrials' experiment/README.md 'auction trial knob docs
 check_grep 'cfg\.contdc\.nPairs\.houses' experiment/README.md 'house pair knob docs'
 check_grep 'JOBS_ARM' experiment/README.md 'jobs arm knob docs'
 
+# --- Restyle and theme invariants ---------------------------------------
+check_file experiment/+utils/roundRect.m
+check_file experiment/+utils/resolveFonts.m
+
+check_grep 'HW_THEME' experiment/+utils/style.m 'theme rollback switch'
+check_grep "case 'arcade'" experiment/+utils/style.m 'arcade rollback target still present'
+check_grep 'themeName' experiment/auction_task.m 'theme recorded in saved auction data'
+check_grep 'themeName' experiment/continuous_DC_task.m 'theme recorded in saved contdc data'
+check_grep 'utils\.resolveFonts' experiment/auction_task.m 'auction font probe wired'
+check_grep 'utils\.resolveFonts' experiment/continuous_DC_task.m 'contdc font probe wired'
+
+# roundRect draws a union of overlapping primitives, so a translucent
+# colour would be painted twice at the corners. The debug gaze dot is the
+# only 4-element colour in the codebase and must stay a DrawDots call.
+check_absent 'utils\.roundRect\(.*255 80 80 180' experiment/auction_task.m 'no translucent colour through roundRect'
+check_absent 'utils\.roundRect\(.*255 80 80 180' experiment/continuous_DC_task.m 'no translucent colour through roundRect'
+
+# The pixel font must not come back as a default: it was never installed
+# by the code and Windows substitutes for it silently.
+check_absent "s\.fontContent[[:space:]]*=[[:space:]]*'Press Start 2P'" experiment/+utils/style.m 'pixel font as content face'
+
+# No hardcoded text size anywhere -- the last one lived in elicitVAS.
+check_absent "Screen\('TextSize',[[:space:]]*window,[[:space:]]*[0-9]" experiment/+utils/elicitVAS.m 'hardcoded text size'
+
+# --- AOI geometry duplicated between the tasks and preflight.m ----------
+# preflight.m re-implements the layout functions by hand. If these drift
+# apart, the AOI check silently stops describing what is actually drawn.
+# These are the first automated checks on that duplication; they are worth
+# keeping whether or not the restyle survives.
+check_grep 'pad = 48;'  experiment/auction_task.m       'auction grid pad'
+check_grep 'pad = 48;'  experiment/preflight.m          'preflight grid pad (must match auction_task)'
+check_grep 'marg = 70;' experiment/continuous_DC_task.m 'contdc two-card margin'
+check_grep 'marg = 70;' experiment/preflight.m          'preflight two-card margin (must match contdc)'
+check_grep 'pad = 18;'  experiment/continuous_DC_task.m 'contdc card inner pad'
+check_grep 'pad = 18;'  experiment/preflight.m          'preflight card inner pad (must match contdc)'
+check_grep 's\.hud\.heightPx[[:space:]]*=[[:space:]]*64;' experiment/+utils/style.m 'HUD height feeds every AOI layout'
+
+check_grep 'Theme' experiment/README.md 'theme knob docs'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

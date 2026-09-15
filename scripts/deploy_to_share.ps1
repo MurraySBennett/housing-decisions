@@ -12,8 +12,9 @@
       - Every file is named explicitly or enumerated from a named directory.
         There is no mirror, no /MIR, no sync, and no delete anywhere in here.
         A file on the share that this script does not name is left untouched.
-      - It refuses to run if the backup directory already exists, rather than
-        overwriting a previous backup.
+      - The backup directory is timestamped to the second, so it never
+        collides with an earlier deploy. It still refuses to run if that
+        exact path somehow exists, rather than overwriting a backup.
       - Participant data (Experiment\Data) and the 605MB house image set
         (Experiment\stimuli\house_images) are never read, written, or backed
         up. They are excluded by name, not by hoping the manifest misses them.
@@ -29,7 +30,11 @@ $ErrorActionPreference = 'Stop'
 $SRC = '\\wsl.localhost\Ubuntu\home\msb\projects\housing-decisions'
 $HW  = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages'
 $EXP = Join-Path $HW 'Experiment'
-$BK  = Join-Path $HW 'Archive\Experiment_pre-2026-09-15'
+# Timestamped, so a second deploy on the same day does not collide with
+# the first. The hardcoded 2026-09-15 name meant the script threw on its
+# own second run -- which is a failure you discover at deploy time, i.e.
+# the worst possible moment.
+$BK  = Join-Path $HW ('Archive\Experiment_pre-' + (Get-Date -Format 'yyyy-MM-dd_HHmmss'))
 
 # Directories under Experiment\ that this script must never read or write.
 $NEVER = @('Data', 'stimuli\house_images')

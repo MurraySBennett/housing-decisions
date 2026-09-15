@@ -6,31 +6,62 @@ project: housing-decisions
 
 ## Now
 
-**Code is deployed to the lab share and the RA-facing work is half done.** The
-share now carries the current experiment code plus the R analysis; the RA deck
-is written but stayed local because it needs another pass. The deploy was a
-manual explicit-manifest copy, which is a stopgap — see the `infra` stream, and
-do not let it become the normal way code reaches that machine.
+**The task changes Murray asked for are in; none of it has ever been
+executed.** 2026-09-15, after reviewing `demo_battery`: three of her six
+complaints turned out to be `DEMO_FAST` artefacts and were deliberately left
+alone (real auction pacing is 36 s dwell / 12 s arrivals under high
+competition, 90 s timeout -- the demo compresses those ~7x). The other three
+were real and are fixed, plus two problems the audit found that she hadn't
+raised.
 
-**The experiment is code-complete; a demo path, an analysis path, and an RA
-guide now exist alongside it.** New on 2026-09-15: `experiment/demo_battery.m`
-(every participant-facing element in ~6 min, into a sandbox that is never the
-real `Data/` tree), `analysis/` in R (reads the run CSVs, prints an integrity
-report, writes ten descriptive figures, and can run on simulated data with no
-MATLAB at all), and `docs/ra-setup-deck.html` (the session guide for a new RA).
-The analysis pipeline is verified end to end on simulated data; the demo script
-is **verified statically only** — this machine has no MATLAB, so its first real
-run on the rig is the test. Everything still gating collection is unchanged:
-settle the conditions, stand up REP, book rig time, rehearse. The bar is still
-that **it has to run seamlessly and pleasantly.**
+**What changed:** job cards no longer show a title -- under the default
+`synthetic` arm every header read `Healthcare - title_001` -- so only
+`industry` is drawn, reversibly. The late tier is now reserved *inside*
+`nAttrs` instead of appended after it, so attribute level 6 renders 6 cells
+rather than 7; this fixes both a mislabelled load condition in the saved data
+and a position confound where the isolated bottom-left cell was always
+`Region` / `Work arrangement`. The value attribute is no longer colour-
+emphasised inside the attribute grid. And the whole battery is restyled:
+warm charcoal-plum ground, dusty rose accent, rounded corners, thinner
+strokes, humanist type in place of the pixel font.
+
+**The ground deliberately stayed dark.** A light theme would have been softer
+still but would have raised relative luminance ~25x, flooring the pupil and
+forfeiting pupillometry permanently. The restyle is a hue-and-shape change,
+not a physiological one.
+
+**Everything is verified statically only** -- `scripts/verify_static.sh`
+passes, this machine has no MATLAB, and the first real execution of any of it
+is at the rig. Run `scripts/verify_matlab.m` there *first*: it asserts
+`pfAoi.allAoiOK`, which is the check that catches a geometry change that was
+not mirrored into `preflight.m`. Rollback is `setenv('HW_THEME','arcade')`
+before `run_battery`, or reverting the single commit that flipped the default.
+
+**Still gating collection, unchanged:** settle the conditions, stand up REP,
+book rig time, rehearse. The bar is still that **it has to run seamlessly and
+pleasantly.**
 
 ## Streams
 
 ### experiments
+- [x] 2026-09-15 fixed three task-design problems found before the pilot:
+  dropped the job title from the card header (the `synthetic` arm renders it
+  as `title_001`), reserved the late tier inside `nAttrs` so attribute level 6
+  is 6 cells and not 7, and stopped colour-emphasising wage/price inside the
+  attribute grid
+- [x] 2026-09-15 restyled the battery: warm dark theme, rounded panels via a
+  new `+utils/roundRect.m`, run-time font probing via `+utils/resolveFonts.m`,
+  and `+utils/style.m` restructured as an `HW_THEME` switch with the original
+  look kept verbatim as `arcade`. Statically verified only
+- [ ] now (S) first real execution of all of the above, at the rig:
+  `scripts/verify_matlab.m` (asserts `allAoiOK`), then `preflight`, then
+  `demo_battery` -- budget 20 minutes for the demo, not 6. Look hardest at
+  the price arc and the VAS line, which are where the softer palette was most
+  likely to have gone too far
 - [ ] now (M) settle the conditions and design — which PLAN rows, which `JOBS_ARM` (three are prepared and committed: `attenuated`, `ecological`, `synthetic`), `attrLevels`, `nTrials`/`nPairs`. The knob table is in review section D. Check the choice against `docs/grant/Wage_and_House_Pricing_Model_Grant_Proposal.pdf` — the proposal may already commit to conditions, and diverging from it silently is worse than diverging deliberately. **This gates everything downstream**
 - [ ] now (S) write down what "runs seamlessly and pleasantly" means as checkable criteria *before* the rehearsal, so the dress run has a pass/fail bar rather than a vibe. Candidates: no visible stutter between trials, no dead time a participant would read as a crash, every instruction understood without asking, a mis-click always recoverable, and the participant always able to tell where they are and how much is left
 - [ ] next (S) run `preflight.m` against the finalised design and check the block schedule and estimated duration are tolerable to sit through — it prints both
-- [ ] next (L) dress rehearsal on the lab rig, once conditions are settled: confirm monitor diagonal and viewing distance in `rigProfiles`, install `Press Start 2P`, then one full TESTING run **and** one full real-mode run as a throwaway participant. Open the saved `.mat`, `.csv` and gaze files afterwards and check every field before participant 1
+- [ ] next (L) dress rehearsal on the lab rig, once conditions are settled: confirm monitor diagonal and viewing distance in `rigProfiles`, then one full TESTING run **and** one full real-mode run as a throwaway participant. Open the saved `.mat`, `.csv` and gaze files afterwards and check every field before participant 1
 - [ ] now (S) run `demo_battery` on a machine with MATLAB and fix whatever it
   hits — it is committed unrun, and the first execution is its only real test.
   Then `Rscript analysis/R/run_all.R --data experiment/Data_demo` to confirm the

@@ -276,10 +276,11 @@ estimated duration.
 | `cfg.auction.nOptionsPerTrial` | 12 | `+utils/config.m` | Search-set size per auction episode; repeats are planned/logged if needed. |
 | `cfg.auction.trialTimeoutSec` | 90 | `+utils/config.m` | Main driver of auction duration. |
 | Auction practice | 1 saved practice episode before real trials | `auction_task.m` | Keeps practice analyzable/excludable via `practice=true`. |
-| `cfg.attrLevels` | `[2 4 6]` | `+utils/config.m` | Continuous/DC information-load manipulation. |
+| `cfg.attrLevels` | `[2 4 6]` | `+utils/config.m` | Continuous/DC information-load manipulation. Counts include both the core attribute and, at the top level, the late-tier one, so a level of 6 renders exactly 6 cells. |
 | `cfg.contdc.nPairs.houses` | 6 | `+utils/config.m` | Fits mid-range house stimulus windows without cross-level reuse. |
 | `cfg.contdc.nPairs.jobs` | 10 | `+utils/config.m` | Uses the larger, less memorable jobs stimulus supply. |
 | `cfg.contdc.allowCrossLevelReuse` | `false` | `+utils/config.m` | Blocks the same item appearing at multiple attribute levels. |
+| Theme | `warm` | `+utils/style.m`, or `setenv('HW_THEME','arcade')` | Warm/rounded vs. the original dark arcade look. Geometry is identical between themes -- only colour, radius, stroke and font differ -- so switching cannot move an AOI. Recorded as `dataMat.theme` on every run. |
 
 ## Debugging tools
 
@@ -427,8 +428,14 @@ before you trust them.
   the dataset derives from these two numbers.
 - `+utils/style.m`'s audio hooks (`blip_click.wav` etc.) reference files
   that don't exist yet.
-- `Press Start 2P` needs installing on the lab machine or the HUD silently
-  falls back to Courier.
+- Fonts are now probed at run time by `+utils/resolveFonts.m`, which picks
+  the first family in `s.fontContentPref` / `s.fontChromePref` that is
+  genuinely installed, and prints what it resolved to via `utils.trace`.
+  The `warm` theme's defaults (`Segoe UI`) ship with every Windows, so no
+  manual font install is required any more. The probe detects substitution
+  by measuring a probe string, since Windows GDI substitutes silently and
+  `Screen('TextFont', window)` echoes back what you asked for rather than
+  what you got.
 - Trial/block counts (`cfg.auction.nTrials`, `cfg.contdc.nPairs`) are best
   guesses, not yet piloted -- and the fixation-start gate on every trial
   adds real time per trial that wasn't in the original 45-minute budget
