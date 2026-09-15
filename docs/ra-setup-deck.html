@@ -460,7 +460,9 @@
         <li>Check the eye tracker is connected and the desktop calibration utility sees it.</li>
         <li>Close everything else. Browsers and Teams notifications land on top of a full-screen Psychtoolbox window.</li>
       </ul>
-      <pre><span class="c">%% in MATLAB, from the experiment folder</span>
+      <pre><span class="c">%% in MATLAB, on the lab machine</span>
+cd <span class="k">'\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment'</span>
+
 preflight(<span class="k">12</span>, <span class="k">1</span>, <span class="k">'rig'</span>, <span class="k">'lab'</span>)   <span class="c">% participant 12, session 1</span>
 utils.verifyPaths(utils.config(<span class="k">'rig'</span>, <span class="k">'lab'</span>))
 utils.checkImages(utils.config(<span class="k">'rig'</span>, <span class="k">'lab'</span>), <span class="k">'houses'</span>)</pre>
@@ -609,6 +611,26 @@ utils.checkImages(utils.config(<span class="k">'rig'</span>, <span class="k">'la
         <li class="step"><span class="n">05</span><span><span class="what">Write down what was on screen.</span> <span class="why">The crash file records the error, not what the participant was doing when it happened.</span></span></li>
       </ol>
       <div class="takeaway step">To resume a participant later, run the same participant ID again. The manifest picks up where they left off.</div>
+    </section>
+
+    <section class="slide" data-section="After">
+      <span class="eyebrow">After</span>
+      <h2>Which copy you are on<span class="sep">·</span><span class="sub">There is more than one</span></h2>
+      <p class="lede">The experiment exists in two places, and they are not interchangeable. Knowing which one you are looking at prevents most of the confusion a new RA runs into.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Copy</th><th>Lives on</th><th>What it is for</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">Lab share</td><td class="mono">\\asc-files&hellip;\PSY-kvam.4</td><td>The copy you run sessions from. Holds the house images and every participant's data.</td></tr>
+            <tr><td class="mono">Repository</td><td class="mono">github.com/MurraySBennett</td><td>Where the code is written and versioned. No images, no participant data, ever.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note caution step">
+        <span class="label">The rule</span>
+        You run from the share. You do not edit the share. Code changes are made in the repository and arrive on the share deliberately, so that the two never quietly disagree about what the experiment does.
+      </div>
+      <div class="takeaway step">Participant data only ever lives on the share. It does not go in the repository, into email, or onto a personal laptop.</div>
     </section>
 
     <section class="slide" data-section="After">

@@ -72,8 +72,12 @@ utils.trace(utils.ternary(TRACE, 'on', 'off'));
 % directories as a side effect of being called. On a laptop with no share
 % that either errors or hangs on a network timeout, so resolve a root that
 % actually exists before calling startSession rather than repairing it after.
+% isfolder, not exist(...,'dir'): exist searches the MATLAB path for the name
+% first and is unreliable on UNC paths, which is exactly what this is. Note
+% this call can block for ~20s on the SMB timeout if the machine is off the
+% OSU network -- that is the network, not a hang.
 shareRoot = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4';
-if exist(shareRoot, 'dir')
+if isfolder(shareRoot)
     demoRoot = shareRoot;           % lab machine: keep the real Tobii path
     fprintf('Lab share found; using it for the Tobii SDK path.\n');
 else
@@ -107,7 +111,7 @@ cfg.paths.prepared   = fullfile(cfg.paths.stimuli, 'prepared');
 % Images: prefer a local copy, fall back to whatever cfg already resolved
 % (the share, if this is the lab machine and it's mounted).
 localImages = fullfile(cfg.paths.stimuli, 'house_images');
-if exist(localImages, 'dir')
+if isfolder(localImages)
     cfg.paths.images = localImages;
 end
 
@@ -126,17 +130,17 @@ cfg.paths.crashed          = fullfile(demoData, 'Crashes');
 demoDirs = {cfg.paths.sessions, cfg.paths.taskData.auction, ...
             cfg.paths.taskData.contdc, cfg.paths.gaze, cfg.paths.crashed};
 for k = 1:numel(demoDirs)
-    if ~exist(demoDirs{k}, 'dir'), mkdir(demoDirs{k}); end
+    if ~isfolder(demoDirs{k}), mkdir(demoDirs{k}); end
 end
 
 % startSession computed the manifest path from the OLD cfg, so it has to be
 % recomputed now or the demo would append to the real manifest.
 sess.manifestFile = fullfile(cfg.paths.sessions, ...
     sprintf('sub-%05d_manifest.mat', sess.participant));
-if ~strcmp(strayManifest, sess.manifestFile) && exist(strayManifest, 'file')
+if ~strcmp(strayManifest, sess.manifestFile) && isfile(strayManifest)
     delete(strayManifest);          % only ever the demo ID's, just created
 end
-if exist(sess.manifestFile, 'file'), delete(sess.manifestFile); end
+if isfile(sess.manifestFile), delete(sess.manifestFile); end
 manifest = struct('participant', sess.participant, ...
     'createdAt', char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')), ...
     'runs', struct('task',{},'sessionNum',{},'runId',{},'domainOrderStr',{}, ...
@@ -147,13 +151,13 @@ sess.manifest = manifest;
 
 %% ---- Domain availability check ----------------------------------------
 domain = lower(char(DEMO_DOMAIN));
-if strcmp(domain, 'houses') && ~exist(cfg.paths.images, 'dir')
+if strcmp(domain, 'houses') && ~isfolder(cfg.paths.images)
     fprintf(2, ['\n*** House images not found at:\n      %s\n' ...
         '    Falling back to the jobs domain for this demo. See STIMULI.md\n' ...
         '    for where the ~605MB image set lives.\n\n'], cfg.paths.images);
     domain = 'jobs';
 end
-if ~exist(cfg.stimFiles.(domain), 'file')
+if ~isfile(cfg.stimFiles.(domain))
     error('demo_battery:noStimuli', ...
         'Stimulus file missing for domain "%s":\n    %s', domain, cfg.stimFiles.(domain));
 end
@@ -238,7 +242,7 @@ function markDemoFile(matFile)
 %MARKDEMOFILE  Stamp demo = true on a saved run so it can never be mistaken
 %   for pilot or participant data, even if the file is moved out of the
 %   sandbox directory.
-if ~exist(matFile, 'file'), return; end
+if ~isfile(matFile), return; end
 S = load(matFile, 'dataMat');
 dataMat = S.dataMat;
 dataMat.demo = true;                                        %#ok<STRNU>

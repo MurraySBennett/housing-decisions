@@ -65,3 +65,26 @@ changed and the other did not.
   pair. Its `n` is scorable pairs, not trials — the figure says so.
 - Simulated data is a crude stand-in with the manipulations hard-coded into
   the generating lines. Nothing produced from it is a result.
+
+## Running this on Windows
+
+The analysis has only been run on WSL. Nothing in it is platform-specific --
+every path goes through `file.path()` -- but two things need saying.
+
+**Installing R.** The lab machine needs R and these packages. R is not required
+to *run* a session, only to analyse one.
+
+```r
+install.packages(c("dplyr", "readr", "tidyr", "stringr", "purrr",
+                   "ggplot2", "scales", "tibble"))
+```
+
+**Pointing at the share.** Use forward slashes; R accepts them on Windows and
+they avoid the escaping problem backslashes create in R strings.
+
+```bash
+Rscript analysis/R/run_all.R --data "//asc-files.asc.ohio-state.edu/projects/PSY-kvam.4/housing_wages/Experiment/Data"
+```
+
+Reading several hundred small CSVs over SMB is slow. Copy the `Data` tree
+locally first if you are iterating on a figure.
