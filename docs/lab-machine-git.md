@@ -81,16 +81,14 @@ type $env:USERPROFILE\.ssh\housing_deploy.pub
 
 Paste the public key at
 `github.com/MurraySBennett/housing-decisions/settings/keys/new`, title it
-`kvam lab rig`, and **leave "Allow write access" unchecked**. Then point ssh
-at it:
+`kvam lab rig`, and **leave "Allow write access" unchecked**.
+
+Point git at the key with a repo-local setting rather than a global ssh
+config — one line, scoped to this checkout, nothing else on the machine
+affected. It is set in step 4, after `git init`:
 
 ```powershell
-Add-Content $env:USERPROFILE\.ssh\config @"
-Host github-housing
-  HostName github.com
-  User git
-  IdentityFile ~/.ssh/housing_deploy
-"@
+git config core.sshCommand "ssh -i $env:USERPROFILE\.ssh\housing_deploy"
 ```
 
 The lab machine now pulls and never pushes. Edits happen on the dev machine
@@ -133,16 +131,18 @@ empty. Attach a repo to what is already there instead:
 ```powershell
 cd \\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages
 git init
-git remote add origin github-housing:MurraySBennett/housing-decisions.git
+git config core.sshCommand "ssh -i $env:USERPROFILE\.ssh\housing_deploy"
+git remote add origin git@github.com:MurraySBennett/housing-decisions.git
 git fetch origin
 git checkout -b main --track origin/main -f
 git status
 ```
 
 `-f` overwrites the share's working files with the repo's. That is the
-intent — they were deployed from this repo and should already match — but
-**run `deploy_to_share.ps1` first anyway**, purely for its Phase 1 backup
-into `Archive\`, so there is a timestamped copy if the assumption is wrong.
+intent — they were deployed from this repo and should already match. There
+is a fresh `Archive\Experiment_pre-*` backup from the last deploy either
+way; if in doubt run `deploy_to_share.ps1` again first, purely for its
+Phase 1 backup.
 
 Expect `git status` to come back clean apart from untracked directories.
 `Archive/`, `screen_recordings/`, `Experiment/Data/` and
