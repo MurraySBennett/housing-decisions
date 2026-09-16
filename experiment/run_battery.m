@@ -43,7 +43,7 @@ TESTING  = false;      % true = windowed, no prompts, participant 9999
 % sets the auction's TOTAL rather than its per-cell count, and which only
 % applies when TESTING is on and therefore drags windowed mode and skipped
 % elicitation along with it.
-TRIALS_PER_CELL = 2;   % <-- set to [] for a full participant run
+TRIALS_PER_CELL = [];   % <-- [] IS the full participant run; an integer shortens it
 JOBS_ARM = 'synthetic'; % 'synthetic' | 'ecological' | 'attenuated'
 TRACE    = false;       % true = print a timestamped line at every major
                         % checkpoint (window open, stimuli loaded, each

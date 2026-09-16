@@ -44,9 +44,18 @@ it is at the rig. Run `scripts/verify_matlab.m` there *first*: it asserts
 `pfAoi.allAoiOK`, the check that catches a geometry change not mirrored into
 `preflight.m`.
 
-**Rehearsal mode is still the default in `run_battery.m`**
-(`TRIALS_PER_CELL = 2`): ~18 min per session against ~57 for the full study.
-**Set it back to `[]` before participant 1.**
+**`run_battery.m` is now set to a full participant run** -- 2026-09-16,
+`TRIALS_PER_CELL = []`, for the staff practice run. All five switches are
+at real-participant settings: `RIG = 'lab'`, `TESTING = false`,
+`FORCE_DOMAIN = ''`, `EYETRACKING = true`, `JOBS_ARM = 'synthetic'`. That
+means session 1 is jobs (12 auction trials + 90 contdc) and session 2 is
+houses (12 + 54), on separate sittings, exactly as PLAN has them.
+
+**These practice runs are indistinguishable from real ones in the data
+tree.** `dataMat.trialsPerCell` was what made a short rehearsal filterable;
+at `[]` there is no marker. Use a reserved participant number for the staff
+runs (9001+) and record which IDs were staff, or they will have to be
+identified by memory later.
 
 **Still gating collection, unchanged:** settle the conditions, stand up REP,
 book rig time, rehearse. The bar is still that **it has to run seamlessly and
@@ -55,6 +64,12 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-16 set `TRIALS_PER_CELL = []` in `run_battery.m` for the
+  staff practice run -- full trial counts, everything else already real.
+  Note this locks in the *current* config as the baseline while the
+  conditions task below is still open: `nTrials = 12`, `nPairs` 6 houses /
+  10 jobs, `attrLevels = [2 4 6]`, `JOBS_ARM = 'synthetic'`. If any of
+  those move afterwards, the practice run does not describe the real one
 - [x] 2026-09-16 fixed the invisible cursor on the auction's comprehension
   check. `utils.elicitVAS` ended with `HideCursor`, elicitation runs before
   the instructions, and nothing showed it again -- so the two-box check was
