@@ -411,6 +411,10 @@ trial.threshold   = NaN;
 trial.trueValue   = NaN;
 trial.bidStimIdx  = NaN;
 trial.bidRT       = NaN;
+% NaN on any trial that never reached the bid screen -- a timeout, an
+% exhausted market, or a cancelled bid. Must be defaulted here or
+% buildTrialTable hits a missing field on exactly those trials.
+trial.bidStartFrac = NaN;
 trial.endReason   = 'exhausted';
 
 % Fixation-start gate: sets a known gaze anchor before the episode begins,
@@ -535,8 +539,8 @@ while true
     [threshold, trueValue] = utils.marketThreshold(itemValue, planRow.competition, ...
                                                 domain, cfg, rs);
 
-    [bid, bidRT, gazeStore, log] = getBid(window, cfg, et, log, gazeStore, ...
-        stimTbl, sel, A, stimIdx, domain, planRow, nTrials, win);
+    [bid, bidRT, bidStartFrac, gazeStore, log] = getBid(window, cfg, et, log, ...
+        gazeStore, stimTbl, sel, A, stimIdx, domain, planRow, nTrials, win, rs);
 
     if isnan(bid)
         continue
@@ -550,8 +554,9 @@ while true
     isHouse  = strcmpi(domain, 'houses');
     accepted = utils.ternary(isHouse, bid >= threshold, bid <= threshold);
 
-    trial.bid        = bid;
-    trial.bidRT      = bidRT;
+    trial.bid          = bid;
+    trial.bidRT        = bidRT;
+    trial.bidStartFrac = bidStartFrac;
     trial.threshold  = threshold;
     trial.trueValue  = trueValue;
     trial.bidStimIdx = stimIdx;
@@ -827,8 +832,8 @@ end
 
 
 %% ======================================================================
-function [bid, rt, gazeStore, log] = getBid(window, cfg, et, log, gazeStore, ...
-    stimTbl, sel, A, idx, domain, planRow, nTrials, win)
+function [bid, rt, startFrac, gazeStore, log] = getBid(window, cfg, et, log, gazeStore, ...
+    stimTbl, sel, A, idx, domain, planRow, nTrials, win, rs)
 %GETBID  Semicircular continuous price scale.
 %
 %   Two fixes. The scale maximum now comes from the sampled WINDOW rather
@@ -848,8 +853,9 @@ scaleMax = win.scaleMax;
 
 % The advertised figure for THIS option, for the scale marker below.
 % Recomputed here rather than passed in: the caller has it, but threading
-% one more argument through a 13-argument signature is how signatures rot.
-itemValue = stimTbl.(A.valueVar)(stimIdx);
+% one more argument through an already-long signature is how signatures rot.
+% NOTE the parameter here is `idx`, not the caller's `stimIdx`.
+itemValue = stimTbl.(A.valueVar)(idx);
 
 cx = W/2; cy = H * 0.80;
 % Was min(W*0.40, H*0.62), which put the topmost tick LABEL within a few
@@ -866,8 +872,29 @@ nTicks = 5;
 tickVals = linspace(scaleMin, scaleMax, nTicks);
 
 bid = NaN; rt = NaN;
+
+% RANDOMISED START. The cursor used to begin at the arc apex -- the
+% midpoint of the scale -- on every trial. There is no "no anchor" option
+% here: the cursor must start somewhere, and wherever it starts pulls
+% responses. The only question is whether the start point carries
+% information.
+%
+% A constant midpoint is a nuisance anchor; it shifts every bid the same
+% way and lands in an intercept. Starting at the advertised value would be
+% much worse, because the anchor would then covary with the main predictor
+% of the bid and manufacture part of the very effect being measured. A
+% random start has no systematic pull, which turns residual anchoring into
+% noise instead of bias.
+%
+% startFrac is returned and saved per trial. Randomising without recording
+% it would waste the design -- the point is that any residual pull toward
+% the start becomes measurable rather than baked in.
+%
+% Drawn from the auction's PRIVATE stream, not the global one.
+startFrac = rand(rs);
 t0 = GetSecs;
-SetMouse(round(cx), round(cy - innerR), window);
+SetMouse(round(cx + innerR*cos(pi + startFrac*pi)), ...
+         round(cy + innerR*sin(pi + startFrac*pi)), window);
 
 while true
     % Bid screen stays clean too -- competition level was already shown on
@@ -1300,7 +1327,8 @@ for d = 1:numel(dataMat.domains)
     for t = 1:numel(Tr)
         rows{end+1} = { dom, Tr(t).trial, Tr(t).practice, Tr(t).competition, Tr(t).nAttrs, ...
             Tr(t).nPresented, Tr(t).nRejected, rejectedList(Tr(t).rejected), Tr(t).duration, ...
-            Tr(t).bidAccepted, Tr(t).bid, Tr(t).bidRT, Tr(t).threshold, Tr(t).pricePaid, ...
+            Tr(t).bidAccepted, Tr(t).bid, Tr(t).bidRT, Tr(t).bidStartFrac, ...
+            Tr(t).threshold, Tr(t).pricePaid, ...
             Tr(t).trueValue, Tr(t).bidStimIdx, Tr(t).endReason, ...
             dataMat.(dom).anchor }; %#ok<AGROW>
     end
@@ -1308,8 +1336,8 @@ end
 if isempty(rows), T = table(); return; end
 M = vertcat(rows{:});
 T = cell2table(M, 'VariableNames', {'domain','trial','practice','competition','nAttrs', ...
-    'nPresented','nRejected','rejectedStimIdx','durationSec','bidAccepted','bid','bidRT','threshold', ...
-    'pricePaid','trueValue','bidStimIdx','endReason','anchor'});
+    'nPresented','nRejected','rejectedStimIdx','durationSec','bidAccepted','bid','bidRT', ...
+    'bidStartFrac','threshold','pricePaid','trueValue','bidStimIdx','endReason','anchor'});
 end
 
 

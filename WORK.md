@@ -57,6 +57,13 @@ pleasantly.**
   thinner scale ticks; live price moved above the arc instead of inside it;
   advertised-value marker on the pricing scale; rejected stimulus indices
   added to the auction CSV; quit key announced on every instruction screen
+- [x] 2026-09-16 randomised the pricing-arc start position in both tasks and
+  recorded it (`bidStartFrac` / `startFrac`). The cursor used to begin at the
+  scale midpoint every trial, which is a constant nuisance anchor; starting it
+  at the advertised value would have been worse, since the anchor would then
+  covary with the main predictor of the response. Random is the only start
+  that cannot bias an estimate, and logging it keeps residual anchoring
+  testable rather than baked in
 - [ ] now (S) **decide whether to keep `cfg.display.showValueMarker`.** It was
   asked for and it is on, but marking the listed price on the response scale
   is an anchor on the dependent variable under BDM. Worth a deliberate call
