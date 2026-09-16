@@ -60,6 +60,30 @@ pfAoi = preflight(2, 1, 'projRoot', expDir, 'rig', 'lab', ...
 assert(isfield(pfAoi, 'allAoiOK') && pfAoi.allAoiOK, ...
     'preflight lab AOI checks must pass');
 
+% Rehearsal mode must shorten the run and change NOTHING else. The two
+% properties worth asserting are that it actually shortens the duration
+% estimate, and that it stays independent of testing mode -- the whole
+% point is a short run that is otherwise the real thing.
+cfgFull = utils.config('projRoot', tmpRoot, 'rig', 'lab');
+cfgReh  = utils.config('projRoot', tmpRoot, 'rig', 'lab', 'trialsPerCell', 2);
+assert(isempty(cfgFull.rehearsal.trialsPerCell), ...
+    'a full run must leave cfg.rehearsal.trialsPerCell empty');
+assert(cfgReh.rehearsal.trialsPerCell == 2, 'rehearsal knob must reach cfg');
+assert(~cfgReh.testing.enabled, ...
+    'rehearsal mode must NOT turn on testing mode');
+assert(~cfgReh.testing.windowed, ...
+    'rehearsal mode must stay full screen');
+assert(isequal(cfgReh.auction.nTrials, cfgFull.auction.nTrials), ...
+    'rehearsal must not mutate the full-study counts in cfg itself');
+
+pfFull = preflight(2, 1, 'projRoot', expDir, 'rig', 'dev', 'runChecks', false);
+pfReh  = preflight(2, 1, 'projRoot', expDir, 'rig', 'dev', ...
+    'runChecks', false, 'trialsPerCell', 2);
+assert(pfReh.estimatedMinutes < pfFull.estimatedMinutes, ...
+    'a rehearsal run must be estimated shorter than a full one');
+assert(numel(pfReh.resolvedPlan) == numel(pfFull.resolvedPlan), ...
+    'rehearsal must not change which plan rows a participant runs');
+
 fprintf('verify_matlab: ok\n');
 end
 

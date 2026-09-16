@@ -46,6 +46,10 @@ dataMat.domains = domainList;
 % Which visual theme this run was collected under. Without it a
 % session that was rolled back mid-way cannot be stratified later.
 dataMat.theme   = cfg.style.themeName;
+% [] on a full study run; an integer on a shortened rehearsal. A
+% rehearsal saves into the real Data tree like any other run, so
+% this is what keeps it filterable out of the analysis later.
+dataMat.trialsPerCell = cfg.rehearsal.trialsPerCell;
 window = [];
 
 try
@@ -182,6 +186,13 @@ try
         % full set of stimuli that will ever be shown BEFORE loading any
         % images, instead of loading per block.
         nPairsThisRun = cfg.contdc.nPairs.(lower(domain));
+        if ~isempty(cfg.rehearsal.trialsPerCell)
+            % contdc's design cells are attribute level x task type, and
+            % nPairs is already per level, so this maps straight across.
+            % A price block prices BOTH options of every pair, so it still
+            % yields twice a choice block's trials at the same nPairs.
+            nPairsThisRun = cfg.rehearsal.trialsPerCell;
+        end
         if cfg.testing.enabled
             nPairsThisRun = cfg.testing.nTrialsPerType;
         end

@@ -280,6 +280,7 @@ estimated duration.
 | `cfg.contdc.nPairs.houses` | 6 | `+utils/config.m` | Fits mid-range house stimulus windows without cross-level reuse. |
 | `cfg.contdc.nPairs.jobs` | 10 | `+utils/config.m` | Uses the larger, less memorable jobs stimulus supply. |
 | `cfg.contdc.allowCrossLevelReuse` | `false` | `+utils/config.m` | Blocks the same item appearing at multiple attribute levels. |
+| `TRIALS_PER_CELL` | `2` | `run_battery.m` | Dress-rehearsal knob. `[]` = the full study; an integer = that many trials in every design cell and **nothing else changes** (full screen, real pacing, real elicitation, instructions and practice, real participant number). Auction cells are the two competition levels, so N per cell means 2N trials; contdc cells are attribute level x task type, so it maps straight onto `nPairs`. Not the same as `cfg.testing.nTrialsPerType`, which sets the auction's *total* and only applies in developer mode. Saved as `dataMat.trialsPerCell`. |
 | Theme | `warm` | `+utils/style.m`, or `setenv('HW_THEME','arcade')` | Warm/rounded vs. the original dark arcade look. Geometry is identical between themes -- only colour, radius, stroke and font differ -- so switching cannot move an AOI. Recorded as `dataMat.theme` on every run. |
 
 ## Debugging tools

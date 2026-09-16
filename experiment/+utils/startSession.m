@@ -25,6 +25,8 @@ p.addParameter('participant', [], @(x) isempty(x) || isnumeric(x));
 p.addParameter('session',     [], @(x) isempty(x) || isnumeric(x));
 p.addParameter('domain',      [], @(x) isempty(x) || (isnumeric(x) && ismember(x,1:3)));
 p.addParameter('testing',     false, @islogical);
+p.addParameter('trialsPerCell', [], @(x) isempty(x) || ...
+    (isnumeric(x) && isscalar(x) && x >= 1 && x == round(x)));
 % Empty means "use the rig profile's default" -- only an EXPLICIT true/false
 % here overrides it. The old default of `true` meant any bare call to
 % startSession() silently forced eye tracking on even on the 'dev' rig,
@@ -43,7 +45,8 @@ opt = p.Results;
 % was passed here: utils.config() previously took no testing/rig argument at
 % all, so opt.testing never reached the struct the tasks actually read.
 cfg = utils.config('projRoot', opt.projRoot, 'rig', opt.rig, ...
-                'testing', opt.testing, 'jobsArm', opt.jobsArm);
+                'testing', opt.testing, 'jobsArm', opt.jobsArm, ...
+                'trialsPerCell', opt.trialsPerCell);
 
 % eyeTracking/showEyePos were computed onto sess.eyeTracking/sess.showEyePos
 % below but NOTHING ever read those fields -- cfg.et.enabled came only from

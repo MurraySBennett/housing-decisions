@@ -41,6 +41,10 @@ dataMat.domains = domainList;
 % Which visual theme this run was collected under. Without it a
 % session that was rolled back mid-way cannot be stratified later.
 dataMat.theme   = cfg.style.themeName;
+% [] on a full study run; an integer on a shortened rehearsal. A
+% rehearsal saves into the real Data tree like any other run, so
+% this is what keeps it filterable out of the analysis later.
+dataMat.trialsPerCell = cfg.rehearsal.trialsPerCell;
 window = [];
 et = struct('enabled', false, 'obj', [], 'showGaze', false, 'analyzable', false);
 
@@ -183,6 +187,14 @@ try
 
         % ---- trial plan -------------------------------------------
         nTrials = cfg.auction.nTrials;
+        if ~isempty(cfg.rehearsal.trialsPerCell)
+            % The auction's design cells are the two competition levels,
+            % and utils.trialPlan balances them by alternating, so N per
+            % cell means 2N trials. This is what cfg.testing.nTrialsPerType
+            % gets wrong: it sets the TOTAL, so asking for 2 there gives
+            % one trial per competition level, not two.
+            nTrials = cfg.rehearsal.trialsPerCell * 2;
+        end
         if cfg.testing.enabled
             nTrials = cfg.testing.nTrialsPerType;
         end

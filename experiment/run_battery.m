@@ -25,6 +25,25 @@ KbName('UnifyKeyNames');
 %% ---- Experimenter settings -------------------------------------------
 RIG      = 'lab';     % 'lab' or 'dev' -- see utils.rigProfiles
 TESTING  = false;      % true = windowed, no prompts, participant 9999
+
+% Dress-rehearsal knob. [] = the full study. An integer = that many trials
+% in EVERY design cell, and nothing else changes: full screen, real
+% pacing, real elicitation, real instructions, real practice, real
+% participant number, eye tracker on. Going to a full participant run is
+% exactly one edit -- set this back to [].
+%
+% "Cell" means one combination of the manipulated factors, so the number
+% means the same thing in both tasks:
+%   auction -- competition low/high      -> 2 trials each = 4 total
+%   contdc  -- 3 attribute levels x 2 task types, per domain
+%              -> 2 pairs per level = 2 choice + 4 price trials per level
+%                 (a price block prices both options of every pair)
+%
+% This is NOT cfg.testing.nTrialsPerType, which is a developer knob that
+% sets the auction's TOTAL rather than its per-cell count, and which only
+% applies when TESTING is on and therefore drags windowed mode and skipped
+% elicitation along with it.
+TRIALS_PER_CELL = 2;   % <-- set to [] for a full participant run
 JOBS_ARM = 'synthetic'; % 'synthetic' | 'ecological' | 'attenuated'
 TRACE    = false;       % true = print a timestamped line at every major
                         % checkpoint (window open, stimuli loaded, each
@@ -57,6 +76,7 @@ utils.trace(utils.ternary(TRACE, 'on', 'off'));
 sess = utils.startSession( ...
     'rig',         RIG, ...
     'testing',     TESTING, ...
+    'trialsPerCell', TRIALS_PER_CELL, ...
     'jobsArm',     JOBS_ARM, ...
     'eyeTracking', EYETRACKING, ...
     'showEyePos',  SHOW_EYEPOS, ...
@@ -64,6 +84,14 @@ sess = utils.startSession( ...
                           % for every run_battery-driven session, not this.
                           % Passing anything just skips a prompt that would
                           % otherwise ask a question with no effect.
+
+if ~isempty(TRIALS_PER_CELL)
+    fprintf(2, ['\n*** REHEARSAL RUN: %d trial(s) per design cell. ***\n' ...
+                '    Everything else is the real thing -- full screen, real pacing,\n' ...
+                '    real elicitation and practice, saving into the real Data tree.\n' ...
+                '    ONLY the trial counts are short. Set TRIALS_PER_CELL = [] for a\n' ...
+                '    full participant run.\n\n'], TRIALS_PER_CELL);
+end
 
 thisSession = utils.batteryPlan(sess.participant, sess.sessionNum, FORCE_DOMAIN);
 if ~isempty(FORCE_DOMAIN)

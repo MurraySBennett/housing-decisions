@@ -19,6 +19,8 @@ p.addRequired('sessionNum',  @(x) isnumeric(x) && isscalar(x));
 p.addParameter('projRoot', '', @(x) ischar(x) || isstring(x));
 p.addParameter('rig', 'lab', @(x) ismember(lower(char(x)), {'lab','dev'}));
 p.addParameter('testing', false, @islogical);
+p.addParameter('trialsPerCell', [], @(x) isempty(x) || ...
+    (isnumeric(x) && isscalar(x) && x >= 1 && x == round(x)));
 p.addParameter('jobsArm', 'synthetic', @(x) ismember(lower(char(x)), ...
     {'synthetic','ecological','attenuated'}));
 p.addParameter('forceDomain', '', @(x) ischar(x) || isstring(x));
@@ -28,7 +30,8 @@ p.parse(participant, sessionNum, varargin{:});
 opt = p.Results;
 
 cfg = utils.config('projRoot', opt.projRoot, 'rig', opt.rig, ...
-    'testing', opt.testing, 'jobsArm', opt.jobsArm);
+    'testing', opt.testing, 'jobsArm', opt.jobsArm, ...
+    'trialsPerCell', opt.trialsPerCell);
 rows = utils.batteryPlan(participant, sessionNum, opt.forceDomain);
 
 winRect = opt.windowRect;
@@ -54,6 +57,13 @@ report.allAoiOK = true;
 fprintf('\n=== Housing/Wages preflight ===\n');
 fprintf('Participant %d | session %d | rig %s | jobs arm %s\n\n', ...
     participant, sessionNum, cfg.rig, cfg.stimuli.jobsArm);
+if ~isempty(cfg.rehearsal.trialsPerCell)
+    fprintf(2, ['REHEARSAL: %d trial(s) per design cell. Counts below are the\n' ...
+                '           SHORT ones -- a full study run is %d auction trials\n' ...
+                '           and %d/%d contdc pairs per level (jobs/houses).\n\n'], ...
+        cfg.rehearsal.trialsPerCell, cfg.auction.nTrials, ...
+        cfg.contdc.nPairs.jobs, cfg.contdc.nPairs.houses);
+end
 
 fprintf('-- resolvedPlan --\n');
 for k = 1:numel(rows)
@@ -127,12 +137,21 @@ for k = 1:numel(rows)
         domain = lower(r.domains{d});
         switch r.task
             case 'auction'
-                seconds = seconds + cfg.auction.trialTimeoutSec * cfg.auction.nTrials;
-                seconds = seconds + cfg.auction.feedbackSec * cfg.auction.nTrials;
+                % Must mirror the same override the task applies, or the
+                % estimate quotes a full-study duration for a rehearsal.
+                nTrials = cfg.auction.nTrials;
+                if ~isempty(cfg.rehearsal.trialsPerCell)
+                    nTrials = cfg.rehearsal.trialsPerCell * 2;
+                end
+                seconds = seconds + cfg.auction.trialTimeoutSec * nTrials;
+                seconds = seconds + cfg.auction.feedbackSec * nTrials;
                 seconds = seconds + cfg.auction.trialTimeoutSec; % practice
                 seconds = seconds + 90; % instructions, checks, transitions
             case 'contdc'
                 nPairs = cfg.contdc.nPairs.(domain);
+                if ~isempty(cfg.rehearsal.trialsPerCell)
+                    nPairs = cfg.rehearsal.trialsPerCell;
+                end
                 nLevels = numel(cfg.attrLevels);
                 seconds = seconds + nLevels * nPairs * cfg.contdc.choiceTimeoutSec;
                 seconds = seconds + nLevels * nPairs * 2 * cfg.contdc.priceTimeoutSec;

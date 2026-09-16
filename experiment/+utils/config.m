@@ -22,6 +22,8 @@ p = inputParser;
 p.addParameter('projRoot', '', @(x) ischar(x) || isstring(x));
 p.addParameter('rig',      'lab', @(x) ismember(lower(char(x)), {'lab','dev'}));
 p.addParameter('testing',  false, @islogical);
+p.addParameter('trialsPerCell', [], @(x) isempty(x) || ...
+    (isnumeric(x) && isscalar(x) && x >= 1 && x == round(x)));
 p.addParameter('jobsArm',  'synthetic', @(x) ismember(lower(char(x)), ...
     {'synthetic','ecological','attenuated'}));
 p.parse(varargin{:});
@@ -245,6 +247,30 @@ cfg.testing.nTrialsPerType   = 2;
 cfg.testing.forceCompetition = [];
 cfg.testing.forceAttrLevel   = [];
 cfg.testing.participant      = 9999;
+
+% --- Rehearsal mode ---------------------------------------------------
+% A SHORT run that is otherwise a REAL run. Deliberately separate from
+% cfg.testing, which is a developer mode: testing also goes windowed,
+% skips elicitation, instructions and practice, and pins participant
+% 9999. None of that is wanted for a dress rehearsal, where the point is
+% to sit through the genuine article at genuine pacing and only stop
+% sooner.
+%
+% [] means the full study. An integer means that many trials in EVERY
+% design cell, and it is the ONLY thing that changes -- full screen, real
+% pacing, real elicitation, real instructions, real practice, real
+% participant number, eye tracker on.
+%
+% "Cell" means one combination of the manipulated factors, so the count
+% is comparable across tasks, which cfg.testing.nTrialsPerType is not:
+%   auction -- cells are the competition levels, so nTrials = N * 2
+%   contdc  -- cells are attribute level x task type, so nPairs = N
+%              (a price block prices both options of every pair, so it
+%              still yields 2N trials to a choice block's N)
+%
+% Going to a full participant run is then exactly one edit: set this back
+% to [].
+cfg.rehearsal.trialsPerCell = opt.trialsPerCell;
 
 % --- Incentives -------------------------------------------------------
 cfg.incentives = utils.incentives('config');

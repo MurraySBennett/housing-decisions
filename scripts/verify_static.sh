@@ -127,6 +127,21 @@ check_grep 's\.hud\.heightPx[[:space:]]*=[[:space:]]*64;' experiment/+utils/styl
 
 check_grep 'Theme' experiment/README.md 'theme knob docs'
 
+# --- Rehearsal mode ------------------------------------------------------
+# It must stay INDEPENDENT of cfg.testing: the whole point is a short run
+# that is otherwise real, and cfg.testing drags windowed mode, skipped
+# elicitation, skipped practice and participant 9999 along with it.
+check_grep 'cfg\.rehearsal\.trialsPerCell' experiment/+utils/config.m 'rehearsal knob defined'
+check_grep 'cfg\.rehearsal\.trialsPerCell' experiment/auction_task.m 'auction honours rehearsal counts'
+check_grep 'cfg\.rehearsal\.trialsPerCell' experiment/continuous_DC_task.m 'contdc honours rehearsal counts'
+check_grep 'cfg\.rehearsal\.trialsPerCell' experiment/preflight.m 'preflight duration honours rehearsal counts'
+check_grep 'trialsPerCell' experiment/+utils/startSession.m 'rehearsal knob threaded through startSession'
+check_grep 'TRIALS_PER_CELL' experiment/run_battery.m 'rehearsal knob exposed to the experimenter'
+check_grep 'trialsPerCell' experiment/auction_task.m 'rehearsal flag saved with auction data'
+check_grep 'trialsPerCell' experiment/continuous_DC_task.m 'rehearsal flag saved with contdc data'
+check_grep 'trialsPerCell \* 2' experiment/auction_task.m 'auction cells are the 2 competition levels'
+check_grep 'TRIALS_PER_CELL' experiment/README.md 'rehearsal knob docs'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

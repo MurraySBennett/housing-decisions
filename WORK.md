@@ -37,6 +37,12 @@ is at the rig. Run `scripts/verify_matlab.m` there *first*: it asserts
 not mirrored into `preflight.m`. Rollback is `setenv('HW_THEME','arcade')`
 before `run_battery`, or reverting the single commit that flipped the default.
 
+**Rehearsal mode is now the default in `run_battery.m`** (`TRIALS_PER_CELL =
+2`): 4 auction trials (2 per competition level) and 2 pairs per attribute
+level per task type, everything else real. Worst-case estimate ~18 min for a
+session versus ~57 min for the full study. **Set it back to `[]` before
+participant 1.**
+
 **Still gating collection, unchanged:** settle the conditions, stand up REP,
 book rig time, rehearse. The bar is still that **it has to run seamlessly and
 pleasantly.**
@@ -44,6 +50,12 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-16 added `TRIALS_PER_CELL` to `run_battery.m`: a dress-rehearsal
+  knob that shortens counts and changes nothing else. `[]` = full study. Set
+  to 2 currently. Deliberately separate from `cfg.testing`, which also forces
+  windowed mode, skips elicitation/instructions/practice and pins participant
+  9999 -- none of which a rehearsal wants. Saved as `dataMat.trialsPerCell`
+  so a short run is filterable out of analysis later
 - [x] 2026-09-15 fixed three task-design problems found before the pilot:
   dropped the job title from the card header (the `synthetic` arm renders it
   as `title_001`), reserved the late tier inside `nAttrs` so attribute level 6
