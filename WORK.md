@@ -26,11 +26,16 @@ participant sees all 80 houses instead of the 7-23 a window held. That was
 both the repeated-house complaint and the reason contdc reused stimuli
 inside a block.
 
-**Next, and unblocked:** item 10, the pricing scale onto the option screen.
-It is the one that decides whether attribute re-inspection *during* pricing
-is visible in the gaze record, and it needs new AOIs plus the matching
-hand-mirror in `preflight.m` or `verify_matlab.m`'s AOI assertion will catch
-it at the rig.
+**Item 10 is done** -- the auction bid is made with the option on screen,
+card left and arc right, same geometry as contdc's price trial. Doing it
+surfaced a live bug: the card AOI geometry existed in three copies and
+preflight's had drifted 12 px, so the assertion `verify_matlab.m` runs
+first at the rig was validating the wrong rectangles. The copies are gone.
+
+**What is left of the pilot backlog:** the rig diagnostic (9, track-box
+property name), verifying the drag-and-drop ratings actually run (2), the
+mid-task drift flag (15), and the 998/999 data QA (20) -- which still needs
+the `dataMat` exporter before its gaze half can be done.
 
 **Earlier changes from the same day, still unrun.** First, the
 attribute rating screen no longer hides the mouse cursor on the way out.
@@ -240,6 +245,36 @@ pleasantly.**
   rather than 12; `minOptionsAfterRetire = 6` stops a market running empty.
   Houses is no longer affected (3.6x). Check `repIdx` and the retirement
   count on the first real run
+- [x] 2026-09-16 **the auction bid is now made with the option on screen**
+  (item 10). Bidding was a separate full screen with nothing on it but the
+  arc, so for the whole pricing response there was nothing to look at --
+  and the reversal prediction is specifically that pricing pulls attention
+  onto the monetary dimension while choosing pulls it onto the qualitative
+  ones. That was testable in contdc, whose price trial already had the card
+  beside the scale, and not in the auction. Both screens now come from the
+  same `utils.layoutCardAndArc` and carry AOIs from the same
+  `utils.cardAOIs`, so gaze on the two is directly comparable. Saved as
+  `bidAoiRects` / `bidAoiNames` / `bidAoiReport`, and `preflight` checks
+  them so `allAoiOK` covers the screen
+- [x] 2026-09-16 **found and fixed a live AOI bug while doing item 10.**
+  The card geometry existed in three copies -- `continuous_DC_task`,
+  `preflight`, and in spirit `auction_task` -- and they had drifted exactly
+  as `verify_static.sh` predicted. Pilot note 18 raised the identity header
+  advance to `s.identityTextHeightPx = 42` and guarded the task copy;
+  preflight's copy kept the literal `30`. So every contdc choice and price
+  AOI rect that `pfAoi.allAoiOK` validated sat **12 px above the cells
+  actually drawn** -- and that assertion is the first thing
+  `verify_matlab.m` runs at the rig. Fixed by deleting the duplicates
+  rather than adding a third guard: `utils.cardAOIs`,
+  `utils.drawOptionCard`, `utils.layoutCardAndArc`, `utils.layoutDetailAOIs`,
+  `utils.identityString`, `utils.valueString`, `utils.hasTextIdentity`,
+  `utils.reserveIdentityStrip`. The detail view's own advance is now
+  `s.detailTextHeightPx` too. Both tasks lost ~7 local functions each
+- [ ] next (S) **the grid layouts are still duplicated in `preflight`.**
+  `auctionAOIs` and the two-card half of `contdcAOIs` still restate
+  `layoutGrid` and `layoutTwoCards` by hand. Narrower than the card
+  duplication was and still pinned by literal guards in
+  `verify_static.sh`, but it is the same class of bug and the same fix
 - [ ] next (S) **orthogonality is optimised over all 128 rows, but nobody
   ever sees all 128.** `window_check.py --attrs` reports within-window
   `max |r|` at 0.19-0.32 for the synthetic arm, which is roughly what

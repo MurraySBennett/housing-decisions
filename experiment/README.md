@@ -17,7 +17,10 @@ weights, multiple anchors, and rejection thresholds.
   each one leaves; the participant inspects, rejects, or bids. 24 trials
   (search episodes) in 4 ABBA blocks of 6, competition blocked with the
   starting level counterbalanced by participant parity, fixed at 6
-  attributes.
+  attributes. **The bid is made with the option on screen** — card left,
+  price arc right, the same `utils.layoutCardAndArc` geometry contdc's
+  price trial uses — so attribute re-inspection *during* pricing is in the
+  gaze record and is directly comparable between the two tasks.
 - **`continuous_DC_task.m`** -- pricing vs. discrete choice on the same
   option pairs, crossed with attribute count (2/4/6). Carries the
   attribute-load manipulation, because its trials are short enough to
@@ -196,6 +199,15 @@ auction's market clock and each trial's RT timer both start from this
 click's actual flip time, not from whenever the function happened to be
 entered -- so an option's on-market window is never silently eaten by a
 participant still reading the fixation screen.
+
+**Pricing screens show the option.** The auction's bid screen and contdc's
+price trial both put the option card beside the scale rather than replacing
+it. This is a measurement requirement, not a layout preference: the
+reversal prediction is that pricing pulls attention to the monetary
+dimension while choosing pulls it to the qualitative ones, and that is
+untestable if the attributes are off screen while the price is being set.
+Both screens carry `bid_<attr>` / `price_<attr>` AOIs from the same
+`utils.cardAOIs`.
 
 **Trial screens stay clean.** Progress and condition info (trial number,
 competition level, attribute count) show ONLY on the fixation-start screen

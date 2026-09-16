@@ -45,8 +45,8 @@ check_file experiment/preflight.m
 check_grep 'trial\.bidRT[[:space:]]*=[[:space:]]*NaN' experiment/auction_task.m 'auction no-bid default'
 check_grep 'buttons\(3\)' experiment/auction_task.m 'right-click bid cancel'
 check_grep 'now[[:space:]]*=[[:space:]]*GetSecs[[:space:]]*-[[:space:]]*t0;' experiment/auction_task.m 'fresh vacancy timestamp'
-check_grep 'utils\.attrSlotRects' experiment/auction_task.m 'fixed auction detail slots'
-check_grep 'utils\.attrSlotRects' experiment/continuous_DC_task.m 'fixed contdc card slots'
+check_grep 'utils\.attrSlotRects' experiment/+utils/layoutDetailAOIs.m 'fixed auction detail slots'
+check_grep 'utils\.attrSlotRects' experiment/+utils/drawOptionCard.m 'fixed card slots'
 
 check_grep "RandStream\\('twister',[[:space:]]*'Seed',[[:space:]]*run\\.seed\\)" experiment/continuous_DC_task.m 'private contdc RNG'
 check_absent 'rs[[:space:]]*=[[:space:]]*RandStream\.getGlobalStream' experiment/continuous_DC_task.m 'global contdc RNG'
@@ -55,7 +55,7 @@ check_grep 'isnan\(ch\(k\)\.choseMoney\)' experiment/continuous_DC_task.m 'skip 
 check_grep 'cfg\.contdc\.nPairs\.\(lower\(domain\)\)' experiment/continuous_DC_task.m 'domain-specific pair counts'
 check_grep 'aoiLayouts' experiment/continuous_DC_task.m 'contdc saved AOI layouts'
 check_grep 'buildAoiLayouts' experiment/continuous_DC_task.m 'contdc AOI layout helper'
-check_grep 'drawCard\(.*\);' experiment/continuous_DC_task.m 'contdc drawCard calls still present'
+check_grep 'utils\.drawOptionCard\(' experiment/continuous_DC_task.m 'contdc draws through the shared card'
 check_grep 'utils\.checkAOIs' experiment/continuous_DC_task.m 'contdc AOI validation'
 check_grep 'utils\.batteryPlan' experiment/run_battery.m 'shared battery plan resolver'
 
@@ -112,17 +112,38 @@ check_absent "s\.fontContent[[:space:]]*=[[:space:]]*'Press Start 2P'" experimen
 # No hardcoded text size anywhere -- the last one lived in elicitVAS.
 check_absent "Screen\('TextSize',[[:space:]]*window,[[:space:]]*[0-9]" experiment/+utils/elicitVAS.m 'hardcoded text size'
 
-# --- AOI geometry duplicated between the tasks and preflight.m ----------
-# preflight.m re-implements the layout functions by hand. If these drift
-# apart, the AOI check silently stops describing what is actually drawn.
-# These are the first automated checks on that duplication; they are worth
-# keeping whether or not the restyle survives.
+# --- AOI geometry: ONE copy, not three ----------------------------------
+# preflight.m used to re-implement the card layout by hand, and it drifted
+# exactly as predicted: pilot note 18 raised the identity header advance to
+# s.identityTextHeightPx = 42, the tasks were updated and guarded, and
+# preflight's copy kept the literal 30 -- so pfAoi.allAoiOK, the assertion
+# verify_matlab.m runs first at the rig, was validating rects 12 px above
+# the cells actually drawn.
+#
+# The card geometry now lives in +utils and every caller shares it. What
+# these guards protect is that nobody re-introduces a local copy.
+check_file experiment/+utils/cardAOIs.m
+check_file experiment/+utils/drawOptionCard.m
+check_file experiment/+utils/layoutCardAndArc.m
+check_file experiment/+utils/reserveIdentityStrip.m
+check_file experiment/+utils/hasTextIdentity.m
+check_grep 'pad = 18;' experiment/+utils/cardAOIs.m      'card inner pad, single copy'
+check_grep 'pad = 18;' experiment/+utils/drawOptionCard.m 'the draw must use the same pad'
+check_grep 'cfg\.style\.identityTextHeightPx' experiment/+utils/cardAOIs.m 'AOI header advance is the named constant'
+check_grep 's\.identityTextHeightPx' experiment/+utils/drawOptionCard.m 'the draw advances by the same constant'
+for f in experiment/auction_task.m experiment/continuous_DC_task.m experiment/preflight.m; do
+  check_absent '^function .*cardAOIs\(' "$f" "no local cardAOIs in $(basename "$f")"
+  check_absent '^function .*hasTextIdentity\(' "$f" "no local hasTextIdentity in $(basename "$f")"
+  check_absent '^function .*(reserveIdentityStrip|identityContentRect)\(' "$f" "no local identity-strip geometry in $(basename "$f")"
+  check_absent '^function .*(identityString|valueString)\(' "$f" "no local identityString/valueString in $(basename "$f")"
+done
+# The grid layouts are still duplicated in preflight. Narrower than the card
+# duplication was, but the same class of bug -- keep the literals pinned
+# until they move to +utils too.
 check_grep 'pad = 48;'  experiment/auction_task.m       'auction grid pad'
 check_grep 'pad = 48;'  experiment/preflight.m          'preflight grid pad (must match auction_task)'
 check_grep 'marg = 70;' experiment/continuous_DC_task.m 'contdc two-card margin'
 check_grep 'marg = 70;' experiment/preflight.m          'preflight two-card margin (must match contdc)'
-check_grep 'pad = 18;'  experiment/continuous_DC_task.m 'contdc card inner pad'
-check_grep 'pad = 18;'  experiment/preflight.m          'preflight card inner pad (must match contdc)'
 check_grep 's\.hud\.heightPx[[:space:]]*=[[:space:]]*64;' experiment/+utils/style.m 'HUD height feeds every AOI layout'
 
 check_grep 'Theme' experiment/README.md 'theme knob docs'
@@ -273,6 +294,31 @@ check_grep 'priceMap' experiment/+utils/applyWindow.m 'the selection path fills 
 # Surplus is only interpretable against the participant's own anchor.
 check_grep 'out\.surplus / base' experiment/+utils/incentives.m 'bonus scale is anchor-relative'
 check_grep 'w\.anchor' experiment/+utils/collectWins.m 'wins carry the anchor'
+
+# --- The auction bid screen shows the option it is pricing --------------
+# Bidding used to be a separate full screen with nothing on it but the arc,
+# so gaze during the pricing response could not say which attributes were
+# being weighed. That is the measurement the reversal hypothesis turns on,
+# and contdc's price trial already had it. Same layout function, same AOI
+# function, so gaze on the two pricing screens is comparable.
+check_grep 'utils\.layoutCardAndArc' experiment/auction_task.m 'bid screen uses the shared card+arc layout'
+check_grep 'utils\.layoutCardAndArc' experiment/continuous_DC_task.m 'contdc price trial uses the same one'
+check_grep 'utils\.drawOptionCard' experiment/auction_task.m 'the bid screen actually draws the option'
+check_grep "utils\.cardAOIs\(cfg, bidL\.cardRect, sel, 'bid'\)" experiment/auction_task.m 'bid AOIs recorded'
+check_grep 'bidAoiRects' experiment/auction_task.m 'bid AOIs saved with the data'
+# preflight must check them too, or allAoiOK stops covering a whole screen.
+check_grep "utils\.cardAOIs\(cfg, bidL\.cardRect, sel, 'bid'\)" experiment/preflight.m 'preflight computes the bid AOIs'
+check_grep 'auctionBid' experiment/preflight.m 'preflight reports on the bid screen'
+check_grep "isfield\(r, 'auctionBid'\)" experiment/preflight.m 'allAoiOK includes the bid screen'
+
+# --- Every utils.X(...) call resolves to a +utils/X.m --------------------
+# MATLAB resolves package functions at call time, so a rename leaves a file
+# that looks fine and throws the first time that branch runs -- mid-session,
+# at the rig, on a screen reached once per trial. Nothing else catches it
+# here: this machine has no MATLAB.
+if ! python3 scripts/check_utils_calls.py; then
+  fail=1
+fi
 
 if [[ "$fail" -ne 0 ]]; then
   exit 1

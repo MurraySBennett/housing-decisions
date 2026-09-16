@@ -176,11 +176,13 @@ out = struct();
 if strcmpi(domain, 'houses') || strcmpi(domain, 'jobs')
     selAuction = utils.selectAttributes(A, cfg.auction.nAttrs, ratings, ...
         cfg.attrMethod, false);
-    a = auctionAOIs(winRect, cfg, selAuction);
+    a = auctionAOIs(winRect, cfg, geom, selAuction);
     [out.auctionGrid.ok, out.auctionGrid.report] = ...
         utils.checkAOIs(a.gridRects, a.gridNames, geom, true);
     [out.auctionDetail.ok, out.auctionDetail.report] = ...
         utils.checkAOIs(a.detailRects, a.detailNames, geom, true);
+    [out.auctionBid.ok, out.auctionBid.report] = ...
+        utils.checkAOIs(a.bidRects, a.bidNames, geom, true);
 end
 
 for lvl = cfg.attrLevels
@@ -195,7 +197,7 @@ for lvl = cfg.attrLevels
 end
 end
 
-function L = auctionAOIs(winRect, cfg, sel)
+function L = auctionAOIs(winRect, cfg, geom, sel)
 s = cfg.style;
 W = winRect(3); H = winRect(4);
 hudH = s.hud.enabled * s.hud.heightPx;
@@ -228,29 +230,17 @@ for k = 1:size(boxRects,2)
     L.gridNames{2*k} = sprintf('box%d_txt', k);
 end
 
-detail = auctionDetailAOIs(winRect, cfg, sel);
+% Not re-implemented here: the same functions auction_task calls.
+detail = utils.layoutDetailAOIs(winRect, cfg, sel);
 L.detailRects = detail.rects;
 L.detailNames = detail.names;
-end
 
-function aoi = auctionDetailAOIs(winRect, cfg, sel)
-s = cfg.style;
-W = winRect(3); H = winRect(4);
-hudH = s.hud.enabled * s.hud.heightPx;
-marg = 60;
-idRect = [marg, hudH + 70, W - marg, H - 40];
-contentRect = identityContentRect(cfg, sel, idRect);
-y0 = contentRect(2) + 8;
-if hasTextIdentity(sel)
-    y0 = y0 + 34;
-end
-slots = utils.attrSlotRects(cfg, contentRect(1), y0);
-n = numel(sel.shown);
-aoi.rects = slots(:, 1:n);
-aoi.names = cell(1, n);
-for k = 1:n
-    aoi.names{k} = sprintf('detail_%s', sel.shown(k).var);
-end
+% The bid screen shows the option card beside the scale as of 2026-09-16,
+% so it has attribute AOIs that have to be checked like any other.
+bidL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
+bid = utils.cardAOIs(cfg, bidL.cardRect, sel, 'bid');
+L.bidRects = bid.rects;
+L.bidNames = bid.names;
 end
 
 function L = contdcAOIs(winRect, cfg, geom, sel)
@@ -263,68 +253,24 @@ gap = geom.targetSepPx;
 marg = 70;
 cardW = floor((W - 2*marg - gap) / 2);
 cards = [marg, marg + cardW + gap; top, top; marg + cardW, W - marg; bot, bot];
-left = cardAOIs(cfg, cards(:,1), sel, 'choice_left');
-right = cardAOIs(cfg, cards(:,2), sel, 'choice_right');
+left = utils.cardAOIs(cfg, cards(:,1), sel, 'choice_left');
+right = utils.cardAOIs(cfg, cards(:,2), sel, 'choice_right');
 L.choiceRects = [left.rects, right.rects];
 L.choiceNames = [left.names, right.names];
 
-top = hudH + 90;
-bot = H - 40;
-marg = 50;
-cardW = min(650, round(W * 0.40));
-priceCard = [marg; top; marg+cardW; bot];
-price = cardAOIs(cfg, priceCard, sel, 'price');
+% The price card is the same layout the auction's bid screen now uses, so
+% take it from the same function rather than restating its numbers.
+priceL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
+price = utils.cardAOIs(cfg, priceL.cardRect, sel, 'price');
 L.priceRects = price.rects;
 L.priceNames = price.names;
-end
-
-function aoi = cardAOIs(cfg, rect, sel, prefix)
-rect = rect(:)';
-pad = 18;
-innerRect = [rect(1)+pad, rect(2)+pad, rect(3)-pad, rect(4)-pad];
-contentRect = identityContentRect(cfg, sel, innerRect);
-x0 = contentRect(1);
-y0 = contentRect(2) + 8;
-if hasTextIdentity(sel)
-    y0 = y0 + 30;
-end
-slots = utils.attrSlotRects(cfg, x0, y0);
-n = numel(sel.shown);
-aoi.rects = slots(:, 1:n);
-aoi.names = cell(1, n);
-for k = 1:n
-    aoi.names{k} = sprintf('%s_%s', prefix, sel.shown(k).var);
-end
-end
-
-function contentRect = identityContentRect(cfg, sel, rect)
-rect = rect(:)';
-isImg = false(1, numel(sel.identity));
-for k = 1:numel(sel.identity)
-    isImg(k) = strcmp(sel.identity(k).kind, 'image');
-end
-if ~any(isImg)
-    contentRect = rect;
-    return
-end
-g = cfg.style.identityGrid;
-gridW = g.nCols * g.cellW + (g.nCols - 1) * g.gap;
-gridH = g.nRows * g.cellH + (g.nRows - 1) * g.gap;
-scale = min(1, (rect(3) - rect(1)) / gridW);
-contentRect = [rect(1), rect(2) + gridH * scale, rect(3), rect(4)];
-end
-
-function tf = hasTextIdentity(sel)
-tf = false;
-for k = 1:numel(sel.identity)
-    tf = tf || ~strcmp(sel.identity(k).kind, 'image');
-end
 end
 
 function ok = domainAoiOK(r)
 ok = true;
 if isfield(r, 'auctionGrid'), ok = ok && r.auctionGrid.ok; end
 if isfield(r, 'auctionDetail'), ok = ok && r.auctionDetail.ok; end
+if isfield(r, 'auctionBid'), ok = ok && r.auctionBid.ok; end
 if isfield(r, 'contdc')
     lvls = fieldnames(r.contdc);
     for i = 1:numel(lvls)

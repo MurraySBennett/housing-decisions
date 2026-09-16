@@ -478,8 +478,8 @@ while true
     DrawFormattedText(window, 'Which would you prefer?', 'center', ...
         L.promptY, s.text);
 
-    drawCard(window, cfg, L.cardRects(:,1), stimTbl, tex, sel, A, leftIdx,  domain, L);
-    drawCard(window, cfg, L.cardRects(:,2), stimTbl, tex, sel, A, rightIdx, domain, L);
+    utils.drawOptionCard(window, cfg, L.cardRects(:,1), stimTbl, tex, sel, leftIdx);
+    utils.drawOptionCard(window, cfg, L.cardRects(:,2), stimTbl, tex, sel, rightIdx);
 
     gazeStore = utils.gazeBuffer('poll', et, gazeStore);
     if et.showGaze && ~isempty(gazeStore.latest)
@@ -532,7 +532,7 @@ function [tr, log, gazeStore] = runPriceTrial(window, cfg, geom, et, log, ...
 
 s = cfg.style;
 winRect = Screen('Rect', window);
-L = layoutPriceCard(winRect, cfg, geom, numel(sel.shown));
+L = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
 
 tr = blankTrial(domain, blockInfo);
 tr.taskType     = 'price';
@@ -553,7 +553,7 @@ log = utils.eventLog('add', log, 'price_onset', GetSecs, ...
 scaleMin = win.scaleMin;
 scaleMax = win.scaleMax;
 
-% Arc lives entirely within its own zone from layoutPriceCard -- side by
+% Arc lives entirely within its own zone from utils.layoutCardAndArc -- side by
 % side with the card, not stacked beneath it, so there is no vertical
 % competition between the price scale and the attribute content.
 cx = (L.arcLeft + L.arcRight) / 2;
@@ -592,7 +592,7 @@ while true
     Screen('TextSize', window, s.sizeHeading);
     DrawFormattedText(window, q, 'center', L.promptY, s.text);
 
-    drawCard(window, cfg, L.cardRect, stimTbl, tex, sel, A, idx, domain, L);
+    utils.drawOptionCard(window, cfg, L.cardRect, stimTbl, tex, sel, idx);
 
     % Arc
     a = linspace(pi, 2*pi, 160);
@@ -703,38 +703,6 @@ end
 
 
 %% ======================================================================
-function L = layoutPriceCard(winRect, cfg, geom, nAttrs)
-s = cfg.style;
-W = winRect(3); H = winRect(4);
-hudH = s.hud.enabled * s.hud.heightPx;
-
-L.promptY = hudH + 40;
-
-marg = 50;
-top  = hudH + 90;
-bot  = H - 40;
-
-% Card (photos + attributes) on the LEFT, pricing arc on the RIGHT --
-% side by side rather than stacked. Stacking put the price scale's tick
-% labels directly beneath the attribute card with no reliable gap between
-% them, and the fixed-size photo/attribute grids need more vertical room
-% than a stacked layout could spare once the arc claimed the bottom of the
-% screen. Side by side gives both components their own clear zone.
-cardW = min(650, round(W * 0.40));
-L.cardRect = [marg; top; marg+cardW; bot];
-
-gap = max(60, geom.targetSepPx);
-L.arcLeft  = marg + cardW + gap;
-L.arcRight = W - marg;
-L.arcTop   = top;
-L.arcBot   = bot;
-
-L.nCols = 2;
-L.nAttrs = nAttrs;
-end
-
-
-%% ======================================================================
 function layouts = buildAoiLayouts(winRect, cfg, geom, selByLevel, levels)
 layouts = struct();
 for lvl = unique(levels)
@@ -742,8 +710,8 @@ for lvl = unique(levels)
     sel = selByLevel.(key);
 
     choiceL = layoutTwoCards(winRect, cfg, geom, numel(sel.shown));
-    left = cardAOIs(cfg, choiceL.cardRects(:,1), sel, 'choice_left');
-    right = cardAOIs(cfg, choiceL.cardRects(:,2), sel, 'choice_right');
+    left = utils.cardAOIs(cfg, choiceL.cardRects(:,1), sel, 'choice_left');
+    right = utils.cardAOIs(cfg, choiceL.cardRects(:,2), sel, 'choice_right');
     choice.rects = [left.rects, right.rects];
     choice.names = [left.names, right.names];
     [choice.ok, choice.report] = utils.checkAOIs(choice.rects, choice.names, geom, true);
@@ -752,8 +720,8 @@ for lvl = unique(levels)
             'Some choice-card AOIs are below the minimum separation -- see report above.');
     end
 
-    priceL = layoutPriceCard(winRect, cfg, geom, numel(sel.shown));
-    price = cardAOIs(cfg, priceL.cardRect, sel, 'price');
+    priceL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
+    price = utils.cardAOIs(cfg, priceL.cardRect, sel, 'price');
     [price.ok, price.report] = utils.checkAOIs(price.rects, price.names, geom, true);
     if ~price.ok && strcmp(cfg.aoiEnforcement, 'strict')
         warning('hw:contdc:priceAoiTooClose', ...
@@ -762,114 +730,6 @@ for lvl = unique(levels)
 
     layouts.(key) = struct('choice', choice, 'price', price);
 end
-end
-
-
-%% ======================================================================
-function aoi = cardAOIs(cfg, rect, sel, prefix)
-rect = rect(:)';
-pad = 18;
-innerRect = [rect(1)+pad, rect(2)+pad, rect(3)-pad, rect(4)-pad];
-contentRect = reserveIdentityStrip(cfg, sel, innerRect);
-x0 = contentRect(1);
-y0 = contentRect(2) + 8;
-if hasTextIdentity(sel)
-    % Mirrors the header advance in drawCard -- same constant, so the
-    % recorded AOIs cannot drift away from the drawn cells.
-    y0 = y0 + cfg.style.identityTextHeightPx;
-end
-
-slots = utils.attrSlotRects(cfg, x0, y0);
-n = numel(sel.shown);
-aoi.rects = slots(:, 1:n);
-aoi.names = cell(1, n);
-for k = 1:n
-    aoi.names{k} = sprintf('%s_%s', prefix, sel.shown(k).var);
-end
-end
-
-
-%% ======================================================================
-function aoi = drawCard(window, cfg, rect, stimTbl, tex, sel, A, idx, domain, L) %#ok<INUSD>
-%DRAWCARD  One option: fixed-size identity photo grid, fixed attribute slots.
-
-s = cfg.style;
-rect = rect(:)';
-utils.roundRect(window, rect, s.radiusPanel, s.bgPanel, ...
-    s.interactive, s.borderWidthPx);
-
-pad = 18;
-innerRect = [rect(1)+pad, rect(2)+pad, rect(3)-pad, rect(4)-pad];
-
-% Identity images (houses: all six photos) are drawn first, in their own
-% FIXED-SIZE grid, ALWAYS -- regardless of the attribute-count level for
-% this trial. Falls through unchanged if this domain's identity has no
-% images (jobs).
-contentRect = utils.drawIdentityStrip(window, cfg, tex, sel, idx, innerRect);
-x0 = contentRect(1);
-y0 = contentRect(2) + 8;
-
-% Identity text header (jobs: industry/title; empty for houses now that
-% their images live in the grid above instead of here)
-% Centred on the card and set in body size rather than label size: with
-% two cards side by side this is the fastest cue to what kind of job is
-% on each side, and left-aligned dim small text was reading as a caption
-% on the attribute grid instead of as the card's heading. Pilot note 18,
-% 2026-09-16. s.identityTextHeightPx is mirrored in cardAOIs.
-Screen('TextFont', window, s.fontContent);
-Screen('TextSize', window, s.sizeContent);
-idText = identityString(stimTbl, sel, idx);
-if ~isempty(idText)
-    bnd = Screen('TextBounds', window, idText);
-    idX = rect(1) + ((rect(3) - rect(1)) - bnd(3)) / 2;
-    DrawFormattedText(window, idText, idX, y0 + 20, s.text);
-    y0 = y0 + s.identityTextHeightPx;
-end
-
-% Attribute cells: FIXED slot positions from cfg.style.attrGrid, not
-% recomputed from how many attributes this trial happens to show. A
-% 2-attribute trial occupies slots 1-2 and leaves the rest blank; a
-% 6-attribute trial occupies slots 1-6. Slot 1 is always the same screen
-% position either way.
-slots = utils.attrSlotRects(cfg, x0, y0);
-n = numel(sel.shown);
-aoi = zeros(4, n);
-
-for k = 1:n
-    cellRect = slots(:, k)';
-    aoi(:, k) = cellRect';
-    cx0 = cellRect(1); cy0 = cellRect(2);
-    cellW = cellRect(3) - cellRect(1);
-
-    attr = sel.shown(k);
-    Screen('TextSize', window, s.sizeLabel);
-    DrawFormattedText(window, attr.label, cx0 + 6, cy0 + 20, s.textDim, ...
-        floor(cellW/8), 0, 0, 1.1);
-
-    % Value follows the label closely (fixed offset, not bottom-anchored
-    % to a variable-height cell) so the gap between title and value stays
-    % the same regardless of how many attributes are on screen.
-    valueY = cy0 + 46;
-
-    if strcmp(attr.kind, 'image')
-        if isfield(tex, attr.var) && idx <= numel(tex.(attr.var)) && isfinite(tex.(attr.var)(idx))
-            Screen('DrawTexture', window, tex.(attr.var)(idx), [], ...
-                [cx0+6, valueY, cellRect(3)-10, cellRect(4)-8]);
-        end
-    else
-        Screen('TextSize', window, s.sizeContent);
-        % The value attribute is NOT emphasised inside the grid. It is
-        % already guaranteed present on every trial as the core tier, so
-        % colouring it differently was an emphasis the design does not
-        % intend. s.money is kept for numbers the participant is actively
-        % SETTING (the price/bid arcs, the anchor box) -- an affordance,
-        % not an emphasis.
-        col = s.text;
-        DrawFormattedText(window, valueString(stimTbl, attr, idx), ...
-            cx0 + 6, valueY, col);
-    end
-end
-
 end
 
 
@@ -1004,72 +864,6 @@ function drawGazeDot(window, cfg, sample)
 [x, y] = utils.gazeToPixels(sample, window);
 if ~isnan(x) && ~isnan(y)
     Screen('DrawDots', window, [x; y], 26, [255 80 80 180]/255, [], 2);
-end
-end
-
-
-%% ======================================================================
-function str = identityString(stimTbl, sel, idx)
-% Text header for identity attributes. Image-kind identity attributes are
-% SKIPPED: they're rendered as pictures by utils.drawIdentityStrip, and
-% their column values are filenames -- including them here printed
-% "ext1.png - kit1.png - bed1.png ..." as the card header, which is what
-% the stray label text under the photos actually was.
-parts = {};
-for k = 1:numel(sel.identity)
-    if strcmp(sel.identity(k).kind, 'image'), continue; end
-    v = sel.identity(k).var;
-    if ismember(v, stimTbl.Properties.VariableNames)
-        val = stimTbl.(v)(idx);
-        if iscell(val), val = val{1}; end
-        if ischar(val) || isstring(val), parts{end+1} = char(val); end %#ok<AGROW>
-    end
-end
-if isempty(parts), str = ''; else, str = strjoin(parts, '  -  '); end
-end
-
-
-%% ======================================================================
-function tf = hasTextIdentity(sel)
-tf = false;
-for k = 1:numel(sel.identity)
-    if ~strcmp(sel.identity(k).kind, 'image')
-        tf = true;
-        return
-    end
-end
-end
-
-
-%% ======================================================================
-function contentRect = reserveIdentityStrip(cfg, sel, rect)
-imgAttrs = sel.identity(strcmp({sel.identity.kind}, 'image'));
-if isempty(imgAttrs)
-    contentRect = rect;
-    return
-end
-
-g = cfg.style.identityGrid;
-gridW = g.nCols * g.cellW + (g.nCols - 1) * g.gap;
-gridH = g.nRows * g.cellH + (g.nRows - 1) * g.gap;
-availW = rect(3) - rect(1);
-scale = min(1, availW / gridW);
-contentRect = [rect(1), rect(2) + gridH * scale, rect(3), rect(4)];
-end
-
-
-%% ======================================================================
-function str = valueString(stimTbl, attr, idx)
-v = stimTbl.(attr.var)(idx);
-if iscell(v), v = v{1}; end
-switch attr.kind
-    case {'currency','total'}, str = utils.formatCurrency(v, 'total');
-    case 'hourly',             str = utils.formatCurrency(v, 'hourly');
-    case 'rating',             str = sprintf('%.1f / 5', v);
-    case 'count',              str = sprintf('%g', v);
-    case 'year',               str = sprintf('%d', round(v));
-    case 'number',             str = sprintf('%.4g', v);
-    otherwise,                 str = char(string(v));
 end
 end
 

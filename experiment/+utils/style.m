@@ -15,9 +15,12 @@ function s = style(themeName)
 %   feeds an AOI rect -- the text sizes, the HUD height, the identity and
 %   attribute grids -- is set once below the switch, outside either theme.
 %   That makes "the themes are geometrically identical" true by
-%   construction rather than by discipline, which matters because
-%   preflight.m re-implements the AOI geometry by hand and would silently
-%   stop matching if a theme could move a rect.
+%   construction rather than by discipline. It used to matter because
+%   preflight.m re-implemented the AOI geometry by hand; as of 2026-09-16
+%   the card geometry lives in utils.cardAOIs / utils.drawOptionCard /
+%   utils.layoutCardAndArc and every caller shares it, so a theme cannot
+%   move a rect in one copy and not another. The grid layouts are still
+%   duplicated in preflight.
 %
 %   THEMES
 %     'warm'   -- warm charcoal-plum ground, dusty rose accent, rounded
@@ -275,6 +278,12 @@ s.identityGrid.gap   = 10;
 % fastest read of what a job IS, and at s.sizeLabel in s.textDim it was
 % losing to the attribute values below it.
 s.identityTextHeightPx = 42;
+% The detail view's own header advance. Separate constant from the card's
+% because the two screens set that header at different sizes -- but a
+% NAMED one, for the same reason: it was a literal 34 in three places
+% (auction_task's draw, its AOI layout, and preflight's copy of that), and
+% the card's equivalent drifted from 30 to 42 in two of its three copies.
+s.detailTextHeightPx = 34;
 
 % Attribute-SLOT grid: enough slots for the max ever shown, 2 columns. As
 % of 2026-09-15 the late tier is reserved INSIDE nAttrs rather than added

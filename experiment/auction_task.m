@@ -255,12 +255,27 @@ try
             warning('hw:auction:aoiTooClose', ...
                 'Some AOIs are below the minimum separation -- see report above.');
         end
-        detailAOIs = layoutDetailAOIs(winRect, cfg, sel);
+        detailAOIs = utils.layoutDetailAOIs(winRect, cfg, sel);
         [detailAoiOK, detailAoiReport] = utils.checkAOIs( ...
             detailAOIs.rects, detailAOIs.names, geom, true);
         if ~detailAoiOK && strcmp(cfg.aoiEnforcement, 'strict')
             warning('hw:auction:detailAoiTooClose', ...
                 'Some detail-view AOIs are below the minimum separation -- see report above.');
+        end
+
+        % The bid screen now shows the option beside the scale, so it has
+        % attribute AOIs of its own -- and they are the ones that make
+        % attribute re-inspection DURING pricing visible in the gaze
+        % record, which is the whole reason the screen changed. Same
+        % layout and the same AOI function contdc's price card uses, so
+        % gaze on the two pricing screens is directly comparable.
+        bidL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
+        bidAOIs = utils.cardAOIs(cfg, bidL.cardRect, sel, 'bid');
+        [bidAoiOK, bidAoiReport] = utils.checkAOIs( ...
+            bidAOIs.rects, bidAOIs.names, geom, true);
+        if ~bidAoiOK && strcmp(cfg.aoiEnforcement, 'strict')
+            warning('hw:auction:bidAoiTooClose', ...
+                'Some bid-screen AOIs are below the minimum separation -- see report above.');
         end
 
         % ---- run trials -------------------------------------------
@@ -385,6 +400,10 @@ try
         dataMat.(domain).detailAoiRects   = detailAOIs.rects;
         dataMat.(domain).detailAoiNames   = detailAOIs.names;
         dataMat.(domain).detailAoiReport  = detailAoiReport;
+        dataMat.(domain).bidAoiRects      = bidAOIs.rects;
+        dataMat.(domain).bidAoiNames      = bidAOIs.names;
+        dataMat.(domain).bidAoiReport     = bidAoiReport;
+        dataMat.(domain).bidCardRect      = bidL.cardRect;
 
         % Gaze goes to its own file: it is orders of magnitude larger than
         % everything else and does not belong in the behavioural .mat.
@@ -630,8 +649,8 @@ while true
     [threshold, trueValue] = utils.marketThreshold(itemValue, planRow.competition, ...
                                                 domain, cfg, rs);
 
-    [bid, bidRT, bidStartFrac, gazeStore, log] = getBid(window, cfg, et, log, ...
-        gazeStore, stimTbl, sel, A, stimIdx, domain, planRow, nTrials, win, rs);
+    [bid, bidRT, bidStartFrac, gazeStore, log] = getBid(window, cfg, geom, et, log, ...
+        gazeStore, stimTbl, tex, sel, A, stimIdx, domain, planRow, nTrials, win, rs);
 
     if isnan(bid)
         continue
@@ -795,7 +814,7 @@ for b = 1:size(L.boxRects, 2)
     y = tr(2) + 8;
 
     Screen('TextSize', window, s.sizeLabel);
-    idText = identityString(stimTbl, sel, idx);
+    idText = utils.identityString(stimTbl, sel, idx);
     DrawFormattedText(window, idText, tr(1)+8, y+20, s.textDim, 34, 0, 0, 1.2);
     y = y + 46;
 
@@ -821,7 +840,7 @@ winRect = Screen('Rect', window);
 s = cfg.style;
 H = winRect(4);
 n = numel(sel.shown);
-detailAOIs = layoutDetailAOIs(winRect, cfg, sel);
+detailAOIs = utils.layoutDetailAOIs(winRect, cfg, sel);
 
 action = '';
 while true
@@ -833,11 +852,11 @@ while true
     Screen('TextSize', window, s.sizeHeading);
     contentRect = utils.drawIdentityStrip(window, cfg, tex, sel, idx, detailAOIs.idRect);
 
-    idText = identityString(stimTbl, sel, idx);
+    idText = utils.identityString(stimTbl, sel, idx);
     textTop = contentRect(2) + 8;
     if ~isempty(idText)
         DrawFormattedText(window, idText, 'center', textTop + 20, s.text);
-        textTop = textTop + 34;
+        textTop = textTop + s.detailTextHeightPx;
     end
 
     for k = 1:n
@@ -869,7 +888,7 @@ while true
             % deliberately KEEPS s.money: there it is the only price
             % information on screen and participants have to find it.
             col = s.text;
-            DrawFormattedText(window, valueString(stimTbl, attr, idx), ...
+            DrawFormattedText(window, utils.valueString(stimTbl, attr, idx), ...
                 pr(1)+12, valueY, col);
         end
     end
@@ -898,52 +917,38 @@ end
 
 
 %% ======================================================================
-function aoi = layoutDetailAOIs(winRect, cfg, sel)
-%LAYOUTDETAILAOIS  Auction detail-view AOIs for saved gaze analysis.
-
-s = cfg.style;
-W = winRect(3); H = winRect(4);
-hudH = s.hud.enabled * s.hud.heightPx;
-marg = 60;
-
-aoi.idRect = [marg, hudH + 70, W - marg, H - 40];
-contentRect = reserveIdentityStrip(cfg, sel, aoi.idRect);
-textTop = contentRect(2) + 8;
-if hasTextIdentity(sel)
-    textTop = textTop + 34;
-end
-
-g = cfg.style.attrGrid;
-attrGridW = g.nCols*g.cellW + (g.nCols-1)*g.gap;
-attrOx = (W - attrGridW) / 2;
-slots = utils.attrSlotRects(cfg, attrOx, textTop + 10);
-
-n = numel(sel.shown);
-aoi.rects = slots(:, 1:n);
-aoi.names = cell(1, n);
-for k = 1:n
-    aoi.names{k} = sprintf('detail_%s', sel.shown(k).var);
-end
-
-end
-
-
-%% ======================================================================
-function [bid, rt, startFrac, gazeStore, log] = getBid(window, cfg, et, log, gazeStore, ...
-    stimTbl, sel, A, idx, domain, planRow, nTrials, win, rs)
-%GETBID  Semicircular continuous price scale.
+function [bid, rt, startFrac, gazeStore, log] = getBid(window, cfg, geom, et, log, gazeStore, ...
+    stimTbl, tex, sel, A, idx, domain, planRow, nTrials, win, rs)
+%GETBID  Option card on the left, semicircular price scale on the right.
 %
-%   Two fixes. The scale maximum now comes from the sampled WINDOW rather
-%   than the item's own list price -- the old rule meant a participant could
-%   never bid above list, and with a $9.98M outlier in the set an
-%   item-derived scale put every realistic bid in the leftmost few percent
-%   of the arc. And tick labels go through utils.formatCurrency, which picks
-%   its unit from the magnitude; the old hard-coded '$%.0fk' rendered every
-%   tick on the wage scale as '$0k'.
+%   THE OPTION STAYS ON SCREEN WHILE THE BID IS MADE. It did not until
+%   2026-09-16: bidding was a separate full-screen step that replaced the
+%   detail view, so for the entire duration of the pricing response there
+%   was nothing on screen but the arc.
+%
+%   That is not a presentation detail, it is the measurement. The reversal
+%   hypothesis is specifically that PRICING pulls attention onto the
+%   monetary dimension while CHOOSING pulls it onto the qualitative ones --
+%   and you cannot see that in the gaze record if the attributes are not on
+%   screen to be looked at. contdc's price trial already had the card
+%   beside the scale, so the effect was testable in one of the two tasks
+%   and not the other.
+%
+%   Same layout function as contdc's price trial (utils.layoutCardAndArc),
+%   so the two screens are geometrically identical and a fixation is
+%   unambiguously on an attribute cell or on the scale, never on both.
+%
+%   Two older fixes, still true. The scale maximum comes from the sampled
+%   WINDOW rather than the item's own list price -- the old rule meant a
+%   participant could never bid above list, and with a $9.98M outlier in
+%   the set an item-derived scale put every realistic bid in the leftmost
+%   few percent of the arc. And tick labels go through
+%   utils.formatCurrency, which picks its unit from the magnitude; the old
+%   hard-coded '$%.0fk' rendered every tick on the wage scale as '$0k'.
 
 s = cfg.style;
 winRect = Screen('Rect', window);
-W = winRect(3); H = winRect(4);
+H = winRect(4);
 
 scaleMin = win.scaleMin;
 scaleMax = win.scaleMax;
@@ -954,13 +959,13 @@ scaleMax = win.scaleMax;
 % NOTE the parameter here is `idx`, not the caller's `stimIdx`.
 itemValue = stimTbl.(A.valueVar)(idx);
 
-cx = W/2; cy = H * 0.80;
-% Was min(W*0.40, H*0.62), which put the topmost tick LABEL within a few
-% pixels of the question text on a 1920x1080 screen and left nowhere to
-% put the live readout except inside the bowl of the arc. Shrinking the
-% radius buys a clear band above the arc for the question and the number.
-outerR = min(W*0.34, H*0.50);
-innerR = outerR * 0.82;
+% The arc lives entirely inside its own zone, side by side with the card.
+% Identical arithmetic to contdc's price trial.
+BL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
+cx = (BL.arcLeft + BL.arcRight) / 2;
+cy = BL.arcBot - 60;
+outerR = min((BL.arcRight - BL.arcLeft)/2 - 30, (BL.arcBot - BL.arcTop) * 0.55);
+innerR = outerR * 0.80;
 
 % Five labelled ticks, not seven: at seven the labels crowd each other at
 % the shallow ends of the arc, and the extra two carry no information the
@@ -1005,7 +1010,13 @@ while true
     else
         q = 'What hourly wage would you accept for this job?';
     end
-    DrawFormattedText(window, q, 'center', H*0.05, s.text);
+    DrawFormattedText(window, q, 'center', BL.promptY, s.text);
+
+    % The option being priced, drawn from the same function that draws it
+    % on the contdc cards and returning the cells it drew into. Its AOIs
+    % are computed once per domain in the caller via utils.cardAOIs with
+    % the 'bid' prefix.
+    utils.drawOptionCard(window, cfg, BL.cardRect, stimTbl, tex, sel, idx);
 
     % Arc
     a = linspace(pi, 2*pi, 180);
@@ -1026,7 +1037,7 @@ while true
         Screen('DrawLine', window, s.textDim, tx1, ty1, tx2, ty2, s.hairlinePx);
 
         lbl = utils.formatCurrency(tickVals(k), 'compact');
-        lx = cx + (outerR+42)*cos(ang); ly = cy + (outerR+42)*sin(ang);
+        lx = cx + (outerR+38)*cos(ang); ly = cy + (outerR+38)*sin(ang);
         bnd = Screen('TextBounds', window, lbl);
         DrawFormattedText(window, lbl, lx - bnd(3)/2, ly, s.textDim);
     end
@@ -1077,11 +1088,13 @@ while true
 
     % Above the arc, not inside its bowl. Inside, the number sat between
     % the two arms of the scale and read as a tick label rather than as
-    % the answer being given.
+    % the answer being given. Clamped into the arc zone so it cannot ride
+    % up over the card or the question -- same expression as contdc.
     Screen('TextSize', window, s.sizeTitle);
     txt = utils.formatCurrency(curVal, A.priceStyle);
     bnd = Screen('TextBounds', window, txt);
-    DrawFormattedText(window, txt, cx - bnd(3)/2, H*0.13, s.money);
+    DrawFormattedText(window, txt, cx - bnd(3)/2, ...
+        max(BL.arcTop - 6, cy - outerR - 52), s.money);
     Screen('TextSize', window, s.sizeLabel);
     DrawFormattedText(window, 'LEFT CLICK to submit     RIGHT CLICK to go back', ...
         'center', H - 48, s.textDim);
@@ -1338,29 +1351,6 @@ end
 
 
 %% ======================================================================
-function str = identityString(stimTbl, sel, idx)
-% Text header for identity attributes. Image-kind identity attributes are
-% SKIPPED: they're rendered as pictures by utils.drawIdentityStrip, and
-% their column values are filenames -- including them here printed
-% "ext1.png - kit1.png - bed1.png ..." as the header, which is what the
-% stray label text under the photos actually was.
-parts = {};
-for k = 1:numel(sel.identity)
-    if strcmp(sel.identity(k).kind, 'image'), continue; end
-    v = sel.identity(k).var;
-    if ismember(v, stimTbl.Properties.VariableNames)
-        val = stimTbl.(v)(idx);
-        if iscell(val), val = val{1}; end
-        if ischar(val) || isstring(val)
-            parts{end+1} = char(val); %#ok<AGROW>
-        end
-    end
-end
-if isempty(parts), str = ''; else, str = strjoin(parts, '  -  '); end
-end
-
-
-%% ======================================================================
 function [plan, nStruck] = retireStimulus(plan, afterTrial, stimIdx, minOptions)
 %RETIRESTIMULUS  Remove a won item from every trial that has not run yet.
 %
@@ -1399,60 +1389,6 @@ function gap = vacancyGap(cfg, rs)
 gap = utils.gammaSample(cfg.auction.vacancyShape, ...
     cfg.auction.vacancyGapMean/cfg.auction.vacancyShape, 1, rs);
 gap = min(gap, cfg.auction.vacancyGapMax);
-end
-
-
-%% ======================================================================
-function tf = hasTextIdentity(sel)
-tf = false;
-for k = 1:numel(sel.identity)
-    if ~strcmp(sel.identity(k).kind, 'image')
-        tf = true;
-        return
-    end
-end
-end
-
-
-%% ======================================================================
-function contentRect = reserveIdentityStrip(cfg, sel, rect)
-imgAttrs = sel.identity(strcmp({sel.identity.kind}, 'image'));
-if isempty(imgAttrs)
-    contentRect = rect;
-    return
-end
-
-g = cfg.style.identityGrid;
-gridW = g.nCols * g.cellW + (g.nCols - 1) * g.gap;
-gridH = g.nRows * g.cellH + (g.nRows - 1) * g.gap;
-availW = rect(3) - rect(1);
-scale = min(1, availW / gridW);
-contentRect = [rect(1), rect(2) + gridH * scale, rect(3), rect(4)];
-end
-
-
-%% ======================================================================
-function str = valueString(stimTbl, attr, idx)
-v = stimTbl.(attr.var)(idx);
-if iscell(v), v = v{1}; end
-switch attr.kind
-    case {'currency', 'total'}
-        str = utils.formatCurrency(v, 'total');
-    case 'hourly'
-        str = utils.formatCurrency(v, 'hourly');
-    case 'rating'
-        str = sprintf('%.1f / 5', v);
-    case 'count'
-        str = sprintf('%g', v);
-    case 'year'
-        str = sprintf('%d', round(v));
-    case 'number'
-        str = sprintf('%.4g', v);
-    case 'category'
-        str = char(string(v));
-    otherwise
-        str = char(string(v));
-end
 end
 
 
