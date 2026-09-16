@@ -226,6 +226,34 @@ check_grep 'vacancyGapMax' experiment/auction_task.m 'the cap is actually applie
 check_grep 'retireStimulus' experiment/auction_task.m 'won items leave the market'
 check_grep 'round\(v / 1000\)' experiment/+utils/snapValue.m 'house prices snap to the nearest thousand'
 
+# --- Post-pilot: second-price wording, wage grid, blocked competition ----
+# The outcome screen must describe the auction it is. "market price" was
+# the private-sale framing the pilot objected to.
+check_absent 'market price' experiment/auction_task.m 'houses outcome must not read as a private sale'
+check_grep 'next best offer' experiment/auction_task.m 'houses outcome names the second-price rule'
+check_grep 'next best offer' experiment/+utils/incentives.m 'houses instructions state the second-price rule'
+
+# Wage is the anchored attribute and needs its own grid, or sampleWindow
+# leaves a single distinct value inside a window. window_check.py is the
+# check that catches it; it must not be deleted along with a regeneration.
+check_file experiment/stimuli/stimgen/window_check.py
+check_grep 'n_levels_by_column' experiment/stimuli/prepare_stimuli.py 'per-column level counts'
+check_grep 'spacing_by_column' experiment/stimuli/prepare_stimuli.py 'per-column level spacing'
+check_grep '"wage": 12' experiment/stimuli/stimgen/configs/jobs_synthetic.json 'wage keeps its own level count'
+check_grep '"wage": "geometric"' experiment/stimuli/stimgen/configs/jobs_synthetic.json 'wage keeps geometric spacing'
+
+# Competition is blocked, and the block order is counterbalanced by
+# participant. Passing the participant is the whole counterbalancing -- a
+# trialPlan call that drops it silently randomises instead.
+check_grep 'cfg\.auction\.nBlocks' experiment/+utils/config.m 'block count is a named knob'
+check_grep 'utils\.trialPlan\(planCfg, win\.n, rs, sess\.participant\)' experiment/auction_task.m 'block order is counterbalanced by participant'
+# The break must fire on a COMPETITION change, not a block index: under
+# ABBA, blocks 2 and 3 are the same level, and announcing a new market
+# there would be a false statement to the participant.
+check_grep 'levelChange' experiment/auction_task.m 'breaks fire at competition changes'
+check_absent 'plan\(t\)\.block ~= plan\(t-1\)\.block' experiment/auction_task.m 'breaks must not fire on block index'
+check_absent 'randperm\(rngStream, nTrials\)' experiment/+utils/trialPlan.m 'competition must not be re-rolled per trial'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

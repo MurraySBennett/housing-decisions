@@ -213,7 +213,11 @@ try
         end
         planCfg = cfg; planCfg.auction.nTrials = nTrials;
         planCfg.auction.nOptionsPerTrial = min(cfg.auction.nOptionsPerTrial, win.n);
-        plan = utils.trialPlan(planCfg, win.n, rs);
+        % Participant number decides which competition level comes first --
+        % same parity trick utils.batteryPlan uses for task order, so the
+        % two counterbalancings stay consistent and neither needs a
+        % condition file.
+        plan = utils.trialPlan(planCfg, win.n, rs, sess.participant);
 
         if ~isempty(cfg.testing.forceCompetition)
             [plan.competition] = deal(cfg.testing.forceCompetition);
@@ -278,14 +282,52 @@ try
             % off by default, and when it is on only ONE randomly chosen
             % trial pays, so "every offer counts towards what you earn" is
             % false either way.
+            % Parts = runs of one competition level, which is what they
+            % will actually see breaks between. Counted the same way as
+            % levelChange below, and the two must not drift apart.
+            nParts = 1 + sum(~strcmp({plan(2:end).competition}, ...
+                                     {plan(1:end-1).competition}));
             showClickMessage(window, cfg, sprintf(['That was the practice round.' ...
-                '\n\nThe real markets start now. There are %d of them, and your ' ...
-                'decisions from here on are the ones we record.' ...
-                '\n\nClick when you are ready.'], numel(plan)));
+                '\n\nThe real markets start now. There are %d of them, in %d ' ...
+                'parts, and your decisions from here on are the ones we ' ...
+                'record.\n\nClick when you are ready.'], ...
+                numel(plan), nParts));
         end
 
-        utils.trace('domain %s: starting %d trials', domain, numel(plan));
+        % What the participant experiences is RUNS of one competition level,
+        % which is not the same as blocks: ABBA puts blocks 2 and 3 at the
+        % same level, so they are one continuous 12-market run. Breaks
+        % belong at level changes, not at every block index -- announcing
+        % "the market has changed" halfway through an unchanged regime
+        % would be false, and would break the expectation the blocking
+        % exists to build.
+        levelChange = [false, ~strcmp({plan(2:end).competition}, ...
+                                      {plan(1:end-1).competition})];
+        nRuns = 1 + sum(levelChange);
+        utils.trace('domain %s: starting %d trials, %d blocks, %d run(s) of a level', ...
+            domain, numel(plan), numel(unique([plan.block])), nRuns);
+        runIdx = 1;
         for t = 1:numel(plan)
+            % The break is what makes competition a REGIME rather than a
+            % per-trial coin flip: it marks that the market the participant
+            % has been learning has been replaced, so the expectation they
+            % built is retired deliberately instead of being quietly
+            % contradicted. It says the level has changed without saying
+            % which way -- naming the direction would hand them the
+            % manipulation.
+            if levelChange(t)
+                log = utils.eventLog('add', log, 'block_break', GetSecs, ...
+                    struct('trial', t, 'fromBlock', plan(t-1).block, ...
+                           'toBlock', plan(t).block, 'run', runIdx + 1));
+                showClickMessage(window, cfg, sprintf(['End of part %d of %d.' ...
+                    '\n\nTake a moment if you would like one.' ...
+                    '\n\nWhat follows is a different market: how much ' ...
+                    'competition there is for these options has changed.' ...
+                    '\n\nClick when you are ready to continue.'], ...
+                    runIdx, nRuns));
+                runIdx = runIdx + 1;
+            end
+
             if cfg.et.driftCheck && mod(t, cfg.auction.driftEvery) == 1 && t > 1
                 [offset, recal] = utils.driftCheck(et, window, cfg, ...
                     [winRect(3)/2, winRect(4)/2]);
@@ -427,6 +469,11 @@ trial = struct();
 trial.trial       = planRow.trial;
 trial.domain      = domain;
 trial.competition = planRow.competition;
+% Not utils.ternary: it is an ordinary function, so both branches are
+% evaluated before the call, and planRow.block would throw in exactly the
+% case the guard exists for.
+if isfield(planRow, 'block'), trial.block = planRow.block; else, trial.block = NaN; end
+if isfield(planRow, 'blockPos'), trial.blockPos = planRow.blockPos; else, trial.blockPos = NaN; end
 trial.stimIdx     = planRow.stimIdx;
 trial.repIdx      = planRow.repIdx;
 trial.nAttrs      = numel(sel.shown);
@@ -644,6 +691,11 @@ function [trial, log, gazeStore] = runPracticeEpisode(window, cfg, geom, L, et, 
 practiceRow = planRow;
 practiceRow.trial = 0;
 practiceRow.practice = true;
+% The practice market borrows block 1's schedule but is not part of it.
+% Leaving block = 1 here would put a trial the participant was told does
+% not count inside a block that does.
+practiceRow.block = NaN;
+practiceRow.blockPos = NaN;
 practiceRow.stimIdx = planRow.stimIdx(1:min(numel(planRow.stimIdx), size(L.boxRects, 2)));
 practiceRow.repIdx = planRow.repIdx(1:numel(practiceRow.stimIdx));
 
@@ -1068,13 +1120,14 @@ style = utils.ternary(isHouse, 'total', 'hourly');
 
 if accepted
     if isHouse
-        % The houses market is rival BUYERS, not a private sale, so the old
-        % "you pay the market price" read as a seller accepting less than an
-        % offer already on the table. Name the mechanism instead: you win at
-        % what it took to beat the next best offer. Saying the second-price
-        % rule out loud is not a leak -- it is what makes truthful bidding
-        % optimal, and a participant who is not told it assumes first-price
-        % and shades the bid, which is the primary DV.
+        % The houses market is rival BUYERS, not a private sale. The old
+        % wording read as a seller accepting less than an offer already on
+        % the table, which is what the pilot objected to. Name the
+        % mechanism instead: you win at what it took to beat the next best
+        % offer. Saying the second-price rule out loud is not a leak -- it
+        % is what makes truthful bidding optimal, and a participant who is
+        % not told it assumes first-price and shades the bid, which is the
+        % primary DV. verify_static.sh guards the old phrasing out.
         msg = sprintf(['You won the house.\n\n' ...
             'You offered %s.\nThe next best offer was %s, so that is what you pay.'], ...
             utils.formatCurrency(bid, style), utils.formatCurrency(pricePaid, style));
@@ -1424,7 +1477,8 @@ for d = 1:numel(dataMat.domains)
     if ~isfield(dataMat, dom) || ~isfield(dataMat.(dom), 'trials'), continue; end
     Tr = dataMat.(dom).trials;
     for t = 1:numel(Tr)
-        rows{end+1} = { dom, Tr(t).trial, Tr(t).practice, Tr(t).competition, Tr(t).nAttrs, ...
+        rows{end+1} = { dom, Tr(t).trial, Tr(t).practice, Tr(t).competition, ...
+            Tr(t).block, Tr(t).blockPos, Tr(t).nAttrs, ...
             Tr(t).nPresented, Tr(t).nRejected, rejectedList(Tr(t).rejected), Tr(t).duration, ...
             Tr(t).bidAccepted, Tr(t).bid, Tr(t).bidRT, Tr(t).bidStartFrac, ...
             Tr(t).threshold, Tr(t).pricePaid, ...
@@ -1434,7 +1488,8 @@ for d = 1:numel(dataMat.domains)
 end
 if isempty(rows), T = table(); return; end
 M = vertcat(rows{:});
-T = cell2table(M, 'VariableNames', {'domain','trial','practice','competition','nAttrs', ...
+T = cell2table(M, 'VariableNames', {'domain','trial','practice','competition', ...
+    'block','blockPos','nAttrs', ...
     'nPresented','nRejected','rejectedStimIdx','durationSec','bidAccepted','bid','bidRT', ...
     'bidStartFrac','threshold','pricePaid','trueValue','bidStimIdx','endReason','anchor'});
 end

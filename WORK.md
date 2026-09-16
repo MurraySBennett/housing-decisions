@@ -13,14 +13,18 @@ reframed as the second-price auction the mechanism already was, which also
 explains why an offer at the listed price can lose. **Not yet deployed to
 the share.**
 
-**Blocked on two calls from Murray:** the jobs arm (`synthetic`'s wage grid
-gives 1-3 distinct wages per anchored window, so the anchor coefficient is
-not identified -- regenerate with 8-12 wage levels, or fall back to
-`attenuated`) and whether to block the competition levels (today every trial
-is independently low/high, so the manipulation barely operates; blocking
-costs ~12-15 min per session). Unblocked and waiting: item 10, the pricing
-scale onto the option screen, which is the one that decides whether
-attribute re-inspection during pricing is visible in the gaze record.
+**Both open decisions are settled and built.** The jobs arm stays
+`synthetic`, regenerated with wage on its own 12-level geometric grid plus
+within-level jitter, which takes distinct wages per anchored window from
+1-3 to 10-26. Competition is now blocked: 24 trials, 4 ABBA blocks of 6,
+starting level counterbalanced by participant parity. Session is ~12-15 min
+longer than the measured ~45 as a result.
+
+**Next, and unblocked:** item 10, the pricing scale onto the option screen.
+It is the one that decides whether attribute re-inspection *during* pricing
+is visible in the gaze record, and it needs new AOIs plus the matching
+hand-mirror in `preflight.m` or `verify_matlab.m`'s AOI assertion will catch
+it at the rig.
 
 **Earlier changes from the same day, still unrun.** First, the
 attribute rating screen no longer hides the mouse cursor on the way out.
@@ -163,6 +167,25 @@ pleasantly.**
   downstream matches on exact attribute values (`buildPairs` scores
   z-scored continuous contrasts), and both tasks already render ratings as
   `%.1f / 5`
+- [x] 2026-09-16 **competition is blocked**, 24 trials in 4 ABBA blocks of
+  6, starting level counterbalanced by participant parity in
+  `utils.trialPlan` (the same trick `utils.batteryPlan` uses for task
+  order). It was trial-wise randomised before, which is why neither pilot
+  participant noticed the level changing -- with nothing to form an
+  expectation from, the manipulation barely operated, and
+  `thresholdNoise = 0.12` already keeps the outcome uncertain while the
+  regime is learnable. ABBA rather than one 12-trial run per level: it puts
+  both levels at the same mean serial position, so competition is
+  orthogonal to fatigue and practice *within* a participant and not just on
+  average across the sample. `cfg.auction.nBlocks = 2` reverts. Two things
+  that had to be got right: the break fires on a **competition change**,
+  not a block index -- under ABBA blocks 2 and 3 are the same level and one
+  continuous run, so announcing a new market there would be a false
+  statement -- and an odd trial count now reduces the block count with a
+  warning instead of erroring, because `trialsPerCell = 3` is 6 trials and
+  a dress rehearsal must not be what discovers that 4 does not divide 6.
+  `block` and `blockPos` are on every trial and in the CSV; practice is
+  `NaN` on both
 - [ ] next (S) **orthogonality is optimised over all 128 rows, but nobody
   ever sees all 128.** `window_check.py --attrs` reports within-window
   `max |r|` at 0.19-0.32 for the synthetic arm, which is roughly what

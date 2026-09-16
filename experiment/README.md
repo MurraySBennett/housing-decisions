@@ -14,12 +14,14 @@ weights, multiple anchors, and rejection thresholds.
 
 - **`auction_task.m`** -- sequential search with a continuous BDM price
   response. Options arrive and expire on a market with a vacancy gap after
-  each one leaves; the participant inspects, rejects, or bids. 12 trials
-  (search episodes), competition crossed low/high, fixed at 6 attributes.
+  each one leaves; the participant inspects, rejects, or bids. 24 trials
+  (search episodes) in 4 ABBA blocks of 6, competition blocked with the
+  starting level counterbalanced by participant parity, fixed at 6
+  attributes.
 - **`continuous_DC_task.m`** -- pricing vs. discrete choice on the same
   option pairs, crossed with attribute count (2/4/6). Carries the
   attribute-load manipulation, because its trials are short enough to
-  afford three levels where the auction's 12 trials are not.
+  afford three levels where the auction's longer search episodes are not.
 
 Both run through one participant-management layer (`+utils`) that handles
 identity, counterbalancing, crash recovery, eye tracking, elicitation reuse,
@@ -291,7 +293,8 @@ estimated duration.
 | Task order counterbalance | Odd participants run session rows in reverse order | `+utils/batteryPlan.m` | Balances auction-first vs. contdc-first within a session. |
 | `JOBS_ARM` | `synthetic` | `run_battery.m` | Selects the prepared job-stimulus arm and provenance file. |
 | `FORCE_DOMAIN` | `''` | `run_battery.m` | Quick manual override; leave empty for real sessions. |
-| `cfg.auction.nTrials` | 12 | `+utils/config.m` | Six trials per competition level. |
+| `cfg.auction.nTrials` | 24 | `+utils/config.m` | Twelve trials per competition level. Must divide evenly by `nBlocks`. |
+| `cfg.auction.nBlocks` | 4 | `+utils/config.m` | Competition is **blocked**, not re-rolled per trial: ABBA over 4 blocks, starting level counterbalanced by participant parity in `utils.trialPlan`. ABBA puts both levels at the same mean serial position, so competition is orthogonal to fatigue and practice within a participant. `2` is one long run per level -- more learnable, but confounded with session half. |
 | `cfg.auction.nOptionsPerTrial` | 12 | `+utils/config.m` | Search-set size per auction episode; repeats are planned/logged if needed. |
 | `cfg.auction.trialTimeoutSec` | 90 | `+utils/config.m` | Main driver of auction duration. |
 | Auction practice | 1 saved practice episode before real trials | `auction_task.m` | Keeps practice analyzable/excludable via `practice=true`. |

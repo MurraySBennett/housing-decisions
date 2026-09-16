@@ -133,7 +133,22 @@ cfg.sampling.nTopIndustries = 4;
 % in WHICH stimuli and attributes are shown (via anchor + ratings), not in
 % how many trials there are. See the project README for why that split is
 % what makes participants comparable at all.
-cfg.auction.nTrials          = 12;
+% 24 trials in 4 blocks of 6, ABBA, with the starting level counterbalanced
+% by participant parity inside utils.trialPlan. Competition used to be
+% re-rolled per trial, which is why neither pilot participant noticed it
+% changing -- with nothing to form an expectation from, the manipulation
+% barely operated. Blocking costs roughly 12-15 min per session on top of
+% the measured ~45.
+%
+% ABBA over 4 blocks rather than one run of 12 per level: it puts both
+% levels at the same mean serial position, so competition is orthogonal to
+% fatigue and practice WITHIN a participant and not merely on average
+% across the sample. Each level still gets 12 trials, and each market
+% yields several bid outcomes, so 6 markets is more feedback about the
+% regime than the trial count suggests. nTrials must divide evenly by
+% nBlocks.
+cfg.auction.nTrials          = 24;
+cfg.auction.nBlocks          = 4;
 cfg.auction.nAttrs           = 6;    % counts the core attribute
 cfg.auction.nOptionsPerTrial = 12;   % ~10-15 is what the stimulus set supports
 cfg.auction.trialTimeoutSec  = 90;

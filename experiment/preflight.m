@@ -74,6 +74,8 @@ end
 
 fprintf('\n-- design knobs --\n');
 fprintf('  auction trials:            %d\n', cfg.auction.nTrials);
+fprintf('  auction blocks:            %d (%d trials each, competition blocked)\n', ...
+    cfg.auction.nBlocks, cfg.auction.nTrials / cfg.auction.nBlocks);
 fprintf('  auction options/trial:     %d\n', cfg.auction.nOptionsPerTrial);
 fprintf('  auction trial timeout:     %.0f sec\n', cfg.auction.trialTimeoutSec);
 fprintf('  auction practice episodes: 1 before real trials\n');
@@ -147,6 +149,9 @@ for k = 1:numel(rows)
                 seconds = seconds + cfg.auction.feedbackSec * nTrials;
                 seconds = seconds + cfg.auction.trialTimeoutSec; % practice
                 seconds = seconds + 90; % instructions, checks, transitions
+                % One self-paced break between blocks. Not free: it is the
+                % screen the participant is most likely to actually rest on.
+                seconds = seconds + 30 * max(0, cfg.auction.nBlocks - 1);
             case 'contdc'
                 nPairs = cfg.contdc.nPairs.(domain);
                 if ~isempty(cfg.rehearsal.trialsPerCell)
