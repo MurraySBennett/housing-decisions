@@ -11,7 +11,7 @@ function wins = collectWins(dataMat)
 %   optimal, and it is why pricePaid below is the threshold.
 
 wins = struct('domain', {}, 'trial', {}, 'competition', {}, ...
-              'stimIdx', {}, 'bid', {}, 'pricePaid', {}, ...
+              'stimIdx', {}, 'bid', {}, 'pricePaid', {}, 'anchor', {}, ...
               'trueValue', {}, 'reservationWage', {}, 'wageObtained', {});
 
 if ~isfield(dataMat, 'domains'), return; end
@@ -31,6 +31,10 @@ for d = 1:numel(dataMat.domains)
         w.stimIdx     = T(t).bidStimIdx;
         w.bid         = T(t).bid;
         w.pricePaid   = T(t).pricePaid;
+        % Carried because surplus is only interpretable relative to the
+        % participant's own budget or reservation wage -- see the scale
+        % note in utils.incentives.
+        w.anchor      = dataMat.(dom).anchor;
 
         if strcmpi(dom, 'houses')
             w.trueValue       = T(t).trueValue;

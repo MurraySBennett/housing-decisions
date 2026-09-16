@@ -180,12 +180,14 @@ try
         end
 
         % ---- stimulus window ------------------------------------------
-        win = utils.sampleWindow(stimuli.(A.valueVar), anchor, ...
-                              cfg.sampling.spread, cfg.sampling.minN);
-        inWindow = stimuli(win.idx, :);
-        fprintf('Window %s to %s: %d stimuli.\n', ...
+        % Selects rows, or keeps them all and fits their prices onto the
+        % window, depending on cfg.sampling.fitToWindow for this domain.
+        % This is also what supplies the 36 distinct houses buildPairs
+        % needs for 3 attribute levels with cross-level reuse blocked.
+        [inWindow, win] = utils.applyWindow(stimuli, A, anchor, cfg);
+        fprintf('Window %s to %s: %d stimuli (%s).\n', ...
             utils.formatCurrency(win.lo, A.priceStyle), ...
-            utils.formatCurrency(win.hi, A.priceStyle), win.n);
+            utils.formatCurrency(win.hi, A.priceStyle), win.n, win.mode);
 
         % ---- block schedule -------------------------------------------
         levels = cfg.attrLevels;

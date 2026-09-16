@@ -254,6 +254,26 @@ check_grep 'levelChange' experiment/auction_task.m 'breaks fire at competition c
 check_absent 'plan\(t\)\.block ~= plan\(t-1\)\.block' experiment/auction_task.m 'breaks must not fire on block index'
 check_absent 'randperm\(rngStream, nTrials\)' experiment/+utils/trialPlan.m 'competition must not be re-rolled per trial'
 
+# --- House prices are FITTED onto the window, not selected --------------
+# 80 houses spanning 126:1 against a 2.67:1 window left 7-23 in a window,
+# which is both the repeated-house complaint and why buildPairs ran short
+# of the 36 distinct contdc needs. Both tasks must go through the single
+# dispatcher: fitting rewrites the value column, and doing that by hand in
+# two places is how they drift apart.
+check_file experiment/+utils/fitToWindow.m
+check_file experiment/+utils/applyWindow.m
+check_grep 'cfg\.sampling\.fitToWindow\.houses' experiment/+utils/config.m 'fit switch exists'
+check_grep 'utils\.applyWindow' experiment/auction_task.m 'auction goes through the dispatcher'
+check_grep 'utils\.applyWindow' experiment/continuous_DC_task.m 'contdc goes through the dispatcher'
+check_absent 'utils\.sampleWindow' experiment/auction_task.m 'auction must not call sampleWindow directly'
+check_absent 'utils\.sampleWindow' experiment/continuous_DC_task.m 'contdc must not call sampleWindow directly'
+# priceMap is the only record of what each house really listed for.
+check_grep 'priceMap' experiment/+utils/fitToWindow.m 'fitted prices keep the original alongside'
+check_grep 'priceMap' experiment/+utils/applyWindow.m 'the selection path fills priceMap too'
+# Surplus is only interpretable against the participant's own anchor.
+check_grep 'out\.surplus / base' experiment/+utils/incentives.m 'bonus scale is anchor-relative'
+check_grep 'w\.anchor' experiment/+utils/collectWins.m 'wins carry the anchor'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

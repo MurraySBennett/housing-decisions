@@ -20,6 +20,12 @@ within-level jitter, which takes distinct wages per anchored window from
 starting level counterbalanced by participant parity. Session is ~12-15 min
 longer than the measured ~45 as a result.
 
+**Item 14 is diagnosed and fixed as a side effect:** house prices are now
+fitted onto the anchor window rather than selected into it, so every
+participant sees all 80 houses instead of the 7-23 a window held. That was
+both the repeated-house complaint and the reason contdc reused stimuli
+inside a block.
+
 **Next, and unblocked:** item 10, the pricing scale onto the option screen.
 It is the one that decides whether attribute re-inspection *during* pricing
 is visible in the gaze record, and it needs new AOIs plus the matching
@@ -186,15 +192,54 @@ pleasantly.**
   a dress rehearsal must not be what discovers that 4 does not divide 6.
   `block` and `blockPos` are on every trial and in the CSV; practice is
   `NaN` on both
-- [ ] next (S) **24 trials doubles the pressure on a thin window.** The
-  auction now needs 24 x 12 = 288 presentations where it needed 144, from a
-  window holding 40-90 stimuli, so each item is seen ~4 times rather than
-  ~2 -- `repIdx` still logs it, but memory effects are twice the size they
-  were. And up to 24 items can now be won and retired rather than 12;
-  `minOptionsAfterRetire = 6` keeps a market from running empty, but on a
-  thin window that floor will be reached where before it was not. Check
-  `repIdx` and the retirement count on the first real run rather than
-  assuming the old numbers still describe it
+- [x] 2026-09-16 **house prices are now FITTED onto the anchor window
+  rather than selected into it** (`utils.fitToWindow` behind the new
+  `utils.applyWindow` dispatcher, `cfg.sampling.fitToWindow.houses`).
+  Measured after the trial count doubled, and the doubling turned out not
+  to be the problem -- it made an existing one visible. 80 houses spanning
+  126:1 in price against a 2.67:1 window left **7-23 stimuli in a window at
+  every anchor except $500k**, so the same house appeared ~21 times over 24
+  trials, ~5 per block. That is the pilot's repeated-house complaint and it
+  is also **item 14, now diagnosed rather than guessed**: contdc needs
+  `nLevels x nPairs x 2` = 36 distinct houses with cross-level reuse
+  blocked, and `utils.buildPairs` was hitting its `:short` warning. Fitting
+  gives all 80 at every anchor, occupancy 20/21/21/20 across four
+  log-slices, reuse down to 3.6x over the whole task and under 1x per
+  block. Rank order and tied prices survive exactly, so the Spearman
+  correlation with the attributes is unchanged (+0.749 with square footage)
+  and `buildPairs` z-scores the money dimension anyway. Widening the window
+  instead does not work: it takes `[0.30 4.00]`, a 13:1 band, before every
+  anchor clears 36, at which point the anchor manipulation is gone. Real
+  prices are kept in `win.priceMap`, which is their only record
+- [ ] now (S) **the fit means all 80 houses load photos, not a subset.**
+  `utils.loadStimulusTextures` loads `nImageVars x nStimuli` = 6 x 80 = 480
+  textures for houses over the lab share, where before it loaded only the
+  ~35 that the plan actually used. It is a one-off up-front load with a
+  progress bar, not a per-block pause, but time it on the first rig run --
+  if it is painful, `cfg.auction.nOptionsPerTrial` from 12 to 8 is the
+  cheapest lever
+- [ ] next (S) **jobs contdc is short of distinct stimuli at high anchors.**
+  It needs 3 x 10 x 2 = 60 and the window holds 40 at an $80 anchor, 53-60
+  elsewhere. The same shortfall houses just had, an order of magnitude
+  milder. Either drop `cfg.contdc.nPairs.jobs`, or turn
+  `cfg.sampling.fitToWindow.jobs` on too -- wage is orthogonal to the
+  attributes by construction in the synthetic arm, so fitting costs that
+  arm nothing except the real wage marginals
+- [x] 2026-09-16 **the incentive bonus scales are anchor-relative now.**
+  Pre-existing and unrelated to fitting, but found next to it: a flat
+  `$1 per $20k of surplus` paid a $750k-budget participant several times a
+  $150k one for identical behaviour, because the window has always been
+  `[0.6 1.6] x anchor`. Now `surplus / anchor` times a scale chosen to
+  reproduce the old payout at a typical anchor. Dead code today
+  (`cfg.incentives.enabled = false`), but it would have been a live problem
+  the moment it was switched on
+- [ ] next (S) **24 trials doubles auction stimulus reuse for jobs.** 288
+  presentations where there were 144, from a 40-60 window, so each job is
+  seen ~5 times rather than ~2.5 -- `repIdx` logs it, but memory effects
+  are twice what they were. Up to 24 items can also be won and retired
+  rather than 12; `minOptionsAfterRetire = 6` stops a market running empty.
+  Houses is no longer affected (3.6x). Check `repIdx` and the retirement
+  count on the first real run
 - [ ] next (S) **orthogonality is optimised over all 128 rows, but nobody
   ever sees all 128.** `window_check.py --attrs` reports within-window
   `max |r|` at 0.19-0.32 for the synthetic arm, which is roughly what

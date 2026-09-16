@@ -180,12 +180,47 @@ Two things worth knowing before you edit:
 
 ## Houses
 
-No preparation needed. The house attributes are already well conditioned
-(max VIF 6.0, condition number 5.2), there is no missing data, and the
-`$9.98M` outlier is handled at runtime by `utils.sampleWindow` — which
-derives pricing-scale bounds from the block's sampled range rather than
-from the individual item, so the outlier never distorts the response
-scale.
+No preparation needed for the attributes: they are already well conditioned
+(max VIF 6.0, condition number 5.2) and there is no missing data.
+
+**Prices are fitted at runtime, not selected.** This is the one place the
+"prepare once, treat the result as frozen" rule bends, and it bends because
+the set is too small and too skewed to fill an anchor window by selection.
+80 houses spanning 126:1 in list price ($79k to `$9.98M`) against a 2.67:1
+window meant a $150k budget saw 7–14 houses and a $1.5M budget saw 18 —
+against the 36 distinct that contdc needs for 3 attribute levels. Only a
+$500k budget cleared it. That is the repeated-house complaint from the
+2026-09-16 pilot and it is `utils:buildPairs:short` in the same breath.
+
+`utils.fitToWindow` instead ranks the 80 and lays them out geometrically
+across `[0.6a, 1.6a]`, so every participant sees all 80 spread evenly over
+their own budget range (occupancy 20/21/21/20 across four log-slices, at
+every anchor). Rank order and tied prices survive exactly, so price still
+covaries with the attributes at the same Spearman correlation (+0.749 with
+square footage) that `utils.buildPairs` needs to oppose money against
+quality — and `buildPairs` z-scores the money dimension, so the change of
+scale costs it nothing.
+
+What it costs: the displayed price is not the real list price, and the
+price/quality *ratio* is compressed. `win.priceMap` keeps both columns so
+analysis can recover the real prices — it is the only record of them.
+
+By rank and geometric, not by value and linear. Both matter. The window is
+a ratio band, so equal ratio steps use it evenly; and a value-based map
+lets the skew through, which for houses means the single `$9.98M` listing
+stretches the top of the window and bunches 48 of 80 houses into one
+quarter of it.
+
+Jobs stays on selection (`cfg.sampling.fitToWindow.jobs = false`) — the
+synthetic arm puts 40–60 in every window, so fitting would cost the real
+wage marginals and buy nothing.
+
+Check it the same way as the wage grid:
+
+```bash
+python3 stimgen/window_check.py ../house_stimuli.csv listPrice --fit \
+        --anchors 150000 350000 750000 --need 36 --presentations 288
+```
 
 House photo filenames are normalized at load time (`utils.readStimuli`
 strips any leftover directory prefix down to the bare filename), so it

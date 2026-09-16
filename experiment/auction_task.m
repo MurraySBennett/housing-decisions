@@ -190,13 +190,14 @@ try
             numel(sel.shown), sel.meanRank);
 
         % ---- stimulus window --------------------------------------
-        vals = stimuli.(A.valueVar);
-        win = utils.sampleWindow(vals, anchor, cfg.sampling.spread, ...
-                              cfg.sampling.minN);
-        inWindow = stimuli(win.idx, :);
-        fprintf('Window %s to %s: %d stimuli (widened %.2fx).\n', ...
+        % Selects rows, or keeps them all and fits their prices onto the
+        % window, depending on cfg.sampling.fitToWindow for this domain.
+        % Either way inWindow is the set to use and win.fitted/win.priceMap
+        % record what the participant was actually shown.
+        [inWindow, win] = utils.applyWindow(stimuli, A, anchor, cfg);
+        fprintf('Window %s to %s: %d stimuli (%s, widened %.2fx).\n', ...
             utils.formatCurrency(win.lo, A.priceStyle), ...
-            utils.formatCurrency(win.hi, A.priceStyle), win.n, win.widenBy);
+            utils.formatCurrency(win.hi, A.priceStyle), win.n, win.mode, win.widenBy);
 
         % ---- trial plan -------------------------------------------
         nTrials = cfg.auction.nTrials;

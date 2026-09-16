@@ -26,8 +26,22 @@ case 'config'
     out.basePayment  = 10.00;   % guaranteed, for showing up
     out.bonusMin     = 0.00;
     out.bonusMax     = 10.00;
-    out.houseScale   = 1 / 20000;   % $1 bonus per $20k of surplus
-    out.wageScale    = 0.50;        % $0.50 bonus per $1/hr above reservation
+    % ANCHOR-RELATIVE, not absolute. Surplus is only interpretable against
+    % the participant's own budget: a $20k gain is a windfall on a $150k
+    % budget and rounding error on a $750k one, so a flat $1-per-$20k rule
+    % paid high-budget participants several times more for identical
+    % behaviour. That was already true under stimulus windowing -- the
+    % window has always been [0.6, 1.6] x anchor -- and fitting prices onto
+    % the window (cfg.sampling.fitToWindow) only makes it uniform.
+    %
+    % The unit is bonus dollars per 1.0 of surplus/anchor. Values chosen to
+    % reproduce the old payout at a typical anchor rather than to re-open
+    % the calibration: 10% surplus on a $350k budget paid $1.75 before and
+    % $2.00 now; $5/hr over a $25 reservation paid $2.50 before and $2.40
+    % now. Worth re-checking against real pilot payouts before this is ever
+    % switched on.
+    out.houseScale   = 20.0;
+    out.wageScale    = 12.0;
     out.currency     = 'USD';
     % showRunning defaults OFF because a live earnings counter on the trial
     % screen is exactly the kind of off-task, changing, high-salience
@@ -117,7 +131,8 @@ case 'compute'
     cfg = varargin{3};
 
     out = struct('enabled', cfg.enabled, 'base', 0, 'bonus', 0, 'total', 0, ...
-                 'selectedTrial', [], 'surplus', NaN, 'explanation', '');
+                 'selectedTrial', [], 'surplus', NaN, 'surplusFrac', NaN, ...
+                 'explanation', '');
 
     if ~cfg.enabled
         out.explanation = 'No performance payment in this version.';
@@ -139,14 +154,22 @@ case 'compute'
 
     if strcmpi(pick.domain, 'houses')
         out.surplus = pick.trueValue - pick.pricePaid;
-        raw = out.surplus * cfg.houseScale;
+        base = pick.anchor;
+        raw = (out.surplus / base) * cfg.houseScale;
     else
         out.surplus = pick.wageObtained - pick.reservationWage;
-        raw = out.surplus * cfg.wageScale;
+        base = pick.reservationWage;
+        raw = (out.surplus / base) * cfg.wageScale;
+    end
+    if ~isfinite(base) || base <= 0
+        % No usable anchor means no defensible scale. Pay the base rather
+        % than invent a bonus from a divide-by-zero.
+        raw = 0;
     end
 
     out.bonus = min(max(raw, cfg.bonusMin), cfg.bonusMax);
     out.total = out.base + out.bonus;
+    out.surplusFrac = out.surplus / base;
     out.explanation = sprintf([ ...
         'Randomly selected: %s, trial %d.\n' ...
         'Surplus: %s\nBonus: $%.2f\nTotal payment: $%.2f'], ...

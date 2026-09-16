@@ -120,6 +120,24 @@ cfg.lateAtMaxOnly = true;         % Zone / work arrangement held to top level
 % --- Stimulus sampling ------------------------------------------------
 cfg.sampling.spread = [0.6 1.6];  % window around the participant's anchor
 cfg.sampling.minN   = 12;         % widen until this many stimuli are inside
+
+% How the anchor window is filled, per domain. See utils.applyWindow.
+%
+%   false -- SELECT the stimuli whose value already falls in the window
+%            (utils.sampleWindow). Correct when the set is big enough and
+%            evenly enough spread to fill it.
+%   true  -- keep every stimulus and FIT its value onto the window by rank
+%            (utils.fitToWindow). Correct when it is not.
+%
+% Houses are not. There are 80 of them spanning 126:1 in price against a
+% 2.67:1 window, so a $150k budget left 7-14 houses: the same house ~21
+% times over 24 auction trials, and contdc short of the 36 distinct it
+% needs for 3 attribute levels. Fitting gives every participant all 80,
+% spread evenly over their own budget range. Jobs does not need it -- the
+% synthetic arm puts 40-60 in every window -- and paying the cost of
+% fitting where it buys nothing would be the wrong trade.
+cfg.sampling.fitToWindow.houses = true;
+cfg.sampling.fitToWindow.jobs   = false;
 cfg.sampling.nTopIndustries = 4;
 
 % --- Auction task -----------------------------------------------------
