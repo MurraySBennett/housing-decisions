@@ -6,14 +6,28 @@ project: housing-decisions
 
 ## Now
 
-**Post-pilot backlog, nine items.** The 2026-09-16 staff pilot (998/999,
-both sessions) produced 21 notes; twelve are committed and deployed. Item 8
-landed just now -- the house outcome screen and the houses instructions are
-reframed as the second-price auction the mechanism already was, which also
-explains why an offer at the listed price can lose. **Not yet deployed to
-the share.**
+**Session end 2026-09-16. Everything is committed, pushed and deployed;
+clean at `e11fc1f`, `main` level with `origin/main`, share current.** Of the
+pilot's 21 notes, 17 are done. Four remain: the track-box property name (9)
+and running the drag-and-drop ratings (2) both need a rig visit; the
+mid-task drift flag (15) is buildable; the 998/999 QA (20) waits on the
+`dataMat` exporter.
 
-**Both open decisions are settled and built.** The jobs arm stays
+**In flight, on the lab machine, not here.** Murray is at the rig
+converting the share into a git checkout --
+`docs/lab-machine-git.md` is the runbook, and **step 0 is the gate**: this
+session moved 2,796 MB of participant data and 605 MB of images out of the
+tree and changed `cfg.paths.*` to match, and none of it has run in MATLAB.
+`utils.verifyPaths` at the rig is the first thing that can confirm the move
+and the config agree. Handoff packet:
+`~/.agents/handoffs/HANDOFF-housing-pilot.md`.
+
+**Blocked on one call:** a name for a GitHub organisation. OSU has no
+Enterprise instance, the repo is private on a personal account, and many
+collaborators are expected -- a flat collaborator list whose access dies
+with the account is the wrong container for something that will be cited.
+
+**Both pilot decisions are settled and built.** The jobs arm stays
 `synthetic`, regenerated with wage on its own 12-level geometric grid plus
 within-level jitter, which takes distinct wages per anchored window from
 1-3 to 10-26. Competition is now blocked: 24 trials, 4 ABBA blocks of 6,
