@@ -14,7 +14,10 @@ if isHouse
     prompt = ['Before we begin.\n\n' ...
               'Imagine you are looking to buy a house.\n\n' ...
               'What is the most you could realistically spend?'];
-    hint   = 'Type the digits and press ENTER.   350000 shows as $350,000';
+    % No note about the comma grouping: the field does it live as they
+    % type, which makes the explanation redundant the moment they press a
+    % key. Pilot note, 2026-09-16.
+    hint   = 'Type the digits and press ENTER.';
     lo = 50000; hi = 5000000;
 else
     prompt = ['Before we begin.\n\n' ...

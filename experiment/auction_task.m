@@ -268,6 +268,19 @@ try
                 window, cfg, geom, L, et, log, gazeStore, ...
                 inWindow, tex, sel, A, domain, plan(1), rs, win);
             trials = practiceTrial;
+
+            % The practice market used to end straight into the first real
+            % one with nothing between them, so the participant had no way
+            % to tell the boundary had been crossed -- they were still in
+            % try-anything mode on trial 1. Pilot note, 2026-09-16.
+            % Deliberately says nothing about earnings: cfg.incentives is
+            % off by default, and when it is on only ONE randomly chosen
+            % trial pays, so "every offer counts towards what you earn" is
+            % false either way.
+            showClickMessage(window, cfg, sprintf(['That was the practice round.' ...
+                '\n\nThe real markets start now. There are %d of them, and your ' ...
+                'decisions from here on are the ones we record.' ...
+                '\n\nClick when you are ready.'], numel(plan)));
         end
 
         utils.trace('domain %s: starting %d trials', domain, numel(plan));
@@ -622,8 +635,11 @@ practiceRow.practice = true;
 practiceRow.stimIdx = planRow.stimIdx(1:min(numel(planRow.stimIdx), size(L.boxRects, 2)));
 practiceRow.repIdx = planRow.repIdx(1:numel(practiceRow.stimIdx));
 
+% What the round is flagged as in the saved data is our business, not
+% theirs -- it told the participant nothing they could act on and invited
+% the thought that this round counts for something. Pilot note, 2026-09-16.
 showClickMessage(window, cfg, ['Practice round\n\nTry inspecting, rejecting, and making ' ...
-    'or cancelling an offer. This round is marked as practice in the data.\n\nClick to begin.']);
+    'or cancelling an offer. Nothing here counts.\n\nClick to begin.']);
 [trial, log, gazeStore] = runSearchEpisode(window, cfg, geom, L, et, log, ...
     gazeStore, stimTbl, tex, sel, A, domain, practiceRow, 1, rs, win);
 trial.practice = true;
