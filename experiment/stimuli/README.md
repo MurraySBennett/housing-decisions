@@ -73,7 +73,7 @@ roughly 13× the trials to separate them.
 |---|---|---|---|
 | **ecological** | `jobs_ecological.json` | 0.95 | Out-of-sample validation. Real listings, natural covariance. Weights **not** estimable here. |
 | **attenuated** | `jobs_attenuated.json` | 0.50 | Optional middle ground. Real values and group means, permuted pairing. 1.3× trial cost. |
-| **synthetic** | `jobs_synthetic.json` | 0.22 | Estimating attribute weights. Balanced factorial space, orthogonal by construction. |
+| **synthetic** | `jobs_synthetic.json` | 0.17 | Estimating attribute weights. Balanced factorial space, orthogonal by construction. |
 
 The intended design is **two clean arms**: estimate weights on the synthetic
 arm where they're identifiable, then test whether those weights predict
@@ -115,6 +115,31 @@ wage distribution's skew and put 11 of 12 levels below $50. Wage is
 therefore generated at 12 levels, spaced geometrically, which holds 4–6
 distinct values in every window from a $15 anchor to an $80 one. The five
 rating attributes stay at 4 quantile-spaced levels, which is what they want.
+
+`jitter` (with `jitter_by_column` for per-attribute overrides) scatters each
+value within its own level. Without it a balanced factorial shows every
+participant the same four numbers over and over, which no real listing set
+does — and a participant who notices that every job pays one of four wages
+is doing a different task from the one we think they are. **It costs the
+design nothing**: the level assignment is drawn first and jitter only moves
+values inside their level, so each level still appears equally often and the
+orthogonality optimised over level indices is untouched. It is measurably
+*better* on the value-space correlations, because independent noise
+attenuates them — `max |r|` fell from 0.19 to 0.17 when it went on.
+
+The unit is a fraction of the half-gap to the nearest neighbouring level,
+which is what lets one number serve a 1–5 rating scale and a $12–$92
+geometric wage grid at the same time: it is derived from the actual spacing,
+so below 1.0 a jittered value can never wander into a neighbour's territory.
+The arm uses 0.5. Ratings come out as 4.1, 2.8, 3.6 (rendered `%.1f / 5`);
+wages as 11, 16, 29, 44, 75. It also does most of the windowing work on its
+own — distinct wages per window went from 4–6 to 10–26, which is
+`attenuated`'s natural variety without `attenuated`'s correlations.
+
+Verify it with the level-recovery check: assign every value back to its
+nearest level midpoint and confirm the per-level counts are still 32/32 for
+the ratings and 10–11 for wage. If jitter is ever raised above 1.0 that
+check is what fails.
 
 **Check the window, never the column.** More levels in the file is not the
 same as more levels inside a window, and the full set looks fine in both

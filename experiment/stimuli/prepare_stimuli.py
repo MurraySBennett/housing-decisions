@@ -229,6 +229,31 @@ def synthesise(cfg, rng):
         raise SystemExit(f'unknown spacing(s): {sorted(bad)} '
                          f'(expected "quantile" or "geometric")')
 
+    # Within-level jitter. A bare factorial shows every participant the same
+    # four numbers over and over, which no real listing set does -- and a
+    # participant who notices that every job pays one of four wages is doing
+    # a different task from the one we think. Jitter buys natural-looking
+    # variation without touching the design: the LEVEL assignment is already
+    # fixed above, so each level still appears equally often and the
+    # orthogonality that was optimised over level indices is untouched.
+    #
+    # The unit is a fraction of the HALF-GAP to the nearest neighbouring
+    # level, not an absolute amount or a percentage of the value. That is
+    # what makes one number safe across a 1-5 rating scale and a $12-$92
+    # geometric wage grid at once: it is derived from the actual spacing, so
+    # at any value below 1.0 a jittered value can never wander into a
+    # neighbouring level's territory. 0.5 is comfortably inside.
+    jitter_default = float(spec.get('jitter', 0.0))
+    jitter_by_col = spec.get('jitter_by_column', {})
+    unknown = set(jitter_by_col) - set(cols)
+    if unknown:
+        raise SystemExit(f'jitter_by_column names non-attribute columns: '
+                         f'{sorted(unknown)}')
+    jitters = [float(jitter_by_col.get(c, jitter_default)) for c in cols]
+    if any(j < 0 or j > 1 for j in jitters):
+        raise SystemExit('jitter must be between 0 (off) and 1 (up to the '
+                         'midpoint between adjacent levels)')
+
     # --- Balanced level assignment per attribute ----------------------
     M = np.zeros((n, len(cols)))
     for k, kl in enumerate(nlevs):
@@ -294,15 +319,31 @@ def synthesise(cfg, rng):
                 raise SystemExit(f'geometric spacing needs a positive lower '
                                  f'endpoint; {c} starts at {mids[0]:g}')
             mids = np.geomspace(mids[0], mids[-1], kl)
-        vals = np.round(mids[M[:, k].astype(int)], dec)
+        exact = mids[M[:, k].astype(int)]
         # Rounding can collapse two quantile midpoints onto one value, which
         # silently costs a level. At 4 levels it never happened; with a
         # finer grid on a skewed column it can, so say so rather than let
         # the design quietly shrink.
-        if len(np.unique(vals)) < kl:
+        if len(np.unique(np.round(exact, dec))) < kl:
             print(f'  WARNING: {c} asked for {kl} levels but rounding to '
-                  f'{dec} decimal(s) leaves {len(np.unique(vals))} distinct '
-                  f'values')
+                  f'{dec} decimal(s) leaves '
+                  f'{len(np.unique(np.round(exact, dec)))} distinct values')
+
+        if jitters[k] > 0 and kl > 1:
+            # Half-gap to the NEAREST neighbour, per level. Edge levels have
+            # one neighbour; interior levels take the smaller of the two, so
+            # an uneven grid (quantile midpoints, or geometric, where gaps
+            # differ by an order of magnitude end to end) is handled without
+            # a special case.
+            gaps = np.diff(mids)
+            half = np.empty(kl)
+            half[0] = gaps[0] / 2
+            half[-1] = gaps[-1] / 2
+            if kl > 2:
+                half[1:-1] = np.minimum(gaps[:-1], gaps[1:]) / 2
+            amp = half[M[:, k].astype(int)] * jitters[k]
+            exact = exact + rng.uniform(-1, 1, n) * amp
+        vals = np.round(exact, dec)
         df[c] = vals
         if dec == 0:
             df[c] = df[c].astype(int)
@@ -327,6 +368,7 @@ def synthesise(cfg, rng):
                 'n_levels_by_column': {c: k for c, k in zip(cols, nlevs)},
                 'spacing_by_column': {c: spacing_by_col.get(c, 'quantile')
                                       for c in cols},
+                'jitter_by_column': {c: j for c, j in zip(cols, jitters)},
                 'final_max_r': worst,
                 'group_carries_signal': spec.get('group_carries_signal', False)}
 

@@ -1,12 +1,12 @@
 {
-  "generated_utc": "2026-09-16T21:36:19+00:00",
+  "generated_utc": "2026-09-16T21:38:54+00:00",
   "script": "prepare_stimuli.py",
   "script_version": "1.0.0",
   "python": "3.13.14",
   "numpy": "2.4.4",
   "pandas": "2.3.3",
   "config_file": "experiment/stimuli/stimgen/configs/jobs_synthetic.json",
-  "config_sha": "e5a87c95b754774a",
+  "config_sha": "c5a1450fafe7176c",
   "config": {
     "seed": 20260721,
     "input_file": "/home/msb/projects/housing-decisions/experiment/stimuli/job_stimuli.csv",
@@ -216,17 +216,18 @@
       "spacing_by_column": {
         "wage": "geometric"
       },
+      "jitter": 0.5,
       "target_max_r": 0.15,
       "iterations": 80000,
       "marginals": "match_source",
       "group_carries_signal": false
     },
-    "_note": "Fully balanced factorial-style space, optimised for orthogonality; levels map to quantile midpoints of the real data so values stay plausible, and industry is orthogonal to attributes. This is the arm for estimating attribute weights. The five rating attributes take 4 levels each. Wage takes 12, because wage is also the advertised anchor and is therefore the one column utils.sampleWindow slices: at 4 levels a participant anchored at $60/hr saw a single distinct wage, which is collinear with the intercept and leaves the anchor coefficient unidentified. Wage levels are also spaced geometrically rather than at quantile midpoints: the window is a fixed ratio band, so a log-uniform grid holds about the same number of levels at every anchor (5-6 from $15 to $80), where quantile midpoints inherited the source skew and collapsed to 2 at an $80 anchor. The five rating attributes keep quantile midpoints. Check with stimgen/window_check.py after any regeneration -- more levels in the file is not the same as more levels inside a window."
+    "_note": "Fully balanced factorial-style space, optimised for orthogonality; levels map to quantile midpoints of the real data so values stay plausible, and industry is orthogonal to attributes. This is the arm for estimating attribute weights. The five rating attributes take 4 levels each. Wage takes 12, because wage is also the advertised anchor and is therefore the one column utils.sampleWindow slices: at 4 levels a participant anchored at $60/hr saw a single distinct wage, which is collinear with the intercept and leaves the anchor coefficient unidentified. Wage levels are also spaced geometrically rather than at quantile midpoints: the window is a fixed ratio band, so a log-uniform grid holds about the same number of levels at every anchor (5-6 from $15 to $80), where quantile midpoints inherited the source skew and collapsed to 2 at an $80 anchor. The five rating attributes keep quantile midpoints. jitter 0.5 then scatters every value within its own level by up to half the half-gap to the nearest neighbouring level, so the set reads like real listings instead of four repeated numbers. The level assignment is untouched, so balance and orthogonality are too. Check with stimgen/window_check.py after any regeneration -- more levels in the file is not the same as more levels inside a window."
   },
   "seed": 20260721,
   "input_sha": null,
   "output_file": "/home/msb/projects/housing-decisions/experiment/stimuli/prepared/job_stimuli_synthetic.csv",
-  "output_sha": "6d23a0062969e4a1",
+  "output_sha": "6e692d242e4a869d",
   "output_rows": 128,
   "output_columns": [
     "industry",
@@ -262,6 +263,14 @@
         "jobSecurityAdvancement": "quantile",
         "wage": "geometric"
       },
+      "jitter_by_column": {
+        "workLife": 0.5,
+        "culture": 0.5,
+        "compensationBenefits": 0.5,
+        "management": 0.5,
+        "jobSecurityAdvancement": 0.5,
+        "wage": 0.5
+      },
       "final_max_r": 0.14279173888012614,
       "group_carries_signal": false
     },
@@ -274,17 +283,17 @@
       ]
     },
     "final": {
-      "max_abs_r": 0.21674632509946,
+      "max_abs_r": 0.1660558675818893,
       "vif": {
-        "workLife": 1.0406570792940801,
-        "culture": 1.0423416732893094,
-        "compensationBenefits": 1.0572189666210736,
-        "management": 1.0299386053154127,
-        "jobSecurityAdvancement": 1.0601263709926707,
-        "wage": 1.0870499300675862,
-        "commuteMinutes": 1.0694243870266953,
-        "ptoDays": 1.162082626270417,
-        "hoursPerWeek": 1.1159826339534213
+        "workLife": 1.0517978234151462,
+        "culture": 1.0416726719253795,
+        "compensationBenefits": 1.0194576899265497,
+        "management": 1.041526163492882,
+        "jobSecurityAdvancement": 1.017727762070874,
+        "wage": 1.1040561116308842,
+        "commuteMinutes": 1.0497014331261003,
+        "ptoDays": 1.0730899472851465,
+        "hoursPerWeek": 1.054207311077375
       }
     }
   }

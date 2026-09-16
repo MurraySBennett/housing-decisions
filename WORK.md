@@ -149,6 +149,20 @@ pleasantly.**
   `stimgen/window_check.py` is the check, and it mirrors `sampleWindow`'s
   widening loop rather than reading the column: more levels in the file is
   not the same as more levels inside a window
+- [x] 2026-09-16 **within-level jitter on the synthetic arm** (`jitter: 0.5`,
+  a fraction of the half-gap to the nearest neighbouring level, so one
+  number serves both a 1-5 rating scale and a $12-$92 geometric wage grid).
+  A bare factorial showed every participant the same four numbers over and
+  over, which no real listing set does. It costs the design nothing -- the
+  level assignment is drawn first, so balance and orthogonality are
+  untouched, and value-space `max |r|` actually *fell* 0.19 -> 0.17 because
+  independent noise attenuates correlations. Checked by recovering every
+  value back to its nearest level: per-level counts still exactly 32/32 for
+  the ratings and 10-11 for wage. It also does most of the windowing work on
+  its own, taking distinct wages per window from 4-6 to 10-26. Nothing
+  downstream matches on exact attribute values (`buildPairs` scores
+  z-scored continuous contrasts), and both tasks already render ratings as
+  `%.1f / 5`
 - [ ] next (S) **orthogonality is optimised over all 128 rows, but nobody
   ever sees all 128.** `window_check.py --attrs` reports within-window
   `max |r|` at 0.19-0.32 for the synthetic arm, which is roughly what
