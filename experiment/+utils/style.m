@@ -266,6 +266,16 @@ s.identityGrid.cellW = 180;
 s.identityGrid.cellH = 135;   % 4:3, close to a real-estate photo's shape
 s.identityGrid.gap   = 10;
 
+% Vertical room reserved for the TEXT identity header (jobs: industry) on
+% a card that has one. This is a single constant because two places read
+% it -- the draw in continuous_DC_task/drawCard and the AOI mirror in
+% cardAOIs -- and if they disagree the recorded attribute AOIs sit
+% somewhere other than the drawn cells, which is invisible until the gaze
+% analysis. Raised from a literal 30 on 2026-09-16: the industry is the
+% fastest read of what a job IS, and at s.sizeLabel in s.textDim it was
+% losing to the attribute values below it.
+s.identityTextHeightPx = 42;
+
 % Attribute-SLOT grid: enough slots for the max ever shown, 2 columns. As
 % of 2026-09-15 the late tier is reserved INSIDE nAttrs rather than added
 % on top of it (see utils.selectAttributes), so the maximum is 6, not 7,

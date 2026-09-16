@@ -204,6 +204,28 @@ check_grep 'coreRatings' experiment/continuous_DC_task.m 'contdc saves the value
 # always shown, so letting its rating in would be a silent design change.
 check_absent 'coreRatings' experiment/+utils/selectAttributes.m 'selection must not read the value rating'
 
+# --- 2026-09-16 pilot round ----------------------------------------------
+# Rating mode is a revert switch, so BOTH implementations must stay present
+# and every caller must go through the dispatcher rather than pick one.
+check_file experiment/+utils/elicitVASDrag.m
+check_file experiment/+utils/elicitRatings.m
+check_file experiment/+utils/elicitVAS.m
+check_grep 'ratingMode' experiment/+utils/config.m 'rating mode switch exists'
+check_absent 'utils\.elicitVAS\(' experiment/auction_task.m 'auction must call utils.elicitRatings'
+check_absent 'utils\.elicitVAS\(' experiment/continuous_DC_task.m 'contdc must call utils.elicitRatings'
+check_absent 'utils\.elicitVAS\(' experiment/+utils/elicitAttrRatings.m 'attr ratings must call utils.elicitRatings'
+
+# The identity header advance is drawn in one place and mirrored in the AOI
+# layout in another. A literal in either is how recorded AOIs drift off the
+# drawn cells without anything failing.
+check_grep 'identityTextHeightPx' experiment/+utils/style.m 'identity header height is a named constant'
+check_absent 'y0 = y0 \+ 30;' experiment/continuous_DC_task.m 'no literal identity header advance'
+
+check_grep 'vacancyGapMax' experiment/+utils/config.m 'vacancy tail is capped'
+check_grep 'vacancyGapMax' experiment/auction_task.m 'the cap is actually applied'
+check_grep 'retireStimulus' experiment/auction_task.m 'won items leave the market'
+check_grep 'round\(v / 1000\)' experiment/+utils/snapValue.m 'house prices snap to the nearest thousand'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

@@ -41,7 +41,7 @@ if nargin < 4, rngStream = []; end
 
 labels = [{A.core.label}, {A.pool.label}];
 
-[ratings, rts, order] = utils.elicitVAS(window, cfg, labels, ...
+[ratings, rts, order, detail] = utils.elicitRatings(window, cfg, labels, ...
     'How important is each of these to you?', ...
     {'Entirely unimportant', 'Extremely important'}, rngStream);
 
@@ -55,5 +55,6 @@ R.coreRTs = rts(1:nC);
 R.pool    = ratings(nC+1:end);
 R.poolRTs = rts(nC+1:end);
 R.order   = order;
+R.detail  = detail;    % [] in sequential mode; drag diagnostics otherwise
 
 end

@@ -64,6 +64,49 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-16 pilot round, decided items: attribute ratings are now
+  drag-and-drop (`+utils/elicitVASDrag.m`, whole set visible, rearrangeable,
+  Done gated on all placed) behind `cfg.elicit.ratingMode` with the original
+  one-at-a-time version kept as `'sequential'` and both reachable only via
+  `+utils/elicitRatings.m`; a WON auction item is struck from every later
+  market (`retireStimulus`, floor of 6 options) while rejected/lost/expired
+  ones may still return; `showValueMarker` off; house responses snap to the
+  nearest $1,000; contdc timeouts 15/25 -> 25/40 s; the industry label on
+  contdc cards is centred and set in body size, with the header advance now
+  the single constant `s.identityTextHeightPx` read by both the draw and the
+  AOI mirror; the vacancy gap keeps its 4 s mean but gains a 10 s cap so
+  only the gamma tail is cut. No pixel-art job icons -- declined
+- [ ] now (S) **drag-and-drop has never been executed.** It is the largest
+  unrun surface in the battery and it is a mouse-interaction screen, which
+  is the class of thing static checks cannot touch. Watch for: chips wider
+  than the bank row, label collisions on the line, and whether dropping
+  outside the band to return a chip to the bank is discoverable. Revert is
+  `cfg.elicit.ratingMode = 'sequential'`
+- [ ] now (M) **decide the jobs arm** -- see the windowing finding above.
+  Recommendation is to regenerate `synthetic` with more wage levels than the
+  rating attributes (`prepare_stimuli.py:196` takes `n_levels` as one scalar
+  for all attributes and needs a per-column override), falling back to
+  `attenuated` if the generator is not to be touched
+- [ ] now (S) **decide the house outcome wording.** `pricePaid = threshold`
+  is second-price and stays -- first-price would put strategic shading
+  inside the primary DV. The recommendation is to reframe the screen as the
+  auction it already is (rival buyers, you pay what it took to beat them)
+  rather than as a private sale
+- [ ] now (M) **the jobs wage grid does not survive anchor-centred
+  windowing.** Found 2026-09-16 from the staff pilot. `synthetic` is a
+  balanced orthogonal factorial: *every* attribute takes exactly 4 levels,
+  wage included (15/25/34/86), which is correct for estimating attribute
+  weights and is what the arm exists for. But wage does double duty as the
+  advertised anchor, and `utils.sampleWindow` then slices that dimension --
+  a participant anchored at $60/hr sees **one** distinct wage, at $18 or
+  $40 two, at $25 three. With one value the anchor is collinear with the
+  intercept and its coefficient is not identified at all; with two there is
+  a slope and nothing about curvature. Houses are unaffected (22-36
+  distinct prices per window, no widening). `ecological` and `attenuated`
+  both give 17-33 distinct wages per window. Fix is either switch arms or
+  give wage more levels than the rating attributes -- `prepare_stimuli.py`
+  takes `n_levels` as one scalar for all attributes (line 196), so the
+  latter needs a small per-column override there
 - [x] 2026-09-16 set `TRIALS_PER_CELL = []` in `run_battery.m` for the
   staff practice run -- full trial counts, everything else already real.
   Note this locks in the *current* config as the baseline while the

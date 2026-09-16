@@ -148,7 +148,7 @@ try
             keepIndustries = {};
             if strcmpi(domain, 'jobs')
                 inds = unique(stimuli.industry);
-                [industryRatings, ~, ~] = utils.elicitVAS(window, cfg, cellstr(inds), ...
+                [industryRatings, ~, ~] = utils.elicitRatings(window, cfg, cellstr(inds), ...
                     'How likely would you be to apply for a job in each of these industries?', ...
                     {'Entirely unlikely', 'Extremely likely'}, rs);
                 [~, ord] = sort(industryRatings, 'descend');
@@ -260,6 +260,7 @@ try
 
         % ---- run trials -------------------------------------------
         trials = struct([]);
+        wonStimIdx = [];
         log = utils.eventLog('init', 20000);
         gazeStore = utils.gazeBuffer('init');
         clockSync = struct('start', utils.clockSync(et), 'end', []);
@@ -297,6 +298,22 @@ try
                 inWindow, tex, sel, A, domain, plan(t), numel(plan), rs, win);
 
             if isempty(trials), trials = trial; else, trials(end+1) = trial; end %#ok<AGROW>
+
+            % A WON item leaves the market for good. Items that were
+            % rejected, lost, or simply expired may come back in a later
+            % market -- a real listing that did not sell gets relisted, and
+            % the repeat is deliberate (utils.trialPlan logs repIdx for
+            % exactly this reliability check). But an item the participant
+            % has already bought cannot be bought again, and seeing it
+            % re-listed reads as the task not keeping track.
+            if trial.bidAccepted && isfinite(trial.bidStimIdx)
+                [plan, nStruck] = retireStimulus(plan, t, trial.bidStimIdx, ...
+                    cfg.auction.minOptionsAfterRetire);
+                wonStimIdx(end+1) = trial.bidStimIdx; %#ok<AGROW>
+                log = utils.eventLog('add', log, 'stimulus_retired', GetSecs, ...
+                    struct('stimIdx', trial.bidStimIdx, 'trial', t, ...
+                           'struckFromTrials', nStruck));
+            end
         end
 
         % ---- store ------------------------------------------------
@@ -316,6 +333,7 @@ try
         dataMat.(domain).stimuliShown    = inWindow;
         dataMat.(domain).plan            = plan;
         dataMat.(domain).comprehension   = comprehension;
+        dataMat.(domain).wonStimIdx      = wonStimIdx;
         dataMat.(domain).trials          = trials;
         dataMat.(domain).events          = utils.eventLog('table', log);
         dataMat.(domain).aoiRects        = L.aoiRects;
@@ -469,9 +487,7 @@ while true
                     struct('box', b, 'stimIdx', boxStim(b), ...
                            'trial', planRow.trial, 'reason', 'expired'));
                 boxStim(b) = NaN;
-                boxVacantUntil(b) = now + utils.gammaSample( ...
-                    cfg.auction.vacancyShape, ...
-                    cfg.auction.vacancyGapMean/cfg.auction.vacancyShape, 1, rs);
+                boxVacantUntil(b) = now + vacancyGap(cfg, rs);
             end
         end
     end
@@ -538,9 +554,7 @@ while true
             struct('box', b, 'stimIdx', stimIdx, 'trial', planRow.trial, ...
                    'dwellSec', now - boxSince(b)));
         boxStim(b) = NaN;
-        boxVacantUntil(b) = now + utils.gammaSample( ...
-            cfg.auction.vacancyShape, ...
-            cfg.auction.vacancyGapMean/cfg.auction.vacancyShape, 1, rs);
+        boxVacantUntil(b) = now + vacancyGap(cfg, rs);
         continue
     end
 
@@ -603,9 +617,7 @@ while true
     else
         boxStim(b) = NaN;
         now = GetSecs - t0;
-        boxVacantUntil(b) = now + utils.gammaSample( ...
-            cfg.auction.vacancyShape, ...
-            cfg.auction.vacancyGapMean/cfg.auction.vacancyShape, 1, rs);
+        boxVacantUntil(b) = now + vacancyGap(cfg, rs);
         showOutcome(window, cfg, false, domain, threshold, bid);
     end
 end
@@ -1284,6 +1296,48 @@ for k = 1:numel(sel.identity)
     end
 end
 if isempty(parts), str = ''; else, str = strjoin(parts, '  -  '); end
+end
+
+
+%% ======================================================================
+function [plan, nStruck] = retireStimulus(plan, afterTrial, stimIdx, minOptions)
+%RETIRESTIMULUS  Remove a won item from every trial that has not run yet.
+%
+%   Struck from plan(afterTrial+1:end), keeping stimIdx and repIdx aligned.
+%   A trial that would drop below minOptions keeps the item rather than
+%   running a market thinner than the design calls for -- a duplicated
+%   listing is a smaller problem than a market with nothing in it, and the
+%   case only arises if the sampled window was already thin.
+%
+%   repIdx is NOT renumbered. It records how many times the participant had
+%   seen that item by that point, which stays true whether or not later
+%   occurrences are struck; renumbering would rewrite history.
+
+nStruck = 0;
+for k = (afterTrial + 1):numel(plan)
+    keep = plan(k).stimIdx ~= stimIdx;
+    if all(keep), continue; end
+    if sum(keep) < minOptions, continue; end
+    plan(k).stimIdx = plan(k).stimIdx(keep);
+    plan(k).repIdx  = plan(k).repIdx(keep);
+    nStruck = nStruck + 1;
+end
+
+end
+
+
+%% ======================================================================
+function gap = vacancyGap(cfg, rs)
+%VACANCYGAP  Seconds a freed box stays empty before it may refill.
+%
+%   Gamma-distributed so turnover is irregular rather than metronomic, but
+%   with a hard ceiling: the untruncated tail produced slots that sat empty
+%   long enough for the 2026-09-16 pilot to read them as the market having
+%   stalled. Capping beats lowering the mean -- typical turnover is
+%   unchanged and only the outliers are cut.
+gap = utils.gammaSample(cfg.auction.vacancyShape, ...
+    cfg.auction.vacancyGapMean/cfg.auction.vacancyShape, 1, rs);
+gap = min(gap, cfg.auction.vacancyGapMax);
 end
 
 

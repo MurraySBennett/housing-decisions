@@ -139,6 +139,9 @@ cfg.auction.nOptionsPerTrial = 12;   % ~10-15 is what the stimulus set supports
 cfg.auction.trialTimeoutSec  = 90;
 cfg.auction.feedbackSec      = 2.2;
 cfg.auction.driftEvery       = 4;    % drift check every N trials
+% A won item is struck from every later market (see retireStimulus), but
+% never so far that a market runs thinner than this.
+cfg.auction.minOptionsAfterRetire = 6;
 
 % Market dynamics. Competition drives turnover as well as price. THESE ARE
 % NOT SCALED BY TESTING MODE -- cfg.testing.enabled never touches this
@@ -164,6 +167,10 @@ cfg.auction.dwellFactor       = 3.0; % how long an option stays once it lands
 % next one appearing in roughly the same slot.
 cfg.auction.vacancyGapMean  = 4;   % mean seconds a box stays empty
 cfg.auction.vacancyShape    = 2;   % gamma shape
+% The mean is fine; it is the gamma's right tail that produces the long
+% dead slots the 2026-09-16 pilot noticed. Cap it rather than lower the
+% mean, so typical turnover is unchanged and only the outliers are cut.
+cfg.auction.vacancyGapMax   = 10;  % seconds; hard ceiling on the draw
 
 % Acceptance thresholds. MULTIPLIERS on the item's value, applied in
 % opposite directions per domain: a house buyer must bid above the
@@ -204,8 +211,11 @@ cfg.contdc.nPairs.jobs       = 10;
 % preference-reversal paradigm and always happens.
 cfg.contdc.allowCrossLevelReuse = false;
 
-cfg.contdc.choiceTimeoutSec  = 15;
-cfg.contdc.priceTimeoutSec   = 25;
+% Raised from 15/25 after the 2026-09-16 pilot: both felt tight to sit
+% through, and a timeout is a lost trial, not a slow one. These are
+% ceilings, not pacing -- nobody who has decided waits them out.
+cfg.contdc.choiceTimeoutSec  = 25;
+cfg.contdc.priceTimeoutSec   = 40;
 cfg.contdc.itiSec            = 0.6;
 cfg.contdc.driftEvery        = 2;    % drift check every N blocks
 
@@ -266,7 +276,14 @@ cfg.et.positionGuide.mirrorX   = true;  % display behaves like a mirror;
 % exactly the kind of cue that pulls stated values toward it. Turning this
 % on is a deliberate design choice with a measurable cost in bid variance;
 % turning it off restores the scale to an unanchored one.
-cfg.display.showValueMarker = true;
+cfg.display.showValueMarker = false;  % held OFF after the 2026-09-16 pilot
+
+% How the attribute/industry importance ratings are collected. 'drag' shows
+% the whole set at once and lets them be dragged onto the line in any order
+% and rearranged; 'sequential' is the original one-at-a-time version. This
+% is a REVERT SWITCH, not a preference -- see utils.elicitRatings for why
+% the two are not the same measurement.
+cfg.elicit.ratingMode = 'drag';   % 'drag' | 'sequential'
 
 % --- Testing mode -----------------------------------------------------
 cfg.testing.enabled          = opt.testing;   % <-- now actually wired up

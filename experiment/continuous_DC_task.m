@@ -150,7 +150,7 @@ try
             keepIndustries = {};
             if strcmpi(domain, 'jobs')
                 inds = unique(stimuli.industry);
-                [industryRatings, ~, ~] = utils.elicitVAS(window, cfg, cellstr(inds), ...
+                [industryRatings, ~, ~] = utils.elicitRatings(window, cfg, cellstr(inds), ...
                     'How likely would you be to apply for a job in each of these industries?', ...
                     {'Entirely unlikely', 'Extremely likely'}, rs);
                 [~, ord] = sort(industryRatings, 'descend');
@@ -772,7 +772,9 @@ contentRect = reserveIdentityStrip(cfg, sel, innerRect);
 x0 = contentRect(1);
 y0 = contentRect(2) + 8;
 if hasTextIdentity(sel)
-    y0 = y0 + 30;
+    % Mirrors the header advance in drawCard -- same constant, so the
+    % recorded AOIs cannot drift away from the drawn cells.
+    y0 = y0 + cfg.style.identityTextHeightPx;
 end
 
 slots = utils.attrSlotRects(cfg, x0, y0);
@@ -807,12 +809,19 @@ y0 = contentRect(2) + 8;
 
 % Identity text header (jobs: industry/title; empty for houses now that
 % their images live in the grid above instead of here)
+% Centred on the card and set in body size rather than label size: with
+% two cards side by side this is the fastest cue to what kind of job is
+% on each side, and left-aligned dim small text was reading as a caption
+% on the attribute grid instead of as the card's heading. Pilot note 18,
+% 2026-09-16. s.identityTextHeightPx is mirrored in cardAOIs.
 Screen('TextFont', window, s.fontContent);
-Screen('TextSize', window, s.sizeLabel);
+Screen('TextSize', window, s.sizeContent);
 idText = identityString(stimTbl, sel, idx);
 if ~isempty(idText)
-    DrawFormattedText(window, idText, x0, y0 + 16, s.textDim, 60, 0, 0, 1.2);
-    y0 = y0 + 30;
+    bnd = Screen('TextBounds', window, idText);
+    idX = rect(1) + ((rect(3) - rect(1)) - bnd(3)) / 2;
+    DrawFormattedText(window, idText, idX, y0 + 20, s.text);
+    y0 = y0 + s.identityTextHeightPx;
 end
 
 % Attribute cells: FIXED slot positions from cfg.style.attrGrid, not

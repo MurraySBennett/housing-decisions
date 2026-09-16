@@ -26,8 +26,18 @@ if isempty(v) || ~isnumeric(v) || ~isfinite(v)
 end
 
 switch lower(char(priceStyle))
-    case {'hourly', 'total'}
+    case 'hourly'
         v = round(v);
+
+    case 'total'
+        % House prices snap to the nearest THOUSAND, not the nearest
+        % dollar. Nobody offers $347,213 for a house, the scale cannot
+        % resolve a dollar anyway (the arc spans hundreds of thousands
+        % across ~900 px), and a bid carrying three junk digits invites
+        % analyses of clustering and rounding that are reading pixel noise.
+        % Same argument as dropping cents from wages. 2026-09-16 pilot.
+        v = round(v / 1000) * 1000;
+
     otherwise
         % Unknown style: leave it alone rather than guess a resolution.
 end
