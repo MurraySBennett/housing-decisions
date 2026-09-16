@@ -13,7 +13,7 @@ Rscript analysis/R/run_all.R --simulate
 Rscript analysis/R/run_all.R --data experiment/Data_demo
 
 # On real data
-Rscript analysis/R/run_all.R --data '/path/to/PSY-kvam.4/housing_wages/Experiment/Data'
+Rscript analysis/R/run_all.R --data '/path/to/PSY-kvam.4/housing_wages_local/Data'
 ```
 
 Output lands in `analysis/output/`: an integrity report, one combined CSV per
@@ -83,7 +83,7 @@ install.packages(c("dplyr", "readr", "tidyr", "stringr", "purrr",
 they avoid the escaping problem backslashes create in R strings.
 
 ```bash
-Rscript analysis/R/run_all.R --data "//asc-files.asc.ohio-state.edu/projects/PSY-kvam.4/housing_wages/Experiment/Data"
+Rscript analysis/R/run_all.R --data "//asc-files.asc.ohio-state.edu/projects/PSY-kvam.4/housing_wages_local/Data"
 ```
 
 Reading several hundred small CSVs over SMB is slow. Copy the `Data` tree

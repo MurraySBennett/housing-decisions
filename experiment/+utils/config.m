@@ -67,9 +67,28 @@ cfg.paths.experiment = fullfile(projRoot, 'housing_wages', 'Experiment');
 % the configs that produce it).
 cfg.paths.stimuli    = fullfile(cfg.paths.experiment, 'stimuli');
 cfg.paths.prepared   = fullfile(cfg.paths.stimuli, 'prepared');
-cfg.paths.images     = fullfile(cfg.paths.stimuli, 'house_images');
 
-cfg.paths.data             = fullfile(cfg.paths.experiment, 'Data');
+% --- Everything git must never touch ------------------------------------
+% Participant data and the 605MB house image set both used to live INSIDE
+% housing_wages/, gitignored. That is safe right up until the share becomes
+% a git checkout -- and then `git clean -fdx`, the command anyone reaches
+% for to reset a working tree, deletes every ignored file. Git raises no
+% objection, because they were ignored on purpose. Participant data is not
+% recoverable from that and the Archive backups deliberately exclude both.
+%
+% So they live in a SIBLING of the checkout, where no git command can
+% reach them:
+%
+%   PSY-kvam.4\housing_wages\          <- the checkout, all of it tracked
+%   PSY-kvam.4\housing_wages_local\    <- this. Never tracked, never git's.
+%       Data\
+%       house_images\
+%
+% demo_battery.m overrides both for a laptop run and is unaffected.
+cfg.paths.local      = fullfile(projRoot, 'housing_wages_local');
+cfg.paths.images     = fullfile(cfg.paths.local, 'house_images');
+
+cfg.paths.data             = fullfile(cfg.paths.local, 'Data');
 cfg.paths.sessions         = fullfile(cfg.paths.data, 'sessions');
 cfg.paths.taskData.auction = fullfile(cfg.paths.data, 'auction');
 cfg.paths.taskData.contdc  = fullfile(cfg.paths.data, 'cont_dc');

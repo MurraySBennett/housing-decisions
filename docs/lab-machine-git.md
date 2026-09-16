@@ -98,23 +98,32 @@ and arrive by `git pull`. If you ever *do* need to commit from the rig,
 commit locally and pull it the other way rather than giving the rig a
 writable key.
 
-## 3. BEFORE converting: move participant data out of the tree
+## 3. Data and images out of the tree — DONE 2026-09-16
 
-`cfg.paths.data` is `<projRoot>\housing_wages\Experiment\Data` — *inside*
-what is about to become the working tree, and gitignored.
+Both were gitignored and *inside* what is about to become the working tree.
+That combination is the dangerous one: `git clean -fdx` removes ignored
+files — the whole point of `-x` — and it is the command anyone reaches for
+to reset a checkout. On that tree it deletes every participant, and git
+raises no objection, because they were ignored by design. The deploy
+script's `Archive\` backups exclude both, so there is no second copy.
 
-That combination is the dangerous one. `git clean -fdx` removes ignored
-files, which is the whole point of `-x`, and it is the command anyone
-reaches for to "reset the checkout". Run it on that tree and **every
-participant is gone**, with git raising no objection because the files were
-ignored by design. The 605 MB image set goes with it.
+`scripts/move_out_of_tree.ps1` moved them and verified file counts and
+bytes on both sides:
 
-Move `Data\` to a sibling of the checkout and re-point `cfg.paths.data`
-first. Converting the share before doing that just arms the trap. Tracked
-in `WORK.md` as the item that blocks this one.
+```
+housing_wages\Experiment\Data                  ->  housing_wages_local\Data
+   41 files, 2,796.3 MB
+housing_wages\Experiment\stimuli\house_images  ->  housing_wages_local\house_images
+  485 files, 605.3 MB
+```
 
-Until that is done, treat `git clean` as a command that does not exist on
-this machine.
+`cfg.paths.local` in `+utils/config.m` points at the new root, and
+`utils.verifyPaths` now lists it under MUST ALREADY EXIST — so if someone
+later restores the old layout, the path check says so rather than the task
+failing mid-session.
+
+The script is idempotent and refuses to merge into an existing destination,
+so re-running it is safe.
 
 ## 4. Convert the share into the working tree
 

@@ -3,7 +3,10 @@
 experiment/stimuli/*
 **/stimuli/house_images/
 
-# Participant data
+# Participant data. Kept here for a dev checkout, but on the lab share the
+# real data now lives in a SIBLING of the checkout (cfg.paths.local ->
+# housing_wages_local/Data) precisely so that no gitignore rule is what
+# stands between `git clean -fdx` and every participant.
 experiment/Data/
 !experiment/Data/README.md
 

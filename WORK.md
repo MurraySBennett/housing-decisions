@@ -412,11 +412,17 @@ pleasantly.**
   `WORK.md` and `docs/` -- not the 605MB image set, the Tobii SDK, or
   participant data, so it is enough to read the project and run the
   analysis on exported CSVs but not to run a session
-- [ ] **now (S) BLOCKS the clone: `cfg.paths.data` is inside the code tree**
-  (`Experiment/Data`), and it is gitignored, so `git clean -fdx` on the
-  share would delete every participant without git objecting. Move it to a
-  sibling of the checkout **before** converting the share, not after.
-  `docs/lab-machine-git.md` carries the warning but a warning is not a fix
+- [x] 2026-09-16 **participant data and the image set are out of the git
+  tree.** Both were gitignored and inside what is about to become the
+  working tree, so `git clean -fdx` would have deleted every participant
+  with git raising no objection -- and the deploy script's `Archive/`
+  backups exclude both, so there was no second copy.
+  `scripts/move_out_of_tree.ps1` moved them to `housing_wages_local/`
+  (41 files / 2,796 MB of data, 485 files / 605 MB of images), verifying
+  counts and bytes on both sides. `cfg.paths.local` is the new root and
+  `utils.verifyPaths` lists it under MUST ALREADY EXIST, so a restored old
+  layout is reported rather than discovered mid-session. The clone is no
+  longer blocked
 - [ ] next (S) `config.m` hardcodes the OSU UNC as `projRoot`, which is why
   `demo_battery.m` has to re-point every path by hand on WSL. `STIMULI.md`
   already documents a `$DATA_ROOT` env-var convention that nothing reads.

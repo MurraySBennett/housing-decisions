@@ -316,6 +316,15 @@ check_grep "isfield\(r, 'auctionBid'\)" experiment/preflight.m 'allAoiOK include
 # that looks fine and throws the first time that branch runs -- mid-session,
 # at the rig, on a screen reached once per trial. Nothing else catches it
 # here: this machine has no MATLAB.
+# --- Data and images live OUTSIDE the checkout --------------------------
+# Not a style rule. Once the share is a git working tree, `git clean -fdx`
+# deletes every ignored file, and both of these were ignored-and-inside.
+check_grep 'cfg\.paths\.local' experiment/+utils/config.m 'the out-of-tree root exists'
+check_grep 'cfg\.paths\.data[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.local' experiment/+utils/config.m 'participant data is out of the tree'
+check_grep 'cfg\.paths\.images[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.local' experiment/+utils/config.m 'the image set is out of the tree'
+check_absent "cfg\.paths\.data[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.experiment" experiment/+utils/config.m 'data must not go back inside Experiment/'
+check_grep 'paths\.local' experiment/+utils/verifyPaths.m 'verifyPaths reports the out-of-tree root'
+
 if ! python3 scripts/check_utils_calls.py; then
   fail=1
 fi
