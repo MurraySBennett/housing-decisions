@@ -197,10 +197,46 @@ def synthesise(cfg, rng):
     target = spec.get('target_max_r', 0.15)
     iters = spec.get('iterations', 60000)
 
+    # n_levels is the default for every attribute; n_levels_by_column
+    # overrides it for named ones. This exists because an attribute that
+    # ALSO serves as the advertised anchor is the only one the runtime
+    # slices (utils.sampleWindow), and a 4-level grid can leave a single
+    # distinct value inside a window -- collinear with the intercept, so
+    # its coefficient is not identified. The rating attributes want few
+    # levels; the anchored one wants enough to survive the slice.
+    per_col = spec.get('n_levels_by_column', {})
+    unknown = set(per_col) - set(cols)
+    if unknown:
+        raise SystemExit(f'n_levels_by_column names non-attribute columns: '
+                         f'{sorted(unknown)}')
+    nlevs = [int(per_col.get(c, nlev)) for c in cols]
+
+    # Level SPACING, per column. 'quantile' (the default) puts levels at
+    # quantile midpoints of the real data, so values look like real values
+    # -- but it inherits the source's skew, and for the anchored column
+    # that is the wrong shape: the window is a fixed RATIO band around the
+    # anchor (0.6x to 1.6x), so a skewed grid gives plenty of levels in the
+    # dense middle and almost none at the top. 'geometric' spaces levels
+    # evenly in log space across the same span, which makes the number of
+    # levels inside a window roughly constant at every anchor.
+    spacing_by_col = spec.get('spacing_by_column', {})
+    unknown = set(spacing_by_col) - set(cols)
+    if unknown:
+        raise SystemExit(f'spacing_by_column names non-attribute columns: '
+                         f'{sorted(unknown)}')
+    bad = {v for v in spacing_by_col.values()} - {'quantile', 'geometric'}
+    if bad:
+        raise SystemExit(f'unknown spacing(s): {sorted(bad)} '
+                         f'(expected "quantile" or "geometric")')
+
     # --- Balanced level assignment per attribute ----------------------
-    base = np.tile(np.arange(nlev), int(np.ceil(n / nlev)))[:n]
     M = np.zeros((n, len(cols)))
-    for k in range(len(cols)):
+    for k, kl in enumerate(nlevs):
+        if n % kl:
+            print(f'  NOTE: {cols[k]} has {kl} levels but n_rows={n} is not a '
+                  f'multiple of it -- {n % kl} level(s) appear once more '
+                  f'than the rest')
+        base = np.tile(np.arange(kl), int(np.ceil(n / kl)))[:n]
         M[:, k] = rng.permutation(base)
 
     def cost(mat):
@@ -210,7 +246,11 @@ def synthesise(cfg, rng):
         return A.max() + 0.25 * A.mean(), float(A.max())
 
     best, worst = cost(M)
-    print(f'  balanced grid: {n} rows x {len(cols)} attrs x {nlev} levels')
+    if len(set(nlevs)) == 1:
+        print(f'  balanced grid: {n} rows x {len(cols)} attrs x {nlev} levels')
+    else:
+        detail = ', '.join(f'{c}={k}' for c, k in zip(cols, nlevs))
+        print(f'  balanced grid: {n} rows x {len(cols)} attrs, levels: {detail}')
     print(f'  start  max|r| = {worst:.3f}   target {target:.2f}')
     for it in range(iters):
         c = rng.integers(len(cols))
@@ -237,16 +277,33 @@ def synthesise(cfg, rng):
     for k, c in enumerate(cols):
         aspec = cfg['attributes'][c]
         dec = aspec.get('decimals', 1)
+        kl = nlevs[k]
         if src is not None and c in src.columns and src[c].notna().any():
             # Level i -> the midpoint of quantile bin i of the real data,
             # so values look like real values but the design stays balanced.
-            qs = np.linspace(0, 1, nlev + 1)
+            qs = np.linspace(0, 1, kl + 1)
             edges = np.nanquantile(src[c].astype(float), qs)
             mids = (edges[:-1] + edges[1:]) / 2
         else:
             lo, hi = aspec['range']
-            mids = np.linspace(lo, hi, nlev)
-        df[c] = np.round(mids[M[:, k].astype(int)], dec)
+            mids = np.linspace(lo, hi, kl)
+        if spacing_by_col.get(c, 'quantile') == 'geometric':
+            # Same span, log-uniform inside it. Keeping the endpoints means
+            # the values stay in the range the real data occupies.
+            if mids[0] <= 0:
+                raise SystemExit(f'geometric spacing needs a positive lower '
+                                 f'endpoint; {c} starts at {mids[0]:g}')
+            mids = np.geomspace(mids[0], mids[-1], kl)
+        vals = np.round(mids[M[:, k].astype(int)], dec)
+        # Rounding can collapse two quantile midpoints onto one value, which
+        # silently costs a level. At 4 levels it never happened; with a
+        # finer grid on a skewed column it can, so say so rather than let
+        # the design quietly shrink.
+        if len(np.unique(vals)) < kl:
+            print(f'  WARNING: {c} asked for {kl} levels but rounding to '
+                  f'{dec} decimal(s) leaves {len(np.unique(vals))} distinct '
+                  f'values')
+        df[c] = vals
         if dec == 0:
             df[c] = df[c].astype(int)
 
@@ -266,7 +323,11 @@ def synthesise(cfg, rng):
         if extra != grp and extra not in df.columns:
             df[extra] = [f'{extra}_{i+1:03d}' for i in range(n)]
 
-    return df, {'n_levels': nlev, 'final_max_r': worst,
+    return df, {'n_levels': nlev,
+                'n_levels_by_column': {c: k for c, k in zip(cols, nlevs)},
+                'spacing_by_column': {c: spacing_by_col.get(c, 'quantile')
+                                      for c in cols},
+                'final_max_r': worst,
                 'group_carries_signal': spec.get('group_carries_signal', False)}
 
 

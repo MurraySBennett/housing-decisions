@@ -98,11 +98,13 @@ pleasantly.**
   than the bank row, label collisions on the line, and whether dropping
   outside the band to return a chip to the bank is discoverable. Revert is
   `cfg.elicit.ratingMode = 'sequential'`
-- [ ] now (M) **decide the jobs arm** -- see the windowing finding above.
-  Recommendation is to regenerate `synthetic` with more wage levels than the
-  rating attributes (`prepare_stimuli.py:196` takes `n_levels` as one scalar
-  for all attributes and needs a per-column override), falling back to
-  `attenuated` if the generator is not to be touched
+- [x] 2026-09-16 **jobs arm decided: stay on `synthetic`, regenerate it.**
+  `prepare_stimuli.py` now takes `n_levels_by_column` and
+  `spacing_by_column`, so the anchored attribute can differ from the rating
+  ones; wage is 12 geometric levels, the five ratings stay at 4 quantile
+  ones. Achieved `final_max_r` 0.143 against the 0.15 target, and the
+  generator still reproduces the old 4-level arm bit-for-bit when no
+  override is given, so the change is behaviour-preserving by default
 - [x] 2026-09-16 **the house outcome screen is now framed as the auction it
   is.** `pricePaid = threshold` was never in question -- first-price would
   put strategic shading inside the primary DV -- but "You pay the market
@@ -125,8 +127,8 @@ pleasantly.**
   either way. Dead text today (`cfg.incentives.enabled = false`) and left
   alone deliberately, since the pilot note was about houses -- but it should
   match the houses wording before incentives are ever switched on
-- [ ] now (M) **the jobs wage grid does not survive anchor-centred
-  windowing.** Found 2026-09-16 from the staff pilot. `synthetic` is a
+- [x] 2026-09-16 **the jobs wage grid did not survive anchor-centred
+  windowing; fixed.** Found 2026-09-16 from the staff pilot. `synthetic` is a
   balanced orthogonal factorial: *every* attribute takes exactly 4 levels,
   wage included (15/25/34/86), which is correct for estimating attribute
   weights and is what the arm exists for. But wage does double duty as the
@@ -136,10 +138,24 @@ pleasantly.**
   intercept and its coefficient is not identified at all; with two there is
   a slope and nothing about curvature. Houses are unaffected (22-36
   distinct prices per window, no widening). `ecological` and `attenuated`
-  both give 17-33 distinct wages per window. Fix is either switch arms or
-  give wage more levels than the rating attributes -- `prepare_stimuli.py`
-  takes `n_levels` as one scalar for all attributes (line 196), so the
-  latter needs a small per-column override there
+  both give 17-33 distinct wages per window. Fixed by giving wage its own
+  grid rather than by switching arms. **The level count was not the whole
+  story:** at 12 quantile-spaced levels the worst window still held 2
+  distinct wages at an $80 anchor, because quantile midpoints inherit the
+  real wage distribution's skew and put 11 of 12 levels below $50. The
+  window is a fixed *ratio* band, so the grid has to be geometric to match
+  it -- 12/14/17/20/24/30/36/43/52/63/76/92 holds 4-6 distinct wages at
+  every anchor from $15 to $80, where `elicitAnchor` accepts $7-$200.
+  `stimgen/window_check.py` is the check, and it mirrors `sampleWindow`'s
+  widening loop rather than reading the column: more levels in the file is
+  not the same as more levels inside a window
+- [ ] next (S) **orthogonality is optimised over all 128 rows, but nobody
+  ever sees all 128.** `window_check.py --attrs` reports within-window
+  `max |r|` at 0.19-0.32 for the synthetic arm, which is roughly what
+  finite-sample noise gives at n = 40-66, so this is probably nothing. Worth
+  one deliberate look before collection rather than a shrug. It also kills
+  the `attenuated` fallback for good: in-window it runs 0.43-0.76, far worse
+  than the r = 0.5 its config advertises
 - [x] 2026-09-16 set `TRIALS_PER_CELL = []` in `run_battery.m` for the
   staff practice run -- full trial counts, everything else already real.
   Note this locks in the *current* config as the baseline while the

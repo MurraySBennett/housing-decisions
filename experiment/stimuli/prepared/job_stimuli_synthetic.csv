@@ -1,129 +1,129 @@
 industry,title,company,workLife,culture,compensationBenefits,management,jobSecurityAdvancement,wage,commuteMinutes,ptoDays,hoursPerWeek,workArrangement
-Healthcare,title_001,company_001,4.2,3.2,4.1,3.1,3.9,34,17,19,40,Onsite
-Business Services,title_002,company_002,2.9,2.8,3.4,2.8,3.9,15,29,16,46,Remote
-Manufacturing,title_003,company_003,2.9,3.2,3.6,3.1,2.6,86,25,10,42,Onsite
-Construction,title_004,company_004,4.2,2.8,3.6,2.8,3.9,34,27,6,51,Onsite
-Retail,title_005,company_005,3.6,4.0,3.6,3.4,3.9,25,25,8,32,Onsite
-Healthcare,title_006,company_006,3.6,2.8,3.6,3.4,2.6,86,22,20,33,Onsite
-Real Estate,title_007,company_007,3.6,4.0,4.1,3.1,2.6,86,26,12,47,Hybrid
-Real Estate,title_008,company_008,3.6,4.0,4.1,3.4,3.1,25,24,10,38,Onsite
-Business Services,title_009,company_009,4.2,2.8,2.7,2.8,3.3,15,36,11,40,Onsite
-Real Estate,title_010,company_010,3.6,3.2,2.7,3.4,3.3,25,31,9,40,Hybrid
-Healthcare,title_011,company_011,2.9,2.8,4.1,2.8,3.1,86,36,17,46,Onsite
-Agriculture,title_012,company_012,4.2,2.8,3.6,3.1,3.3,15,36,12,41,Onsite
-Construction,title_013,company_013,4.2,2.8,4.1,3.4,3.3,25,31,8,44,Onsite
-Education,title_014,company_014,3.4,4.0,3.6,3.1,3.9,34,21,28,37,Onsite
-Education,title_015,company_015,3.6,2.8,4.1,4.0,3.1,34,37,28,34,Onsite
-Education,title_016,company_016,3.6,2.8,2.7,4.0,3.9,15,19,28,45,Onsite
-Real Estate,title_017,company_017,4.2,3.6,3.4,3.1,2.6,86,16,9,51,Hybrid
-Real Estate,title_018,company_018,3.4,2.8,3.4,4.0,2.6,34,12,6,45,Onsite
-Education,title_019,company_019,3.4,3.2,3.6,3.4,3.1,86,20,28,41,Hybrid
-Business Services,title_020,company_020,2.9,3.6,4.1,3.1,3.1,15,26,20,41,Hybrid
-Healthcare,title_021,company_021,3.4,3.2,4.1,2.8,3.1,34,33,15,43,Hybrid
-Retail,title_022,company_022,3.6,4.0,4.1,3.1,3.1,34,5,7,36,Onsite
-Healthcare,title_023,company_023,3.6,3.2,2.7,3.1,2.6,86,25,20,40,Onsite
-Construction,title_024,company_024,4.2,4.0,3.4,2.8,3.9,86,35,7,45,Onsite
-Agriculture,title_025,company_025,4.2,2.8,3.4,4.0,3.3,86,41,7,48,Onsite
-Agriculture,title_026,company_026,3.6,2.8,3.4,3.4,3.9,34,14,16,47,Onsite
-Healthcare,title_027,company_027,3.6,3.6,2.7,4.0,3.3,15,31,16,47,Onsite
-Agriculture,title_028,company_028,2.9,4.0,3.6,3.1,2.6,34,27,10,42,Onsite
-Business Services,title_029,company_029,2.9,4.0,4.1,3.4,3.3,86,12,11,35,Hybrid
-Construction,title_030,company_030,2.9,4.0,4.1,3.4,3.1,25,40,10,44,Onsite
-Retail,title_031,company_031,4.2,3.2,3.4,2.8,3.1,86,22,5,42,Onsite
-Agriculture,title_032,company_032,4.2,3.2,2.7,2.8,3.3,25,38,15,44,Onsite
-Education,title_033,company_033,3.4,3.2,3.4,4.0,3.9,86,22,28,43,Hybrid
-Agriculture,title_034,company_034,3.4,3.6,2.7,2.8,3.3,34,26,8,39,Onsite
-Manufacturing,title_035,company_035,4.2,4.0,4.1,4.0,3.9,15,37,18,41,Hybrid
-Education,title_036,company_036,3.4,4.0,3.6,3.1,3.9,86,23,24,38,Onsite
-Healthcare,title_037,company_037,4.2,3.6,4.1,2.8,3.9,34,16,12,40,Onsite
-Healthcare,title_038,company_038,3.4,3.6,4.1,3.1,2.6,15,36,17,47,Onsite
-Manufacturing,title_039,company_039,2.9,4.0,3.4,3.1,2.6,86,33,9,41,Onsite
-Business Services,title_040,company_040,3.4,3.2,3.6,3.1,3.9,25,29,12,48,Hybrid
-Construction,title_041,company_041,2.9,2.8,3.6,4.0,3.3,86,33,5,53,Onsite
-Agriculture,title_042,company_042,4.2,4.0,3.4,3.4,3.1,86,43,16,53,Onsite
-Real Estate,title_043,company_043,2.9,3.2,3.4,3.4,3.1,25,19,12,38,Onsite
-Retail,title_044,company_044,4.2,2.8,4.1,3.4,3.3,25,21,5,38,Hybrid
-Manufacturing,title_045,company_045,3.6,3.2,3.6,4.0,3.1,15,27,16,45,Onsite
-Real Estate,title_046,company_046,2.9,4.0,3.4,3.1,3.3,15,13,10,46,Remote
-Agriculture,title_047,company_047,4.2,3.2,4.1,4.0,3.9,15,54,8,47,Onsite
-Agriculture,title_048,company_048,3.6,4.0,2.7,2.8,2.6,34,15,14,45,Onsite
-Retail,title_049,company_049,3.4,3.2,3.6,4.0,3.9,34,14,13,36,Onsite
-Retail,title_050,company_050,3.6,3.6,4.1,4.0,3.3,25,17,5,40,Hybrid
-Construction,title_051,company_051,3.6,2.8,4.1,3.1,3.9,15,5,18,53,Onsite
-Manufacturing,title_052,company_052,2.9,2.8,2.7,4.0,3.1,86,28,11,41,Onsite
-Business Services,title_053,company_053,3.6,4.0,3.4,4.0,2.6,34,34,14,45,Remote
-Healthcare,title_054,company_054,3.4,4.0,3.4,2.8,3.9,86,15,15,50,Onsite
-Construction,title_055,company_055,3.6,3.6,3.6,3.4,3.1,86,49,11,41,Onsite
-Manufacturing,title_056,company_056,4.2,3.2,4.1,4.0,3.1,34,23,11,40,Onsite
-Education,title_057,company_057,4.2,3.6,2.7,4.0,3.3,15,20,27,41,Onsite
-Manufacturing,title_058,company_058,2.9,3.2,2.7,3.4,2.6,25,28,19,42,Onsite
-Manufacturing,title_059,company_059,2.9,3.2,2.7,3.1,2.6,34,34,11,37,Onsite
-Construction,title_060,company_060,2.9,3.2,2.7,3.1,3.9,34,49,19,46,Onsite
-Manufacturing,title_061,company_061,3.4,2.8,3.4,3.1,3.9,34,26,17,41,Onsite
-Real Estate,title_062,company_062,3.4,3.2,3.6,3.1,3.1,15,11,18,43,Hybrid
-Manufacturing,title_063,company_063,4.2,4.0,3.6,3.4,3.3,15,29,10,47,Onsite
-Agriculture,title_064,company_064,3.6,4.0,3.4,4.0,2.6,86,27,12,50,Onsite
-Retail,title_065,company_065,3.4,2.8,2.7,3.4,3.3,15,9,5,36,Onsite
-Education,title_066,company_066,4.2,3.2,2.7,2.8,3.1,15,12,25,45,Onsite
-Real Estate,title_067,company_067,3.6,3.6,3.6,3.4,3.9,15,17,12,45,Hybrid
-Business Services,title_068,company_068,3.6,3.2,3.4,2.8,2.6,86,13,18,44,Remote
-Business Services,title_069,company_069,3.6,3.2,3.4,3.4,3.3,25,24,15,41,Onsite
-Construction,title_070,company_070,3.4,3.6,3.4,3.4,3.3,34,23,5,49,Onsite
-Agriculture,title_071,company_071,3.4,3.2,3.6,3.1,3.3,34,38,19,52,Onsite
-Real Estate,title_072,company_072,2.9,3.2,3.4,4.0,3.1,15,19,5,43,Hybrid
-Real Estate,title_073,company_073,4.2,4.0,3.6,2.8,3.1,34,30,13,46,Hybrid
-Business Services,title_074,company_074,2.9,4.0,3.6,3.4,3.1,86,37,17,38,Remote
-Manufacturing,title_075,company_075,2.9,3.2,3.4,3.1,2.6,25,19,18,41,Onsite
-Construction,title_076,company_076,2.9,4.0,4.1,2.8,3.3,34,6,5,43,Onsite
-Real Estate,title_077,company_077,4.2,3.6,4.1,4.0,3.1,25,15,8,40,Onsite
-Manufacturing,title_078,company_078,4.2,3.6,3.4,2.8,3.9,15,28,12,43,Hybrid
-Education,title_079,company_079,3.6,3.6,3.6,2.8,2.6,34,21,28,41,Onsite
-Healthcare,title_080,company_080,3.4,3.6,3.6,3.4,3.9,25,28,16,43,Hybrid
-Construction,title_081,company_081,3.4,3.6,3.6,3.1,2.6,34,34,7,46,Onsite
-Construction,title_082,company_082,3.4,3.6,3.6,3.1,3.9,34,18,8,43,Onsite
-Business Services,title_083,company_083,3.6,2.8,2.7,3.1,2.6,15,18,12,41,Hybrid
-Retail,title_084,company_084,3.4,3.6,3.4,2.8,3.9,25,28,5,39,Onsite
-Business Services,title_085,company_085,2.9,3.2,3.4,4.0,3.9,34,36,20,44,Remote
-Agriculture,title_086,company_086,3.6,3.6,3.4,2.8,3.3,86,26,8,44,Onsite
-Education,title_087,company_087,2.9,3.6,2.7,2.8,3.3,15,7,28,42,Onsite
-Real Estate,title_088,company_088,3.4,3.2,4.1,3.4,3.1,15,9,14,45,Onsite
-Healthcare,title_089,company_089,2.9,4.0,2.7,3.4,3.9,86,24,15,49,Onsite
-Retail,title_090,company_090,3.4,4.0,2.7,2.8,3.1,86,31,11,38,Onsite
-Retail,title_091,company_091,4.2,2.8,4.1,2.8,2.6,86,17,9,41,Onsite
-Healthcare,title_092,company_092,3.4,4.0,2.7,3.4,2.6,25,41,11,43,Onsite
-Healthcare,title_093,company_093,3.6,3.6,3.6,2.8,2.6,86,41,12,42,Onsite
-Manufacturing,title_094,company_094,2.9,3.2,4.1,4.0,3.3,15,31,16,41,Onsite
-Agriculture,title_095,company_095,4.2,2.8,2.7,3.4,3.1,86,24,16,49,Onsite
-Healthcare,title_096,company_096,3.4,3.6,4.1,4.0,3.1,25,28,15,52,Onsite
-Education,title_097,company_097,4.2,4.0,3.4,3.4,3.3,25,20,25,32,Onsite
-Education,title_098,company_098,4.2,3.2,2.7,4.0,3.9,34,16,28,35,Onsite
-Healthcare,title_099,company_099,4.2,4.0,4.1,3.1,2.6,15,10,15,40,Onsite
-Construction,title_100,company_100,2.9,3.2,2.7,2.8,3.9,15,20,16,44,Onsite
-Business Services,title_101,company_101,4.2,2.8,3.6,2.8,2.6,15,22,10,41,Onsite
-Construction,title_102,company_102,2.9,3.6,4.1,3.4,3.9,15,36,14,49,Onsite
-Business Services,title_103,company_103,3.6,2.8,3.6,4.0,3.3,15,19,22,37,Hybrid
-Retail,title_104,company_104,3.6,2.8,3.4,2.8,3.3,25,36,11,37,Onsite
-Business Services,title_105,company_105,2.9,2.8,2.7,4.0,2.6,25,35,14,34,Hybrid
-Real Estate,title_106,company_106,2.9,2.8,3.4,2.8,2.6,86,35,6,42,Hybrid
-Retail,title_107,company_107,3.6,4.0,3.6,3.1,2.6,25,32,6,35,Onsite
-Manufacturing,title_108,company_108,3.4,3.6,3.6,2.8,3.3,15,35,16,43,Onsite
-Retail,title_109,company_109,4.2,2.8,3.6,4.0,3.1,25,23,6,36,Onsite
-Retail,title_110,company_110,2.9,3.6,3.4,4.0,3.3,34,27,11,40,Onsite
-Manufacturing,title_111,company_111,3.4,3.6,4.1,3.4,3.9,86,34,9,45,Onsite
-Agriculture,title_112,company_112,2.9,4.0,2.7,4.0,3.9,34,17,5,50,Onsite
-Education,title_113,company_113,3.4,3.6,4.1,3.4,3.1,25,19,28,43,Hybrid
-Agriculture,title_114,company_114,3.6,3.2,4.1,2.8,2.6,25,41,16,49,Onsite
-Education,title_115,company_115,2.9,3.6,2.7,4.0,3.1,25,20,25,32,Onsite
-Education,title_116,company_116,3.4,3.6,2.7,4.0,3.1,86,11,23,34,Onsite
-Education,title_117,company_117,3.4,4.0,2.7,3.1,3.9,34,31,26,35,Hybrid
-Real Estate,title_118,company_118,4.2,4.0,3.4,3.4,3.3,15,23,12,44,Hybrid
-Agriculture,title_119,company_119,3.6,2.8,3.6,4.0,3.1,25,46,9,40,Onsite
-Retail,title_120,company_120,4.2,2.8,3.6,3.4,3.1,25,9,11,41,Onsite
-Healthcare,title_121,company_121,2.9,2.8,2.7,2.8,2.6,25,30,14,51,Onsite
-Construction,title_122,company_122,3.4,3.6,3.4,3.1,3.1,34,21,14,40,Onsite
-Manufacturing,title_123,company_123,3.4,3.2,2.7,3.4,2.6,25,33,17,44,Onsite
-Retail,title_124,company_124,3.4,4.0,2.7,3.1,2.6,34,15,8,34,Onsite
-Business Services,title_125,company_125,2.9,2.8,4.1,2.8,3.3,25,23,16,44,Hybrid
-Construction,title_126,company_126,3.6,3.6,3.4,3.1,3.3,86,44,14,49,Onsite
-Business Services,title_127,company_127,4.2,2.8,2.7,3.1,3.3,25,43,17,42,Hybrid
-Real Estate,title_128,company_128,3.6,3.6,4.1,4.0,2.6,15,24,13,51,Hybrid
+Healthcare,title_001,company_001,4.2,3.2,4.1,3.1,3.9,17,15,15,50,Onsite
+Retail,title_002,company_002,2.9,2.8,3.4,2.8,3.9,12,37,10,34,Onsite
+Business Services,title_003,company_003,2.9,3.2,3.6,3.1,2.6,43,21,15,40,Onsite
+Education,title_004,company_004,4.2,2.8,3.6,2.8,3.9,76,20,27,41,Onsite
+Real Estate,title_005,company_005,3.6,4.0,3.6,3.4,3.9,30,23,17,43,Hybrid
+Retail,title_006,company_006,3.6,2.8,3.6,3.4,2.6,43,22,6,33,Onsite
+Agriculture,title_007,company_007,4.2,4.0,4.1,3.1,2.6,43,54,19,47,Onsite
+Retail,title_008,company_008,3.6,4.0,4.1,3.4,3.1,14,14,12,37,Onsite
+Manufacturing,title_009,company_009,4.2,2.8,2.7,2.8,3.3,24,16,20,42,Onsite
+Healthcare,title_010,company_010,3.6,3.2,2.7,3.4,3.3,63,24,12,49,Onsite
+Business Services,title_011,company_011,2.9,2.8,4.1,2.8,3.1,92,20,20,46,Hybrid
+Construction,title_012,company_012,4.2,2.8,3.6,3.1,3.3,24,21,5,43,Onsite
+Retail,title_013,company_013,4.2,2.8,4.1,3.4,3.3,14,10,9,45,Onsite
+Healthcare,title_014,company_014,3.4,4.0,3.6,3.1,3.9,17,17,16,46,Onsite
+Retail,title_015,company_015,3.6,2.8,4.1,4.0,3.1,17,5,9,40,Onsite
+Manufacturing,title_016,company_016,3.6,2.8,2.7,4.0,3.9,52,26,11,41,Onsite
+Manufacturing,title_017,company_017,4.2,3.6,3.4,3.1,2.6,43,23,9,46,Onsite
+Construction,title_018,company_018,3.4,2.8,3.4,4.0,2.6,14,33,19,51,Onsite
+Construction,title_019,company_019,3.4,3.2,3.6,3.4,3.1,20,24,5,45,Onsite
+Education,title_020,company_020,2.9,3.6,4.1,3.1,3.1,24,25,26,41,Hybrid
+Business Services,title_021,company_021,3.4,3.2,4.1,2.8,3.1,36,37,17,38,Hybrid
+Education,title_022,company_022,3.6,4.0,4.1,3.1,3.1,17,9,28,37,Hybrid
+Retail,title_023,company_023,3.6,3.2,2.7,3.1,2.6,92,5,5,36,Onsite
+Healthcare,title_024,company_024,4.2,4.0,3.4,2.8,3.9,43,15,12,41,Hybrid
+Business Services,title_025,company_025,4.2,2.8,3.4,4.0,3.3,20,26,16,43,Onsite
+Healthcare,title_026,company_026,3.6,2.8,3.4,3.4,3.9,76,26,20,47,Hybrid
+Business Services,title_027,company_027,3.6,3.6,2.7,4.0,3.3,24,31,18,41,Hybrid
+Manufacturing,title_028,company_028,2.9,4.0,3.6,3.1,2.6,76,34,11,43,Onsite
+Healthcare,title_029,company_029,2.9,4.0,4.1,3.4,3.3,92,13,14,42,Onsite
+Business Services,title_030,company_030,2.9,4.0,4.1,3.4,3.1,30,18,12,41,Onsite
+Manufacturing,title_031,company_031,4.2,3.2,3.4,2.8,3.1,43,40,8,43,Hybrid
+Healthcare,title_032,company_032,4.2,3.2,2.7,2.8,3.3,14,33,18,46,Onsite
+Construction,title_033,company_033,3.4,3.2,3.4,4.0,3.9,43,21,8,43,Onsite
+Manufacturing,title_034,company_034,3.4,3.6,2.7,2.8,3.3,36,17,19,46,Onsite
+Manufacturing,title_035,company_035,4.2,4.0,4.1,4.0,3.9,24,14,16,44,Onsite
+Real Estate,title_036,company_036,3.4,4.0,3.6,3.1,3.9,20,24,11,48,Hybrid
+Business Services,title_037,company_037,3.6,3.6,3.4,2.8,3.9,36,41,20,42,Hybrid
+Real Estate,title_038,company_038,3.4,2.8,4.1,3.1,2.6,52,24,12,46,Onsite
+Retail,title_039,company_039,2.9,4.0,3.4,3.1,2.6,92,34,5,37,Onsite
+Real Estate,title_040,company_040,3.4,3.2,3.6,3.1,3.9,63,41,8,41,Hybrid
+Education,title_041,company_041,2.9,2.8,3.6,4.0,3.3,20,21,27,37,Hybrid
+Retail,title_042,company_042,4.2,4.0,3.4,3.4,3.1,92,7,15,41,Onsite
+Business Services,title_043,company_043,2.9,3.2,4.1,3.4,3.1,63,31,17,50,Hybrid
+Education,title_044,company_044,4.2,2.8,4.1,3.1,3.3,30,20,25,32,Onsite
+Healthcare,title_045,company_045,3.6,3.2,3.6,4.0,3.1,52,21,21,41,Onsite
+Agriculture,title_046,company_046,2.9,4.0,3.4,3.1,3.3,24,20,9,42,Onsite
+Business Services,title_047,company_047,3.6,3.2,4.1,4.0,3.9,52,18,24,41,Onsite
+Construction,title_048,company_048,3.6,4.0,2.7,2.8,2.6,76,24,5,44,Onsite
+Construction,title_049,company_049,3.4,3.2,3.6,4.0,3.9,76,36,14,49,Onsite
+Real Estate,title_050,company_050,3.6,3.6,4.1,4.0,3.3,12,16,16,38,Hybrid
+Manufacturing,title_051,company_051,3.6,2.8,4.1,3.1,3.9,24,48,16,41,Onsite
+Manufacturing,title_052,company_052,2.9,2.8,2.7,4.0,3.1,20,37,10,34,Onsite
+Retail,title_053,company_053,3.6,4.0,3.4,4.0,2.6,76,28,5,37,Onsite
+Healthcare,title_054,company_054,3.4,4.0,3.4,2.8,3.9,43,39,13,41,Onsite
+Agriculture,title_055,company_055,3.6,3.6,3.6,3.4,3.1,43,40,12,47,Onsite
+Construction,title_056,company_056,4.2,3.2,4.1,4.0,3.1,17,35,7,43,Onsite
+Education,title_057,company_057,4.2,3.6,2.7,4.0,3.3,24,29,27,40,Onsite
+Retail,title_058,company_058,2.9,3.2,2.7,3.4,2.6,14,22,5,41,Onsite
+Real Estate,title_059,company_059,2.9,3.2,2.7,3.1,2.6,76,7,5,47,Hybrid
+Healthcare,title_060,company_060,2.9,2.8,2.7,3.1,3.9,36,24,23,49,Onsite
+Manufacturing,title_061,company_061,3.4,2.8,3.4,3.1,3.9,36,36,20,45,Onsite
+Education,title_062,company_062,3.4,3.2,3.6,3.1,3.1,12,20,25,32,Onsite
+Real Estate,title_063,company_063,4.2,4.0,3.6,3.4,3.3,24,16,10,39,Hybrid
+Business Services,title_064,company_064,3.6,4.0,3.4,4.0,2.6,20,39,19,39,Hybrid
+Agriculture,title_065,company_065,3.4,2.8,2.7,3.4,3.3,24,33,10,47,Onsite
+Real Estate,title_066,company_066,4.2,3.2,2.7,2.8,3.1,14,36,11,37,Onsite
+Construction,title_067,company_067,3.6,3.6,3.6,3.4,3.9,24,21,12,48,Onsite
+Retail,title_068,company_068,3.6,3.2,3.4,2.8,2.6,92,23,7,45,Onsite
+Business Services,title_069,company_069,3.6,3.2,3.4,3.4,3.3,30,19,22,37,Hybrid
+Real Estate,title_070,company_070,3.4,3.6,3.4,3.4,3.3,17,28,15,45,Hybrid
+Business Services,title_071,company_071,3.4,3.2,3.6,3.1,3.3,76,25,17,38,Hybrid
+Agriculture,title_072,company_072,2.9,3.2,3.4,4.0,3.1,12,30,8,48,Onsite
+Agriculture,title_073,company_073,4.2,4.0,3.6,2.8,3.1,36,49,14,50,Onsite
+Real Estate,title_074,company_074,2.9,4.0,3.6,3.4,3.1,92,40,11,43,Hybrid
+Education,title_075,company_075,2.9,3.2,3.4,3.1,2.6,30,19,26,46,Onsite
+Healthcare,title_076,company_076,2.9,4.0,4.1,2.8,3.3,36,33,12,47,Onsite
+Education,title_077,company_077,4.2,3.6,4.1,4.0,3.1,30,15,28,41,Onsite
+Manufacturing,title_078,company_078,4.2,3.6,3.4,2.8,3.9,12,22,14,49,Onsite
+Healthcare,title_079,company_079,3.6,3.6,3.6,2.8,2.6,36,16,22,44,Onsite
+Real Estate,title_080,company_080,2.9,3.6,3.6,3.4,3.9,63,23,5,35,Onsite
+Business Services,title_081,company_081,3.4,3.6,3.6,3.4,2.6,17,37,7,38,Onsite
+Education,title_082,company_082,3.4,3.6,3.6,3.1,3.9,17,19,28,36,Onsite
+Real Estate,title_083,company_083,3.6,2.8,2.7,3.1,2.6,52,21,7,42,Hybrid
+Agriculture,title_084,company_084,3.4,3.6,3.4,2.8,3.9,14,19,8,46,Onsite
+Agriculture,title_085,company_085,3.4,3.2,3.4,4.0,3.9,36,28,7,52,Onsite
+Education,title_086,company_086,3.6,3.6,3.4,2.8,3.3,43,23,27,35,Hybrid
+Agriculture,title_087,company_087,2.9,3.6,2.7,2.8,3.3,12,40,5,49,Onsite
+Education,title_088,company_088,3.4,3.2,4.1,3.4,3.1,12,16,24,35,Onsite
+Agriculture,title_089,company_089,2.9,4.0,2.7,3.4,3.9,92,42,9,45,Onsite
+Agriculture,title_090,company_090,3.4,4.0,2.7,2.8,3.1,20,44,6,46,Onsite
+Education,title_091,company_091,4.2,2.8,4.1,2.8,2.6,20,30,28,38,Onsite
+Retail,title_092,company_092,3.4,4.0,2.7,3.4,2.6,30,12,17,39,Onsite
+Healthcare,title_093,company_093,3.6,3.6,3.6,2.8,2.6,92,12,18,48,Onsite
+Retail,title_094,company_094,2.9,3.2,4.1,4.0,3.3,12,25,12,39,Onsite
+Manufacturing,title_095,company_095,4.2,2.8,2.7,3.4,3.1,20,34,13,45,Onsite
+Real Estate,title_096,company_096,3.4,3.6,4.1,4.0,3.1,63,22,11,41,Hybrid
+Agriculture,title_097,company_097,4.2,4.0,3.4,3.4,3.3,63,30,8,46,Onsite
+Real Estate,title_098,company_098,4.2,3.2,2.7,4.0,3.9,76,34,8,43,Remote
+Education,title_099,company_099,4.2,4.0,4.1,3.1,2.6,52,13,25,46,Onsite
+Healthcare,title_100,company_100,2.9,3.2,2.7,2.8,3.9,52,18,18,42,Hybrid
+Agriculture,title_101,company_101,4.2,2.8,3.6,2.8,2.6,12,48,11,41,Onsite
+Real Estate,title_102,company_102,2.9,3.6,4.1,3.4,3.9,12,25,15,45,Onsite
+Manufacturing,title_103,company_103,3.6,2.8,3.6,4.0,3.3,52,30,10,40,Hybrid
+Healthcare,title_104,company_104,3.6,2.8,3.4,2.8,3.3,30,10,9,45,Onsite
+Manufacturing,title_105,company_105,2.9,2.8,2.7,4.0,2.6,30,30,13,38,Onsite
+Business Services,title_106,company_106,2.9,2.8,3.4,2.8,2.6,20,17,22,43,Hybrid
+Construction,title_107,company_107,4.2,4.0,3.6,3.1,2.6,63,41,8,44,Onsite
+Construction,title_108,company_108,3.4,3.6,3.6,2.8,3.3,52,38,15,42,Onsite
+Construction,title_109,company_109,4.2,3.6,3.6,4.0,3.1,14,27,5,47,Onsite
+Construction,title_110,company_110,2.9,3.6,3.4,4.0,3.3,36,39,9,44,Onsite
+Agriculture,title_111,company_111,3.4,3.6,4.1,3.4,3.9,20,32,10,45,Onsite
+Manufacturing,title_112,company_112,2.9,4.0,2.7,4.0,3.9,76,20,10,44,Onsite
+Education,title_113,company_113,3.4,3.6,4.1,3.4,3.1,63,22,28,32,Onsite
+Agriculture,title_114,company_114,3.6,3.2,4.1,2.8,2.6,30,24,9,39,Onsite
+Agriculture,title_115,company_115,2.9,3.6,2.7,4.0,3.1,63,21,16,46,Onsite
+Retail,title_116,company_116,3.4,3.6,2.7,4.0,3.1,92,6,17,38,Onsite
+Retail,title_117,company_117,3.4,4.0,2.7,3.1,3.9,17,32,16,43,Onsite
+Construction,title_118,company_118,4.2,4.0,3.4,3.4,3.3,12,29,5,49,Onsite
+Manufacturing,title_119,company_119,3.6,2.8,3.6,4.0,3.1,17,21,14,48,Onsite
+Business Services,title_120,company_120,4.2,2.8,3.6,3.4,3.1,14,33,21,40,Remote
+Healthcare,title_121,company_121,2.9,2.8,2.7,2.8,2.6,14,21,19,43,Onsite
+Construction,title_122,company_122,3.4,3.6,3.4,3.1,3.1,36,26,11,44,Onsite
+Retail,title_123,company_123,3.4,3.2,2.7,3.4,2.6,30,28,8,32,Onsite
+Education,title_124,company_124,3.4,4.0,2.7,3.1,2.6,17,29,23,33,Onsite
+Construction,title_125,company_125,2.9,2.8,4.1,2.8,3.3,63,18,12,41,Onsite
+Real Estate,title_126,company_126,3.6,3.6,3.4,3.1,3.3,43,43,20,43,Onsite
+Business Services,title_127,company_127,4.2,3.2,2.7,3.1,3.3,14,21,17,41,Onsite
+Construction,title_128,company_128,3.6,3.6,4.1,4.0,2.6,52,22,13,42,Onsite

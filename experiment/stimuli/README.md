@@ -73,7 +73,7 @@ roughly 13× the trials to separate them.
 |---|---|---|---|
 | **ecological** | `jobs_ecological.json` | 0.95 | Out-of-sample validation. Real listings, natural covariance. Weights **not** estimable here. |
 | **attenuated** | `jobs_attenuated.json` | 0.50 | Optional middle ground. Real values and group means, permuted pairing. 1.3× trial cost. |
-| **synthetic** | `jobs_synthetic.json` | 0.19 | Estimating attribute weights. Balanced factorial space, orthogonal by construction. |
+| **synthetic** | `jobs_synthetic.json` | 0.22 | Estimating attribute weights. Balanced factorial space, orthogonal by construction. |
 
 The intended design is **two clean arms**: estimate weights on the synthetic
 arm where they're identifiable, then test whether those weights predict
@@ -102,6 +102,38 @@ attribute takes `n_levels` levels, each level appears equally often, and the
 assignment is optimised for orthogonality. Levels map onto quantile
 midpoints of the real data, so values stay plausible. Set
 `group_carries_signal: true` if you want industry to predict attributes.
+
+`n_levels_by_column` and `spacing_by_column` override the default for named
+attributes. Both exist for one reason: **the anchored attribute is not like
+the others.** Wage doubles as the advertised anchor, so it is the only
+column `utils.sampleWindow` slices, and the window is a fixed *ratio* band
+around the participant's anchor (0.6× to 1.6×). A 4-level grid left a
+participant anchored at $60/hr seeing a single distinct wage — collinear
+with the intercept, so the anchor coefficient is not identified at all — and
+quantile midpoints made it worse at the top, because they inherit the real
+wage distribution's skew and put 11 of 12 levels below $50. Wage is
+therefore generated at 12 levels, spaced geometrically, which holds 4–6
+distinct values in every window from a $15 anchor to an $80 one. The five
+rating attributes stay at 4 quantile-spaced levels, which is what they want.
+
+**Check the window, never the column.** More levels in the file is not the
+same as more levels inside a window, and the full set looks fine in both
+cases. After regenerating anything:
+
+```bash
+python3 stimgen/window_check.py prepared/job_stimuli_synthetic.csv wage \
+        --attrs workLife culture compensationBenefits management \
+                jobSecurityAdvancement wage
+```
+
+It mirrors `sampleWindow`'s widening loop, prints distinct anchored values
+per window, and — with `--attrs` — the within-window `max |r|`. That second
+number is worth knowing: orthogonality is optimised over all 128 rows, but
+no participant ever sees all 128. In the synthetic arm the in-window figure
+runs 0.19–0.32, which is about what finite-sample noise gives at n ≈ 40–66.
+In `attenuated` it runs 0.43–0.76 — the arm's own r = 0.5 understates what
+windowing does to it, which is a further reason not to use it as the
+weight-estimating arm.
 
 ## Editing a config
 

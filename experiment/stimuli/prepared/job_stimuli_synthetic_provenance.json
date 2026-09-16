@@ -1,15 +1,15 @@
 {
-  "generated_utc": "2026-07-22T00:23:10+00:00",
+  "generated_utc": "2026-09-16T21:36:19+00:00",
   "script": "prepare_stimuli.py",
   "script_version": "1.0.0",
-  "python": "3.13.9",
-  "numpy": "2.3.5",
+  "python": "3.13.14",
+  "numpy": "2.4.4",
   "pandas": "2.3.3",
-  "config_file": "stimgen\\configs\\jobs_synthetic.json",
-  "config_sha": "c4778dd55438b6d2",
+  "config_file": "experiment/stimuli/stimgen/configs/jobs_synthetic.json",
+  "config_sha": "e5a87c95b754774a",
   "config": {
     "seed": 20260721,
-    "input_file": "C:\\Users\\bennett.1755\\OneDrive - The Ohio State University\\projects\\housing_wages\\experiment\\stimuli\\job_stimuli.csv",
+    "input_file": "/home/msb/projects/housing-decisions/experiment/stimuli/job_stimuli.csv",
     "id_columns": [
       "industry",
       "title",
@@ -206,21 +206,27 @@
     ],
     "name": "jobs_synthetic",
     "mode": "synthetic",
-    "output_file": "C:\\Users\\bennett.1755\\OneDrive - The Ohio State University\\projects\\housing_wages\\experiment\\stimuli\\prepared\\job_stimuli_synthetic.csv",
+    "output_file": "/home/msb/projects/housing-decisions/experiment/stimuli/prepared/job_stimuli_synthetic.csv",
     "synthetic": {
       "n_rows": 128,
       "n_levels": 4,
+      "n_levels_by_column": {
+        "wage": 12
+      },
+      "spacing_by_column": {
+        "wage": "geometric"
+      },
       "target_max_r": 0.15,
       "iterations": 80000,
       "marginals": "match_source",
       "group_carries_signal": false
     },
-    "_note": "Fully balanced factorial-style space. Each attribute takes 4 levels, each level equally often, assignment optimised for orthogonality. Levels map to quantile midpoints of the real data so values stay plausible. Industry is orthogonal to attributes. This is the arm for estimating attribute weights."
+    "_note": "Fully balanced factorial-style space, optimised for orthogonality; levels map to quantile midpoints of the real data so values stay plausible, and industry is orthogonal to attributes. This is the arm for estimating attribute weights. The five rating attributes take 4 levels each. Wage takes 12, because wage is also the advertised anchor and is therefore the one column utils.sampleWindow slices: at 4 levels a participant anchored at $60/hr saw a single distinct wage, which is collinear with the intercept and leaves the anchor coefficient unidentified. Wage levels are also spaced geometrically rather than at quantile midpoints: the window is a fixed ratio band, so a log-uniform grid holds about the same number of levels at every anchor (5-6 from $15 to $80), where quantile midpoints inherited the source skew and collapsed to 2 at an $80 anchor. The five rating attributes keep quantile midpoints. Check with stimgen/window_check.py after any regeneration -- more levels in the file is not the same as more levels inside a window."
   },
   "seed": 20260721,
   "input_sha": null,
-  "output_file": "C:\\Users\\bennett.1755\\OneDrive - The Ohio State University\\projects\\housing_wages\\experiment\\stimuli\\prepared\\job_stimuli_synthetic.csv",
-  "output_sha": "328f70b46e3f8e73",
+  "output_file": "/home/msb/projects/housing-decisions/experiment/stimuli/prepared/job_stimuli_synthetic.csv",
+  "output_sha": "6d23a0062969e4a1",
   "output_rows": 128,
   "output_columns": [
     "industry",
@@ -240,7 +246,23 @@
   "steps": {
     "synthesise": {
       "n_levels": 4,
-      "final_max_r": 0.1375,
+      "n_levels_by_column": {
+        "workLife": 4,
+        "culture": 4,
+        "compensationBenefits": 4,
+        "management": 4,
+        "jobSecurityAdvancement": 4,
+        "wage": 12
+      },
+      "spacing_by_column": {
+        "workLife": "quantile",
+        "culture": "quantile",
+        "compensationBenefits": "quantile",
+        "management": "quantile",
+        "jobSecurityAdvancement": "quantile",
+        "wage": "geometric"
+      },
+      "final_max_r": 0.14279173888012614,
       "group_carries_signal": false
     },
     "generate": {
@@ -252,17 +274,17 @@
       ]
     },
     "final": {
-      "max_abs_r": 0.1865701475651213,
+      "max_abs_r": 0.21674632509946,
       "vif": {
-        "workLife": 1.0296751736070067,
-        "culture": 1.0369582384002953,
-        "compensationBenefits": 1.0617650041581914,
-        "management": 1.0327204999211759,
-        "jobSecurityAdvancement": 1.0560414057418146,
-        "wage": 1.06507250015068,
-        "commuteMinutes": 1.0589458358945179,
-        "ptoDays": 1.0792563886177358,
-        "hoursPerWeek": 1.0868208520693787
+        "workLife": 1.0406570792940801,
+        "culture": 1.0423416732893094,
+        "compensationBenefits": 1.0572189666210736,
+        "management": 1.0299386053154127,
+        "jobSecurityAdvancement": 1.0601263709926707,
+        "wage": 1.0870499300675862,
+        "commuteMinutes": 1.0694243870266953,
+        "ptoDays": 1.162082626270417,
+        "hoursPerWeek": 1.1159826339534213
       }
     }
   }
