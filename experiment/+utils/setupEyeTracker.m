@@ -11,6 +11,7 @@ et.obj         = [];
 et.mediaMode   = cfg.et.mediaMode;
 et.showGaze    = cfg.et.mediaMode && cfg.et.showGaze;
 et.calibrated  = false;
+et.positioned  = false;   % head got inside the track box before calibrating
 et.analyzable  = true;
 et.requestedSampleRateHz = cfg.et.sampleRateHz;
 et.actualSampleRateHz = NaN;
@@ -50,6 +51,12 @@ try
     end
 
     if doCalibrate
+        % Start the gaze stream BEFORE the position guide: the first call
+        % to get_gaze_data() is what subscribes, and the guide needs live
+        % samples to show anything at all.
+        et.obj.get_gaze_data();
+        et.positioned = utils.positionGuide(et, window, cfg);
+
         et.calibrated = utils.calibrate(et, window, cfg);
     end
 

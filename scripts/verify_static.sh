@@ -168,6 +168,15 @@ check_grep 'rejectedStimIdx' experiment/auction_task.m 'rejected options in the 
 check_grep 'showValueMarker' experiment/+utils/config.m 'value-marker knob'
 check_grep 's\.marker' experiment/+utils/style.m 'scale marker colour'
 
+# --- Head-position guide -------------------------------------------------
+check_file experiment/+utils/positionGuide.m
+check_grep 'utils\.positionGuide' experiment/+utils/setupEyeTracker.m 'position guide runs before calibration'
+check_grep 'positionGuide\.tolerance' experiment/+utils/config.m 'position guide knobs'
+check_grep 'positioned' experiment/auction_task.m 'head position recorded with auction data'
+check_grep 'positioned' experiment/continuous_DC_task.m 'head position recorded with contdc data'
+# The guide must never be able to strand a session on a setup screen.
+check_grep 'timeoutSec' experiment/+utils/positionGuide.m 'position guide has an escape hatch'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

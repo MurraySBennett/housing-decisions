@@ -238,6 +238,24 @@ cfg.et.useBuiltInCalibration = true;
 cfg.et.mediaMode = false;
 cfg.et.showGaze  = false;
 
+% --- Head-position guide ----------------------------------------------
+% Shown once before calibration: live feedback on where the tracker sees
+% the participant's eyes versus where they need to be. Calibration can
+% succeed from a poor position and then drift or drop an eye mid-block,
+% by which point the trials are spent.
+cfg.et.positionGuide.enabled   = true;
+cfg.et.positionGuide.tolerance = 0.12;  % allowed deviation from track-box
+                                        % centre, in normalised units, on
+                                        % each of x, y and z
+cfg.et.positionGuide.holdSec   = 1.0;   % time in position before it
+                                        % accepts -- stops a participant
+                                        % passing through the right spot
+                                        % from counting as settled in it
+cfg.et.positionGuide.timeoutSec = 90;   % give up and continue rather than
+                                        % strand a session on a setup screen
+cfg.et.positionGuide.mirrorX   = true;  % display behaves like a mirror;
+                                        % flip if the rig reads backwards
+
 % --- Display options --------------------------------------------------
 % Draw the advertised figure (listed price / offered wage) on the pricing
 % scale, so the participant can see where it sits relative to the value

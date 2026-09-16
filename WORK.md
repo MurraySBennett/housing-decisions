@@ -50,6 +50,19 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-16 added `+utils/positionGuide.m`: a head-position screen before
+  calibration showing where the tracker sees the participant's eyes against a
+  target zone, with a depth bar and one instruction at a time. Uses Tobii
+  track-box coordinates only (gaze point is uncalibrated at that stage and
+  would be meaningless). Skippable by click, times out at 90s, every SDK
+  access wrapped -- a positioning aid must never be why a session cannot run.
+  Whether the participant got in position is saved as
+  `dataMat.eyeTracking.positioned`
+- [ ] now (S) **verify the track-box property name against this SDK build.**
+  `positionGuide` tries `in_track_box_coordinate_system` then
+  `position_in_track_box_coordinate_system`; if neither matches, the screen
+  says "Looking for your eyes..." forever until the timeout. First rig run
+  will show this immediately
 - [x] 2026-09-16 post-pilot round: saving screens with a real staged progress
   bar and a neutral "Did you know..." panel around both blocking writes (the
   end-of-block freeze); value labels now "Offered wage" / "Listed price";
