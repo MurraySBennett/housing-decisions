@@ -186,6 +186,15 @@ pleasantly.**
   a dress rehearsal must not be what discovers that 4 does not divide 6.
   `block` and `blockPos` are on every trial and in the CSV; practice is
   `NaN` on both
+- [ ] next (S) **24 trials doubles the pressure on a thin window.** The
+  auction now needs 24 x 12 = 288 presentations where it needed 144, from a
+  window holding 40-90 stimuli, so each item is seen ~4 times rather than
+  ~2 -- `repIdx` still logs it, but memory effects are twice the size they
+  were. And up to 24 items can now be won and retired rather than 12;
+  `minOptionsAfterRetire = 6` keeps a market from running empty, but on a
+  thin window that floor will be reached where before it was not. Check
+  `repIdx` and the retirement count on the first real run rather than
+  assuming the old numbers still describe it
 - [ ] next (S) **orthogonality is optimised over all 128 rows, but nobody
   ever sees all 128.** `window_check.py --attrs` reports within-window
   `max |r|` at 0.19-0.32 for the synthetic arm, which is roughly what
