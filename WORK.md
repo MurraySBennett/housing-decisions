@@ -6,7 +6,23 @@ project: housing-decisions
 
 ## Now
 
-**Two participant-facing changes landed 2026-09-16, both unrun.** First, the
+**Post-pilot backlog, nine items.** The 2026-09-16 staff pilot (998/999,
+both sessions) produced 21 notes; twelve are committed and deployed. Item 8
+landed just now -- the house outcome screen and the houses instructions are
+reframed as the second-price auction the mechanism already was, which also
+explains why an offer at the listed price can lose. **Not yet deployed to
+the share.**
+
+**Blocked on two calls from Murray:** the jobs arm (`synthetic`'s wage grid
+gives 1-3 distinct wages per anchored window, so the anchor coefficient is
+not identified -- regenerate with 8-12 wage levels, or fall back to
+`attenuated`) and whether to block the competition levels (today every trial
+is independently low/high, so the manipulation barely operates; blocking
+costs ~12-15 min per session). Unblocked and waiting: item 10, the pricing
+scale onto the option screen, which is the one that decides whether
+attribute re-inspection during pricing is visible in the gaze record.
+
+**Earlier changes from the same day, still unrun.** First, the
 attribute rating screen no longer hides the mouse cursor on the way out.
 That was the bug: elicitation runs before the instructions, nothing turned
 the cursor back on, and the auction's comprehension check then asked for an
@@ -87,11 +103,28 @@ pleasantly.**
   rating attributes (`prepare_stimuli.py:196` takes `n_levels` as one scalar
   for all attributes and needs a per-column override), falling back to
   `attenuated` if the generator is not to be touched
-- [ ] now (S) **decide the house outcome wording.** `pricePaid = threshold`
-  is second-price and stays -- first-price would put strategic shading
-  inside the primary DV. The recommendation is to reframe the screen as the
-  auction it already is (rival buyers, you pay what it took to beat them)
-  rather than as a private sale
+- [x] 2026-09-16 **the house outcome screen is now framed as the auction it
+  is.** `pricePaid = threshold` was never in question -- first-price would
+  put strategic shading inside the primary DV -- but "You pay the market
+  price of $Y" described a private sale in which a seller took less than an
+  offer already on the table, which is what made it read wrong. It now says
+  "You won the house. You offered $X. The next best offer was $Y, so that is
+  what you pay." The same statement went into the houses instructions, both
+  the incentivised and unincentivised branches: stating the second-price
+  rule is not a leak, it is what makes truthful bidding optimal, and a
+  participant who is not told it assumes first-price and shades. That
+  paragraph also closes pilot note 16 -- an offer at the listed price can
+  lose, because `compHigh = 1.10` puts the threshold above list by design,
+  and nothing on screen had ever said so. Jobs is untouched: participants
+  name their *lowest acceptable* wage, so being paid above it needs no
+  explanation
+- [ ] next (S) **the incentivised jobs instructions still tell participants
+  to shade.** `utils.incentives('instructions','jobs',...)` says "it is in
+  your interest to ask for the most you think the employer will agree to",
+  which is the first-price advice under a mechanism that pays the threshold
+  either way. Dead text today (`cfg.incentives.enabled = false`) and left
+  alone deliberately, since the pilot note was about houses -- but it should
+  match the houses wording before incentives are ever switched on
 - [ ] now (M) **the jobs wage grid does not survive anchor-centred
   windowing.** Found 2026-09-16 from the staff pilot. `synthetic` is a
   balanced orthogonal factorial: *every* attribute takes exactly 4 levels,

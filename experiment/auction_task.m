@@ -1068,8 +1068,15 @@ style = utils.ternary(isHouse, 'total', 'hourly');
 
 if accepted
     if isHouse
-        msg = sprintf(['Your offer was accepted.\n\n' ...
-            'You offered %s.\nYou pay the market price of %s.'], ...
+        % The houses market is rival BUYERS, not a private sale, so the old
+        % "you pay the market price" read as a seller accepting less than an
+        % offer already on the table. Name the mechanism instead: you win at
+        % what it took to beat the next best offer. Saying the second-price
+        % rule out loud is not a leak -- it is what makes truthful bidding
+        % optimal, and a participant who is not told it assumes first-price
+        % and shades the bid, which is the primary DV.
+        msg = sprintf(['You won the house.\n\n' ...
+            'You offered %s.\nThe next best offer was %s, so that is what you pay.'], ...
             utils.formatCurrency(bid, style), utils.formatCurrency(pricePaid, style));
     else
         msg = sprintf(['Your offer was accepted.\n\n' ...
