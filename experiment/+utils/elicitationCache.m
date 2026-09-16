@@ -28,6 +28,12 @@ switch lower(action)
         if exist(f, 'file')
             L = load(f, 'data');
             out = L.data;
+            % Normalise here rather than in every caller: a cache written
+            % before the value attribute was rated (a session that
+            % straddled that change) has no coreRatings field, and the
+            % second task of that session must still run.
+            if ~isfield(out, 'coreRatings'), out.coreRatings = []; end
+            if ~isfield(out, 'coreRTs'),     out.coreRTs     = []; end
             fprintf('Reusing %s elicitation from earlier this session (%s).\n', ...
                 domain, f);
         else

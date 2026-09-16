@@ -6,42 +6,47 @@ project: housing-decisions
 
 ## Now
 
-**The task changes Murray asked for are in; none of it has ever been
-executed.** 2026-09-15, after reviewing `demo_battery`: three of her six
-complaints turned out to be `DEMO_FAST` artefacts and were deliberately left
-alone (real auction pacing is 36 s dwell / 12 s arrivals under high
-competition, 90 s timeout -- the demo compresses those ~7x). The other three
-were real and are fixed, plus two problems the audit found that she hadn't
-raised.
+**Two participant-facing changes landed 2026-09-16, both unrun.** First, the
+attribute rating screen no longer hides the mouse cursor on the way out.
+That was the bug: elicitation runs before the instructions, nothing turned
+the cursor back on, and the auction's comprehension check then asked for an
+aimed click at an invisible pointer -- indistinguishable from a crash from
+the participant's side. The check now calls `ShowCursor` itself rather than
+trusting the screen before it, and `verify_static.sh` guards both halves.
 
-**What changed:** job cards no longer show a title -- under the default
-`synthetic` arm every header read `Healthcare - title_001` -- so only
-`industry` is drawn, reversibly. The late tier is now reserved *inside*
-`nAttrs` instead of appended after it, so attribute level 6 renders 6 cells
-rather than 7; this fixes both a mislabelled load condition in the saved data
-and a position confound where the isolated bottom-left cell was always
-`Region` / `Work arrangement`. The value attribute is no longer colour-
-emphasised inside the attribute grid. And the whole battery is restyled:
-warm charcoal-plum ground, dusty rose accent, rounded corners, thinner
-strokes, humanist type in place of the pixel font.
+**Second, the value attribute is now rated.** Listed price / offered wage
+goes on the same importance line as the pool, in the same randomised order,
+via the new `utils.elicitAttrRatings` -- and is then deliberately excluded
+from `utils.selectAttributes`, because it is on every card at every
+attribute level and no rating could change that. Saved as
+`dataMat.<domain>.coreRatings`, for stated-versus-revealed comparison on the
+one variable the pricing model turns on. **Watch the compression this
+introduces:** price sits at the top of the line for most people, squeezing
+the pool into the rest of it. Rank order is unaffected so selection behaves
+as before, but raw pool ratings are not comparable across this change.
 
-**The ground deliberately stayed dark.** A light theme would have been softer
-still but would have raised relative luminance ~25x, flooring the pupil and
-forfeiting pupillometry permanently. The restyle is a hue-and-shape change,
-not a physiological one.
+**Attribute counts, asked and answered.** Houses: 6 photos (identity --
+always shown, never counted, never rated), listed price, and 5 rated pool
+attributes (bedrooms, bathrooms, square feet, lot size, year built). Jobs:
+industry, offered wage, 8 rated pool attributes, plus work arrangement held
+back to the top level. Both domains show exactly 6 cells at attribute level
+6, so on-screen load is already matched -- what differs is the pool the
+selection draws from, 5 versus 8. A consequence worth deciding on: the
+houses selection at level 6 is degenerate, showing all five pool attributes
+whatever the participant said about them.
+
+**The ground stays dark** (do not relitigate): a light theme would raise
+relative luminance ~25x and floor the pupil, forfeiting pupillometry.
 
 **Everything is verified statically only** -- `scripts/verify_static.sh`
-passes, this machine has no MATLAB, and the first real execution of any of it
-is at the rig. Run `scripts/verify_matlab.m` there *first*: it asserts
-`pfAoi.allAoiOK`, which is the check that catches a geometry change that was
-not mirrored into `preflight.m`. Rollback is `setenv('HW_THEME','arcade')`
-before `run_battery`, or reverting the single commit that flipped the default.
+passes, this machine has no MATLAB, and the first real execution of any of
+it is at the rig. Run `scripts/verify_matlab.m` there *first*: it asserts
+`pfAoi.allAoiOK`, the check that catches a geometry change not mirrored into
+`preflight.m`.
 
-**Rehearsal mode is now the default in `run_battery.m`** (`TRIALS_PER_CELL =
-2`): 4 auction trials (2 per competition level) and 2 pairs per attribute
-level per task type, everything else real. Worst-case estimate ~18 min for a
-session versus ~57 min for the full study. **Set it back to `[]` before
-participant 1.**
+**Rehearsal mode is still the default in `run_battery.m`**
+(`TRIALS_PER_CELL = 2`): ~18 min per session against ~57 for the full study.
+**Set it back to `[]` before participant 1.**
 
 **Still gating collection, unchanged:** settle the conditions, stand up REP,
 book rig time, rehearse. The bar is still that **it has to run seamlessly and
@@ -50,6 +55,29 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-16 fixed the invisible cursor on the auction's comprehension
+  check. `utils.elicitVAS` ended with `HideCursor`, elicitation runs before
+  the instructions, and nothing showed it again -- so the two-box check was
+  an aimed click with no pointer. Removed the hide (every gaze trial
+  re-shows the cursor at `awaitFixationStart` anyway, so it bought nothing)
+  and made `askComprehension` show its own. Also switched that screen off
+  raw `GetMouse(window)` onto `utils.getMouse`: it runs right after the
+  window opens, which is exactly when the raw call has been seen to return
+  NaN on Windows without throwing, straight into a `Screen('DrawLine')`
+- [x] 2026-09-16 listed price / offered wage is now rated alongside the pool
+  attributes (`+utils/elicitAttrRatings.m`) and excluded from selection --
+  it is always shown, so its rating decides nothing. Stored as
+  `coreRatings` / `coreRatingRTs` / `coreLabels` per domain; the session
+  elicitation cache normalises the field so a session straddling this change
+  still runs
+- [ ] next (S) **decide whether `A.late` should be rated too.** Work
+  arrangement is jobs' only late attribute, is shown at the top level, and
+  has no stated weight -- the same gap price had until today. It is not
+  rating-selected either, so this is purely about having the number
+- [ ] next (S) **houses' stratified selection is degenerate at level 6** --
+  5 pool attributes and 5 slots, so every participant sees the same five
+  regardless of what they rated. Jobs picks 4 of 8 there. Either accept it
+  or fold it into the attribute-data task below
 - [x] 2026-09-16 dropped Region (the Zone column) from the house attributes
   -- not part of the current design. Houses now has no late tier, which means
   its max level is exactly 6 (price + all 5 pool attributes), so every

@@ -182,6 +182,28 @@ check_grep 'timeoutSec' experiment/+utils/positionGuide.m 'position guide has an
 check_grep "A\.late = struct\('var', \{\}" experiment/+utils/attributes.m 'houses late tier is empty (Region out of the design)'
 check_grep 'groupDigits' experiment/+utils/elicitAnchor.m 'anchor input is thousands-grouped'
 
+# --- Cursor on click-driven screens --------------------------------------
+# elicitVAS used to hide the cursor on the way out, which left the auction's
+# comprehension check asking for an aimed click at an invisible pointer.
+# Pattern anchored past any comment marker: the file explains the old
+# HideCursor call in prose, and that prose must not trip the check.
+check_absent '^[^%]*HideCursor' experiment/+utils/elicitVAS.m 'elicitVAS must leave the cursor visible'
+if ! awk '/^function choice = askComprehension/,/^s = cfg\.style;/' \
+     experiment/auction_task.m | grep -q 'ShowCursor'; then
+  printf 'missing: askComprehension does not show the cursor itself\n' >&2
+  fail=1
+fi
+
+# --- The value attribute is rated, and excluded from selection -----------
+check_file experiment/+utils/elicitAttrRatings.m
+check_grep 'utils\.elicitAttrRatings' experiment/auction_task.m 'auction rates the value attribute'
+check_grep 'utils\.elicitAttrRatings' experiment/continuous_DC_task.m 'contdc rates the value attribute'
+check_grep 'coreRatings' experiment/auction_task.m 'auction saves the value-attribute rating'
+check_grep 'coreRatings' experiment/continuous_DC_task.m 'contdc saves the value-attribute rating'
+# Selection must keep taking pool ratings only -- the core attribute is
+# always shown, so letting its rating in would be a silent design change.
+check_absent 'coreRatings' experiment/+utils/selectAttributes.m 'selection must not read the value rating'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

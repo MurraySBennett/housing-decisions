@@ -82,6 +82,25 @@ attributes that attribute level 6 never reaches.
 Jobs have no image identity attributes at all, so none of this applies
 there; industry/title are the only identity fields and stay text-only.
 
+## The value attribute is rated, and then ignored by the selection
+
+`utils.elicitAttrRatings` puts the core attribute -- listed price for
+houses, offered wage for jobs -- on the same importance line as the pool,
+in the same randomised order. Its rating goes to
+`dataMat.<domain>.coreRatings` and **nothing reads it at run time**:
+`utils.selectAttributes` still receives pool ratings only, because the core
+attribute is on every card at every attribute level and no rating could
+change that. The point of collecting it is the analysis -- it is the one
+attribute for which there was no stated weight on the same scale as the
+others, which made stated-versus-revealed comparison impossible for
+precisely the variable the pricing model turns on.
+
+The cost is real and is written up in the function's header: price sits at
+the top of the line for most people, which compresses the pool attributes
+into the remainder of the scale. Rank order (all `utils.selectAttributes`
+reads) is unaffected; the raw pool values are not comparable to pool values
+collected before this change.
+
 ## Image loading
 
 Rebuilt entirely after images turned out not to be rendering at all in an

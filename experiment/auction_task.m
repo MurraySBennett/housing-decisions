@@ -125,6 +125,8 @@ try
             anchorRT        = cached.anchorRT;
             poolRatings     = cached.poolRatings;
             attrRTs         = cached.attrRTs;
+            coreRatings     = cached.coreRatings;
+            coreRTs         = cached.coreRTs;
             industryRatings = cached.industryRatings;
             if strcmpi(domain, 'jobs') && ~isempty(cached.keepIndustries)
                 stimuli = stimuli(ismember(stimuli.industry, cached.keepIndustries), :);
@@ -134,6 +136,8 @@ try
             anchorRT = NaN;
             poolRatings = linspace(0.9, 0.1, A.nPool);
             attrRTs = nan(1, A.nPool);
+            coreRatings = repmat(0.9, 1, A.nCore);
+            coreRTs = nan(1, A.nCore);
             industryRatings = [];
         else
             utils.trace('domain %s: eliciting anchor', domain);
@@ -153,15 +157,23 @@ try
                 fprintf('Filtered to %d jobs across %d industries.\n', height(stimuli), numel(keepIndustries));
             end
 
-            [poolRatings, attrRTs, ~] = utils.elicitVAS(window, cfg, {A.pool.label}, ...
-                'How important is each of these to you?', ...
-                {'Entirely unimportant', 'Extremely important'}, rs);
+            % Listed price / offered wage is rated on the same line as the
+            % pool, and then excluded from the selection that follows --
+            % it is always shown, so its rating cannot decide anything.
+            % See utils.elicitAttrRatings for why it is collected at all.
+            attrR       = utils.elicitAttrRatings(window, cfg, A, rs);
+            poolRatings = attrR.pool;
+            attrRTs     = attrR.poolRTs;
+            coreRatings = attrR.core;
+            coreRTs     = attrR.coreRTs;
 
             capture = struct();
             capture.anchor          = anchor;
             capture.anchorRT        = anchorRT;
             capture.poolRatings     = poolRatings;
             capture.attrRTs         = attrRTs;
+            capture.coreRatings     = coreRatings;
+            capture.coreRTs         = coreRTs;
             capture.industryRatings = industryRatings;
             capture.keepIndustries  = keepIndustries;
             utils.elicitationCache('save', sess, domain, capture);
@@ -282,6 +294,9 @@ try
         dataMat.(domain).poolRatings     = poolRatings;
         dataMat.(domain).poolRatingRTs   = attrRTs;
         dataMat.(domain).poolLabels      = {A.pool.label};
+        dataMat.(domain).coreRatings     = coreRatings;
+        dataMat.(domain).coreRatingRTs   = coreRTs;
+        dataMat.(domain).coreLabels      = {A.core.label};
         dataMat.(domain).industryRatings = industryRatings;
         dataMat.(domain).attrSelection   = sel;
         dataMat.(domain).window          = win;
@@ -1114,6 +1129,12 @@ end
 
 %% ======================================================================
 function choice = askComprehension(window, cfg, question, choices)
+% This screen asks for a click on one of two boxes, so it owns its cursor
+% rather than trusting whatever ran before it to have left one visible.
+% What ran before it is elicitation, which used to hide the cursor on the
+% way out -- and an aimed click at an invisible pointer is the worst kind
+% of dead time, because the participant cannot tell it from a crash.
+ShowCursor('Arrow', window);
 s = cfg.style;
 scr = Screen('Rect', window);
 W = scr(3); H = scr(4);

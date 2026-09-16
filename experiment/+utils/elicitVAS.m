@@ -44,7 +44,12 @@ for k = 1:n
     ShowCursor('Arrow', window);
 
     while true
-        [mx, ~, buttons] = GetMouse(window);
+        % utils.getMouse, not raw GetMouse(window): this screen runs before
+        % any trial does, right after the window opens and often before it
+        % has taken focus, which is exactly the case where GetMouse(window)
+        % has been seen to return NaN on Windows without throwing. A NaN mx
+        % here goes straight into Screen('DrawLine') below.
+        [mx, ~, buttons] = utils.getMouse(window);
         mx = min(max(mx, lineLeft), lineRight);
 
         Screen('FillRect', window, s.bg);
@@ -82,7 +87,7 @@ for k = 1:n
         utils.checkForQuit;
 
         if buttons(1)
-            while any(buttons), [~,~,buttons] = GetMouse(window); end
+            while any(buttons), [~,~,buttons] = utils.getMouse(window); end
             break
         end
     end
@@ -93,6 +98,12 @@ for k = 1:n
     placedLabel{end+1} = items{idx}; %#ok<AGROW>
 end
 
-HideCursor(window);
+% The cursor is deliberately LEFT VISIBLE. This used to end with
+% HideCursor(window), and that is what made the auction's comprehension
+% check unusable: elicitation runs before the instructions, nothing turned
+% the cursor back on afterwards, and the check asks the participant to
+% click one of two boxes with an invisible pointer. Hiding it here bought
+% nothing either -- every gaze-recorded trial starts at
+% utils.awaitFixationStart, which shows the cursor again anyway.
 
 end
