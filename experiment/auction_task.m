@@ -298,9 +298,17 @@ try
 
         % Gaze goes to its own file: it is orders of magnitude larger than
         % everything else and does not belong in the behavioural .mat.
+        % This is the end of a domain's trials, and what follows is
+        % several seconds of blocking disk writes. Previously nothing was
+        % drawn here, so the last trial screen simply froze -- which is
+        % what a participant reads as a crash.
+        savingFact = utils.didYouKnow(run.seed);
+        utils.savingScreen(window, cfg, 0.10, 'Collecting eye-tracking samples', savingFact);
+
         clockSync.end = utils.clockSync(et);
         gaze = utils.gazeBuffer('flush', et, gazeStore);
         if ~isempty(gaze)
+            utils.savingScreen(window, cfg, 0.25, 'Writing eye-tracking data', savingFact);
             gazeFile = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
             eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
             save(gazeFile, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
@@ -309,6 +317,7 @@ try
         end
         dataMat.(domain).clockSync = clockSync;
 
+        utils.savingScreen(window, cfg, 0.55, 'Releasing images', savingFact);
         Screen('Close', struct2texlist(tex));
     end
 
@@ -322,7 +331,11 @@ try
     end
 
     % =============================================== save
+    savingFact = utils.didYouKnow(run.seed);
+    utils.savingScreen(window, cfg, 0.75, 'Writing trial data', savingFact);
     utils.saveRun(sess, run, dataMat, buildTrialTable(dataMat));
+    utils.savingScreen(window, cfg, 1.00, 'Done - thank you', savingFact);
+    WaitSecs(1.2);
 
     ListenChar(0); ShowCursor; Priority(0); sca; clear PsychImaging;
     if standalone, utils.endRun(sess, run, 'complete'); end
@@ -833,11 +846,23 @@ W = winRect(3); H = winRect(4);
 scaleMin = win.scaleMin;
 scaleMax = win.scaleMax;
 
+% The advertised figure for THIS option, for the scale marker below.
+% Recomputed here rather than passed in: the caller has it, but threading
+% one more argument through a 13-argument signature is how signatures rot.
+itemValue = stimTbl.(A.valueVar)(stimIdx);
+
 cx = W/2; cy = H * 0.80;
-outerR = min(W*0.40, H*0.62);
+% Was min(W*0.40, H*0.62), which put the topmost tick LABEL within a few
+% pixels of the question text on a 1920x1080 screen and left nowhere to
+% put the live readout except inside the bowl of the arc. Shrinking the
+% radius buys a clear band above the arc for the question and the number.
+outerR = min(W*0.34, H*0.50);
 innerR = outerR * 0.82;
 
-nTicks = 7;
+% Five labelled ticks, not seven: at seven the labels crowd each other at
+% the shallow ends of the arc, and the extra two carry no information the
+% endpoints and midpoint do not already give.
+nTicks = 5;
 tickVals = linspace(scaleMin, scaleMax, nTicks);
 
 bid = NaN; rt = NaN;
@@ -856,7 +881,7 @@ while true
     else
         q = 'What hourly wage would you accept for this job?';
     end
-    DrawFormattedText(window, q, 'center', H*0.14, s.text);
+    DrawFormattedText(window, q, 'center', H*0.05, s.text);
 
     % Arc
     a = linspace(pi, 2*pi, 180);
@@ -874,12 +899,38 @@ while true
         ang = pi + (k-1)/(nTicks-1) * pi;
         tx1 = cx + innerR*cos(ang); ty1 = cy + innerR*sin(ang);
         tx2 = cx + outerR*cos(ang); ty2 = cy + outerR*sin(ang);
-        Screen('DrawLine', window, s.textDim, tx1, ty1, tx2, ty2, 2);
+        Screen('DrawLine', window, s.textDim, tx1, ty1, tx2, ty2, s.hairlinePx);
 
         lbl = utils.formatCurrency(tickVals(k), 'compact');
         lx = cx + (outerR+42)*cos(ang); ly = cy + (outerR+42)*sin(ang);
         bnd = Screen('TextBounds', window, lbl);
         DrawFormattedText(window, lbl, lx - bnd(3)/2, ly, s.textDim);
+    end
+
+    % Where the advertised figure sits on this scale.
+    %
+    % METHODOLOGICAL NOTE, read before assuming this is harmless: under
+    % BDM the optimal bid is the participant's own valuation, and drawing
+    % the listed price on the response scale gives them a salient
+    % reference point right where they are about to answer. Expect bids to
+    % cluster nearer it than they otherwise would. That is a real effect
+    % on the dependent variable, not a display detail -- it is switched on
+    % because it was asked for, and cfg.display.showValueMarker turns it
+    % off without touching this code.
+    if cfg.display.showValueMarker
+        mFrac = (itemValue - scaleMin) / max(scaleMax - scaleMin, eps);
+        if isfinite(mFrac) && mFrac >= 0 && mFrac <= 1
+            mAng = pi + mFrac*pi;
+            Screen('DrawLine', window, s.marker, ...
+                cx + (innerR-10)*cos(mAng), cy + (innerR-10)*sin(mAng), ...
+                cx + (outerR+10)*cos(mAng), cy + (outerR+10)*sin(mAng), 4);
+            mLbl = utils.ternary(strcmpi(domain,'houses'), 'listed', 'offered');
+            Screen('TextSize', window, s.sizeLabel);
+            bnd = Screen('TextBounds', window, mLbl);
+            DrawFormattedText(window, mLbl, ...
+                cx + (innerR-34)*cos(mAng) - bnd(3)/2, ...
+                cy + (innerR-34)*sin(mAng), s.marker);
+        end
     end
 
     % Response
@@ -896,10 +947,17 @@ while true
     py = cy + innerR*sin(pi + frac*pi);
     Screen('DrawDots', window, [px; py], 20, s.interactive, [], 2);
 
+    % Snap to the resolution it is DISPLAYED at, so the recorded bid is
+    % exactly the number the participant saw when they clicked.
+    curVal = utils.snapValue(curVal, A.priceStyle);
+
+    % Above the arc, not inside its bowl. Inside, the number sat between
+    % the two arms of the scale and read as a tick label rather than as
+    % the answer being given.
     Screen('TextSize', window, s.sizeTitle);
     txt = utils.formatCurrency(curVal, A.priceStyle);
     bnd = Screen('TextBounds', window, txt);
-    DrawFormattedText(window, txt, cx - bnd(3)/2, cy - 60, s.money);
+    DrawFormattedText(window, txt, cx - bnd(3)/2, H*0.13, s.money);
     Screen('TextSize', window, s.sizeLabel);
     DrawFormattedText(window, 'LEFT CLICK to submit     RIGHT CLICK to go back', ...
         'center', H - 48, s.textDim);
@@ -979,7 +1037,11 @@ txt = utils.incentives('instructions', domain, cfg.incentives);
 Screen('FillRect', window, s.bg);
 Screen('TextFont', window, s.fontContent);
 Screen('TextSize', window, s.sizeContent);
-DrawFormattedText(window, [txt '\n\n\nClick to continue.'], ...
+% utils.checkForQuit has always listened for 'q' on every screen; it
+% was simply never told to the participant, which makes it a
+% researcher's escape hatch rather than the participant's right to
+% withdraw that it is supposed to be.
+DrawFormattedText(window, [txt quitNotice()], ...
     'center', 'center', s.text, 62, 0, 0, 1.6);
 Screen('Flip', window);
 utils.waitForClick(window);
@@ -1237,7 +1299,7 @@ for d = 1:numel(dataMat.domains)
     Tr = dataMat.(dom).trials;
     for t = 1:numel(Tr)
         rows{end+1} = { dom, Tr(t).trial, Tr(t).practice, Tr(t).competition, Tr(t).nAttrs, ...
-            Tr(t).nPresented, Tr(t).nRejected, Tr(t).duration, ...
+            Tr(t).nPresented, Tr(t).nRejected, rejectedList(Tr(t).rejected), Tr(t).duration, ...
             Tr(t).bidAccepted, Tr(t).bid, Tr(t).bidRT, Tr(t).threshold, Tr(t).pricePaid, ...
             Tr(t).trueValue, Tr(t).bidStimIdx, Tr(t).endReason, ...
             dataMat.(dom).anchor }; %#ok<AGROW>
@@ -1246,6 +1308,35 @@ end
 if isempty(rows), T = table(); return; end
 M = vertcat(rows{:});
 T = cell2table(M, 'VariableNames', {'domain','trial','practice','competition','nAttrs', ...
-    'nPresented','nRejected','durationSec','bidAccepted','bid','bidRT','threshold', ...
+    'nPresented','nRejected','rejectedStimIdx','durationSec','bidAccepted','bid','bidRT','threshold', ...
     'pricePaid','trueValue','bidStimIdx','endReason','anchor'});
+end
+
+
+%% ======================================================================
+function s = rejectedList(idx)
+%REJECTEDLIST  Rejected stimulus indices as one semicolon-joined string.
+%
+%   The identities were always recorded -- trial.rejected in the .mat, and
+%   an option_reject event carrying stimIdx and dwellSec in the event log
+%   -- but the CSV only ever carried the COUNT. That made "which options
+%   did they turn down" a question you had to open the .mat to answer,
+%   which in practice means nobody asks it.
+%
+%   A long-format CSV cannot hold a variable-length list in a cell, so it
+%   goes in as text: '' for none, '14', '14;27;31'. Order is the order
+%   they were rejected in.
+
+if isempty(idx)
+    s = "";
+    return
+end
+s = string(strjoin(arrayfun(@(k) sprintf('%d', k), idx(:)', 'UniformOutput', false), ';'));
+end
+
+%% ======================================================================
+function s = quitNotice()
+%QUITNOTICE  Footer for every instruction screen.
+s = ['\n\n\nYou can stop at any time: press the Q key and the session ' ...
+     'will end.\n\n\nClick to continue.'];
 end

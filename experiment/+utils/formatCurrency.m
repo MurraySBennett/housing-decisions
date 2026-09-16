@@ -3,7 +3,7 @@ function s = formatCurrency(val, style)
 %
 %   utils.formatCurrency(425000)             -> '$425,000'
 %   utils.formatCurrency(425000, 'compact')  -> '$425k'
-%   utils.formatCurrency(23.5,   'hourly')   -> '$23.50/hr'
+%   utils.formatCurrency(23.5,   'hourly')   -> '$24/hr'
 %
 %   Replaces both formatCurrency() and the java.text.DecimalFormat-based
 %   insertCommas(), which fails under -nojvm and on headless test runs.
@@ -13,7 +13,12 @@ if isempty(val) || (isnumeric(val) && isnan(val)), s = '--'; return; end
 
 switch lower(char(style))
     case 'hourly'
-        s = sprintf('$%.2f/hr', val);
+        % Whole dollars. Cents are a precision this study does not have
+        % and does not want: they imply the wage is known to the penny and
+        % invite participants to fiddle at a resolution that carries no
+        % signal. utils.snapValue rounds the RESPONSE to match, so what is
+        % recorded is always exactly what was displayed.
+        s = sprintf('$%.0f/hr', val);
 
     case 'compact'
         % Ticks on the pricing scale: pick the unit from the magnitude

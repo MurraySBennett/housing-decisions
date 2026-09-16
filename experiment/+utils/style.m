@@ -95,6 +95,12 @@ case 'warm'
     % accent colour.
     s.target       = s.text;               % 12.4:1
 
+    % The advertised-value marker on the pricing scale. Needs its own
+    % colour: it is neither the participant's response (s.money, the live
+    % readout) nor a control (s.interactive, the knob), and reusing either
+    % would make the scale ambiguous at exactly the moment it must not be.
+    s.marker       = c255(126, 186, 181);  % #7EBAB5  muted teal   7.2:1
+
     % --- Typography ---------------------------------------------------
     % The pixel font is gone. It was used at three sites, was never
     % checked for availability, and made the build depend on a manual
@@ -151,6 +157,7 @@ case 'arcade'
     s.borderStrong = s.border;
     s.track        = s.border;
     s.target       = s.interactive;
+    s.marker       = c255(126, 217, 130);  % green, distinct from cyan/amber
 
     % Pixel font for chrome only. Pixel fonts wreck reading times at small
     % sizes, and reading time is a dependent variable here.

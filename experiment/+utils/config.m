@@ -238,6 +238,18 @@ cfg.et.useBuiltInCalibration = true;
 cfg.et.mediaMode = false;
 cfg.et.showGaze  = false;
 
+% --- Display options --------------------------------------------------
+% Draw the advertised figure (listed price / offered wage) on the pricing
+% scale, so the participant can see where it sits relative to the value
+% they are about to state.
+%
+% THIS IS NOT COSMETIC. Under BDM the optimal bid is the participant's own
+% valuation, and a salient reference point on the response scale is
+% exactly the kind of cue that pulls stated values toward it. Turning this
+% on is a deliberate design choice with a measurable cost in bid variance;
+% turning it off restores the scale to an unanchored one.
+cfg.display.showValueMarker = true;
+
 % --- Testing mode -----------------------------------------------------
 cfg.testing.enabled          = opt.testing;   % <-- now actually wired up
 cfg.testing.windowed         = rp.windowedDefault || opt.testing;

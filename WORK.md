@@ -50,6 +50,17 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-16 post-pilot round: saving screens with a real staged progress
+  bar and a neutral "Did you know..." panel around both blocking writes (the
+  end-of-block freeze); value labels now "Offered wage" / "Listed price";
+  hourly wages in whole dollars with the response snapped to match; fewer and
+  thinner scale ticks; live price moved above the arc instead of inside it;
+  advertised-value marker on the pricing scale; rejected stimulus indices
+  added to the auction CSV; quit key announced on every instruction screen
+- [ ] now (S) **decide whether to keep `cfg.display.showValueMarker`.** It was
+  asked for and it is on, but marking the listed price on the response scale
+  is an anchor on the dependent variable under BDM. Worth a deliberate call
+  before participant 1, not a default
 - [x] 2026-09-16 added `TRIALS_PER_CELL` to `run_battery.m`: a dress-rehearsal
   knob that shortens counts and changes nothing else. `[]` = full study. Set
   to 2 currently. Deliberately separate from `cfg.testing`, which also forces

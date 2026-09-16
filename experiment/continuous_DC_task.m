@@ -331,9 +331,15 @@ try
         dataMat.(domain).reversals     = scoreReversals(trials);
         dataMat.(domain).aoiLayouts    = aoiLayouts;
 
+        % Blocking disk writes from here. See the matching note in
+        % auction_task.m -- a frozen screen reads as a crash.
+        savingFact = utils.didYouKnow(run.seed);
+        utils.savingScreen(window, cfg, 0.10, 'Collecting eye-tracking samples', savingFact);
+
         clockSync.end = utils.clockSync(et);
         gaze = utils.gazeBuffer('flush', et, gazeStore);
         if ~isempty(gaze)
+            utils.savingScreen(window, cfg, 0.25, 'Writing eye-tracking data', savingFact);
             gf = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
             eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
             save(gf, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
@@ -341,10 +347,16 @@ try
             fprintf('Saved %d gaze samples.\n', numel(gaze));
         end
         dataMat.(domain).clockSync = clockSync;
+        utils.savingScreen(window, cfg, 0.55, 'Releasing images', savingFact);
     end
 
     showMessage(window, cfg, 'Thank you. That is the end of this task.', 2.5);
+
+    savingFact = utils.didYouKnow(run.seed);
+    utils.savingScreen(window, cfg, 0.75, 'Writing trial data', savingFact);
     utils.saveRun(sess, run, dataMat, buildTrialTable(dataMat));
+    utils.savingScreen(window, cfg, 1.00, 'Done - thank you', savingFact);
+    WaitSecs(1.2);
 
     ListenChar(0); ShowCursor; Priority(0); sca; clear PsychImaging;
     if standalone, utils.endRun(sess, run, 'complete'); end
@@ -530,8 +542,12 @@ cx = (L.arcLeft + L.arcRight) / 2;
 cy = L.arcBot - 60;
 outerR = min((L.arcRight - L.arcLeft)/2 - 30, (L.arcBot - L.arcTop) * 0.55);
 innerR = outerR * 0.80;
-nTicks = 7;
+% Five, not seven -- see the matching note in auction_task.m.
+nTicks = 5;
 tickVals = linspace(scaleMin, scaleMax, nTicks);
+
+% The advertised figure for this option, for the scale marker below.
+itemValue = stimTbl.(A.valueVar)(idx);
 
 % Fixation-start gate: known gaze anchor at trial onset, self-paced start.
 % t0 becomes the fixation click's own flip time, the true stimulus-locked
@@ -565,11 +581,30 @@ while true
         ang = pi + (k-1)/(nTicks-1)*pi;
         Screen('DrawLine', window, s.textDim, ...
             cx+innerR*cos(ang), cy+innerR*sin(ang), ...
-            cx+outerR*cos(ang), cy+outerR*sin(ang), 3);
+            cx+outerR*cos(ang), cy+outerR*sin(ang), s.hairlinePx);
         lbl = utils.formatCurrency(tickVals(k), 'compact');
         bnd = Screen('TextBounds', window, lbl);
         DrawFormattedText(window, lbl, cx+(outerR+38)*cos(ang)-bnd(3)/2, ...
             cy+(outerR+38)*sin(ang), s.textDim);
+    end
+
+    % Where the advertised figure sits on this scale. See the
+    % methodological note at the matching block in auction_task.m -- the
+    % anchoring concern is if anything sharper here, because the listed
+    % figure is also on the card a few centimetres away.
+    if cfg.display.showValueMarker
+        mFrac = (itemValue - scaleMin) / max(scaleMax - scaleMin, eps);
+        if isfinite(mFrac) && mFrac >= 0 && mFrac <= 1
+            mAng = pi + mFrac*pi;
+            Screen('DrawLine', window, s.marker, ...
+                cx + (innerR-10)*cos(mAng), cy + (innerR-10)*sin(mAng), ...
+                cx + (outerR+10)*cos(mAng), cy + (outerR+10)*sin(mAng), 4);
+            mLbl = utils.ternary(strcmpi(domain,'houses'), 'listed', 'offered');
+            bnd = Screen('TextBounds', window, mLbl);
+            DrawFormattedText(window, mLbl, ...
+                cx + (innerR-32)*cos(mAng) - bnd(3)/2, ...
+                cy + (innerR-32)*sin(mAng), s.marker);
+        end
     end
 
     [mx, my, buttons] = utils.getMouse(window);
@@ -583,10 +618,15 @@ while true
     py = cy + innerR*sin(pi + frac*pi);
     Screen('DrawDots', window, [px; py], 18, s.interactive, [], 2);
 
+    % Snap to the displayed resolution -- see utils.snapValue.
+    curVal = utils.snapValue(curVal, A.priceStyle);
+
+    % Above the arc rather than inside its bowl, matching auction_task.
     Screen('TextSize', window, s.sizeTitle);
     txt = utils.formatCurrency(curVal, A.priceStyle);
     bnd = Screen('TextBounds', window, txt);
-    DrawFormattedText(window, txt, cx - bnd(3)/2, cy - 40, s.money);
+    DrawFormattedText(window, txt, cx - bnd(3)/2, ...
+        max(L.arcTop - 6, cy - outerR - 52), s.money);
 
     gazeStore = utils.gazeBuffer('poll', et, gazeStore);
     if et.showGaze && ~isempty(gazeStore.latest)
@@ -892,7 +932,9 @@ end
 Screen('FillRect', window, s.bg);
 Screen('TextFont', window, s.fontContent);
 Screen('TextSize', window, s.sizeContent);
-DrawFormattedText(window, [body '\n\n\nClick to continue.'], 'center', 'center', ...
+% See the note in auction_task.m -- 'q' always worked, participants
+% were just never told.
+DrawFormattedText(window, [body quitNotice()], 'center', 'center', ...
     s.text, 60, 0, 0, 1.6);
 Screen('Flip', window);
 utils.waitForClick(window);
@@ -1028,4 +1070,11 @@ if isempty(rows), T = table(); return; end
 T = cell2table(vertcat(rows{:}), 'VariableNames', {'domain','block','attrLevel', ...
     'taskType','pairIdx','chosenIdx','choseMoney','itemIdx','isMoneyOption', ...
     'postedValue','price','contrast','rt','timedOut'});
+end
+
+%% ======================================================================
+function s = quitNotice()
+%QUITNOTICE  Footer for every instruction screen.
+s = ['\n\n\nYou can stop at any time: press the Q key and the session ' ...
+     'will end.\n\n\nClick to continue.'];
 end

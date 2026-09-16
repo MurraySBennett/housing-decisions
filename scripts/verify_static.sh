@@ -142,6 +142,32 @@ check_grep 'trialsPerCell' experiment/continuous_DC_task.m 'rehearsal flag saved
 check_grep 'trialsPerCell \* 2' experiment/auction_task.m 'auction cells are the 2 competition levels'
 check_grep 'TRIALS_PER_CELL' experiment/README.md 'rehearsal knob docs'
 
+# --- Post-pilot fixes ----------------------------------------------------
+check_file experiment/+utils/savingScreen.m
+check_file experiment/+utils/didYouKnow.m
+check_file experiment/+utils/snapValue.m
+
+# A blocking save must never happen with a stale trial screen up.
+check_grep 'utils\.savingScreen' experiment/auction_task.m 'auction saving screen'
+check_grep 'utils\.savingScreen' experiment/continuous_DC_task.m 'contdc saving screen'
+check_grep 'utils\.snapValue' experiment/auction_task.m 'auction bid snapped to displayed resolution'
+check_grep 'utils\.snapValue' experiment/continuous_DC_task.m 'contdc price snapped to displayed resolution'
+
+# The value labels must read as ADVERTISED figures, not as the response.
+check_grep "'Offered wage'" experiment/+utils/attributes.m 'jobs value label'
+check_grep "'Listed price'" experiment/+utils/attributes.m 'houses value label'
+check_absent "'\\\$%\\.2f/hr'" experiment/+utils/formatCurrency.m 'cents on hourly wages'
+
+# Participants must be told about the quit key -- it always worked.
+check_grep 'quitNotice' experiment/auction_task.m 'auction quit notice'
+check_grep 'quitNotice' experiment/continuous_DC_task.m 'contdc quit notice'
+
+# Rejected options reach the CSV, not just the .mat.
+check_grep 'rejectedStimIdx' experiment/auction_task.m 'rejected options in the CSV'
+
+check_grep 'showValueMarker' experiment/+utils/config.m 'value-marker knob'
+check_grep 's\.marker' experiment/+utils/style.m 'scale marker colour'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi
