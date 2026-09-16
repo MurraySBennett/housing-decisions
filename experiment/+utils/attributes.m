@@ -58,14 +58,31 @@ switch lower(char(domain))
             'kind',  {'count','count','number','number','year'}, ...
             'dir',   {1, 1, 1, 1, 1});
 
-        % Zone is 2-level and confounded with lot size, square footage and
-        % bedroom count, so its weight estimate absorbs variance from those.
-        % Held to the top level deliberately.
-        A.late = struct( ...
-            'var',   {'Zone'}, ...
-            'label', {'Region'}, ...
-            'kind',  {'category'}, ...
-            'dir',   {0});
+        % No late tier for houses at present. Region (the Zone column) is
+        % NOT in use: it may come back, but it is not part of the current
+        % design, so it is not shown and not rated. Restore by moving the
+        % commented definition below back into A.late.
+        %
+        % The column stays in house_stimuli.csv either way, so this costs
+        % nothing to reverse.
+        %
+        %   A.late = struct( ...
+        %       'var',   {'Zone'}, ...
+        %       'label', {'Region'}, ...
+        %       'kind',  {'category'}, ...
+        %       'dir',   {0});
+        %
+        % When it does come back, note the original reservation: Zone is
+        % 2-level and confounded with lot size, square footage and bedroom
+        % count, so its weight estimate absorbs variance from those. That
+        % is why it was held to the top attribute level rather than put in
+        % the pool.
+        %
+        % A consequence of there being no late tier: houses now has 5 pool
+        % attributes and a max level of 6 (core + 5), which exactly matches
+        % the top of cfg.attrLevels. Every rated attribute can therefore
+        % appear -- no orphaned pool attribute that no level ever reaches.
+        A.late = struct('var', {}, 'label', {}, 'kind', {}, 'dir', {});
 
         A.valueVar = 'listPrice';
         A.priceStyle = 'total';

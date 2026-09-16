@@ -50,6 +50,20 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-16 dropped Region (the Zone column) from the house attributes
+  -- not part of the current design. Houses now has no late tier, which means
+  its max level is exactly 6 (price + all 5 pool attributes), so every
+  attribute a participant rates can actually appear. Definition kept
+  commented in `attributes.m` and the column stays in the CSV, so restoring
+  it is one edit
+- [x] 2026-09-16 anchor input now groups thousands as you type (350000 shows
+  as $350,000). This is the field where an order-of-magnitude typo silently
+  rescales every stimulus the participant then sees, via `sampleWindow`
+- [ ] next (M) **houses has only 5 rated attributes to jobs' 8**, and the
+  stimulus CSV has no unused columns to promote. If the two domains need to
+  be comparable in information load, houses needs new attribute data
+  (garage, HOA, school rating, days on market...) generated with the same
+  correlation control as the jobs arms
 - [x] 2026-09-16 added `+utils/positionGuide.m`: a head-position screen before
   calibration showing where the tracker sees the participant's eyes against a
   target zone, with a depth bar and one instruction at a time. Uses Tobii

@@ -177,6 +177,11 @@ check_grep 'positioned' experiment/continuous_DC_task.m 'head position recorded 
 # The guide must never be able to strand a session on a setup screen.
 check_grep 'timeoutSec' experiment/+utils/positionGuide.m 'position guide has an escape hatch'
 
+# Region/Zone is out of the current design. If it comes back it must be a
+# deliberate edit, not a silent reappearance.
+check_grep "A\.late = struct\('var', \{\}" experiment/+utils/attributes.m 'houses late tier is empty (Region out of the design)'
+check_grep 'groupDigits' experiment/+utils/elicitAnchor.m 'anchor input is thousands-grouped'
+
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi

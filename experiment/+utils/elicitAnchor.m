@@ -14,7 +14,7 @@ if isHouse
     prompt = ['Before we begin.\n\n' ...
               'Imagine you are looking to buy a house.\n\n' ...
               'What is the most you could realistically spend?'];
-    hint   = 'Type an amount and press ENTER.   e.g. 350000';
+    hint   = 'Type the digits and press ENTER.   350000 shows as $350,000';
     lo = 50000; hi = 5000000;
 else
     prompt = ['Before we begin.\n\n' ...
@@ -42,8 +42,13 @@ while true
     utils.roundRect(window, box, s.radiusPanel, s.bgPanel, ...
         s.interactive, s.borderWidthPx);
 
+    % Grouped as they type. A bare "350000" is genuinely hard to read at
+    % a glance, and this is the one field in the study where being an
+    % order of magnitude out silently rescales every stimulus the
+    % participant then sees, via utils.sampleWindow. Commas make a
+    % mistyped zero visible at the moment it is typed.
     Screen('TextSize', window, s.sizeTitle);
-    shown = ['$' str];
+    shown = ['$' groupDigits(str) '_'];
     b = Screen('TextBounds', window, shown);
     DrawFormattedText(window, shown, cx - b(3)/2, cy + 100 + b(4)/4, s.money);
 
@@ -83,5 +88,27 @@ end
 
 ListenChar(0);
 rt = GetSecs - t0;
+
+end
+
+
+%% ======================================================================
+function out = groupDigits(str)
+%GROUPDIGITS  Thousands separators for a raw digit string.
+%
+%   '350000'  -> '350,000'
+%   '1234567' -> '1,234,567'
+%   '24'      -> '24'        (a no-op below four digits, so the same path
+%                             serves hourly wages without special-casing)
+%
+%   Leading zeros are stripped first, so a stray keypress shows as
+%   '350,000' rather than '0,350,000'.
+
+out = regexprep(str, '^0+(?=\d)', '');
+if isempty(out)
+    out = str;
+    return
+end
+out = regexprep(out, '(\d)(?=(\d{3})+$)', '$1,');
 
 end
