@@ -116,6 +116,10 @@ foreach ($f in @('job_stimuli_synthetic.csv',   'job_stimuli_synthetic_provenanc
 foreach ($f in @('jobs_synthetic.json', 'jobs_ecological.json', 'jobs_attenuated.json')) {
     $manifest += [pscustomobject]@{ From = "experiment\stimuli\stimgen\configs\$f"; ToDir = 'Experiment\stimuli\stimgen\configs' }
 }
+# window_check.py goes with prepare_stimuli.py. It is the check that catches
+# a stimulus column that looks fine in the file and collapses inside an
+# anchored window, and a check that exists on only one machine is not one.
+$manifest += [pscustomobject]@{ From = 'experiment\stimuli\stimgen\window_check.py'; ToDir = 'Experiment\stimuli\stimgen' }
 
 # -- R analysis
 $manifest += [pscustomobject]@{ From = 'analysis\README.md'; ToDir = 'analysis' }
