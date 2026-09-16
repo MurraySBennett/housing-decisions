@@ -358,15 +358,30 @@ pleasantly.**
   files). `Data\`, `stimuli\house_images\`, `Experiment\archive\` and the
   share-only stimulus files were excluded by name and verified untouched
   afterwards. The RA deck was deliberately NOT copied — it needs work first
-- [ ] now (M) **this copy is a stopgap and recreates the divergence problem.**
-  Git is not installed on the lab machine. Get it installed, clone the repo
-  over the share copy, and delete `scripts/deploy_to_share.ps1` — then
-  `git status` on the share becomes the parity check and
-  `docs/shared-drive-parity-2026-09-10.md` stops needing to be redone by hand
-- [ ] next (S) `cfg.paths.data` points inside the code tree
-  (`Experiment/Data`). If the share becomes a git clone, `git clean -fdx`
-  there would delete every participant. Move it to a sibling of the checkout
-  before cloning, not after
+- [x] 2026-09-16 deployed to the lab share (6 commits; 97 files backed up to
+  `Archive\Experiment_pre-2026-09-16_181240`, 80 replaced, 3 added) and
+  pushed 30 commits to GitHub, which had been stale since 2026-08-18. The
+  repo already existed and was simply not being pushed to
+- [ ] now (M) **put the lab machine on git** -- steps written up in
+  `docs/lab-machine-git.md`, needs a keyboard at the rig. Plan is to make
+  the share's `housing_wages/` itself the working tree: `utils.config`
+  defaults `projRoot` to the share root, and Windows does not distinguish
+  the repo's `experiment/` from the share's `Experiment/`, so it lines up
+  with no config changes. Read-only deploy key so a shared machine never
+  holds a credential that can push. Delete `deploy_to_share.ps1` in the
+  same commit that finishes it -- two live mechanisms is worse than either
+- [ ] next (S) **decide how collaborators get access.** The repo is private
+  on a personal account. Check whether OSU runs GitHub Enterprise first: an
+  org-owned repo outlives an individual account, which matters for
+  something that will be cited. A clone gives code, stimulus definitions,
+  `WORK.md` and `docs/` -- not the 605MB image set, the Tobii SDK, or
+  participant data, so it is enough to read the project and run the
+  analysis on exported CSVs but not to run a session
+- [ ] **now (S) BLOCKS the clone: `cfg.paths.data` is inside the code tree**
+  (`Experiment/Data`), and it is gitignored, so `git clean -fdx` on the
+  share would delete every participant without git objecting. Move it to a
+  sibling of the checkout **before** converting the share, not after.
+  `docs/lab-machine-git.md` carries the warning but a warning is not a fix
 - [ ] next (S) `config.m` hardcodes the OSU UNC as `projRoot`, which is why
   `demo_battery.m` has to re-point every path by hand on WSL. `STIMULI.md`
   already documents a `$DATA_ROOT` env-var convention that nothing reads.

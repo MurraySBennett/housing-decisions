@@ -64,3 +64,10 @@ data/
 experiment/Data_demo/
 analysis/Data_simulated/
 analysis/output/
+
+# --- Only relevant once the share IS the working tree -------------------
+# See docs/lab-machine-git.md. These live in housing_wages/ on the lab
+# share and must stay untracked, or `git status` there stops being a
+# usable parity check. Harmless on any other machine.
+Archive/
+screen_recordings/
