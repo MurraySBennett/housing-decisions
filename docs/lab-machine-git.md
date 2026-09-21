@@ -96,32 +96,14 @@ and arrive by `git pull`. If you ever *do* need to commit from the rig,
 commit locally and pull it the other way rather than giving the rig a
 writable key.
 
-## 3. Data and images out of the tree — DONE 2026-09-16
+## 3. Data and images stay in Experiment and are gitignored
 
-Both were gitignored and *inside* what is about to become the working tree.
-That combination is the dangerous one: `git clean -fdx` removes ignored
-files — the whole point of `-x` — and it is the command anyone reaches for
-to reset a checkout. On that tree it deletes every participant, and git
-raises no objection, because they were ignored by design. The deploy
-script's `Archive\` backups exclude both, so there is no second copy.
+Participant data stays in `housing_wages\Experiment\Data`, and house images
+stay in `housing_wages\Experiment\stimuli\house_images`. The boundary is
+`.gitignore`, not a second sibling share directory.
 
-`scripts/move_out_of_tree.ps1` moved them and verified file counts and
-bytes on both sides:
-
-```
-housing_wages\Experiment\Data                  ->  housing_wages_local\Data
-   41 files, 2,796.3 MB
-housing_wages\Experiment\stimuli\house_images  ->  housing_wages_local\house_images
-  485 files, 605.3 MB
-```
-
-`cfg.paths.local` in `+utils/config.m` points at the new root, and
-`utils.verifyPaths` now lists it under MUST ALREADY EXIST — so if someone
-later restores the old layout, the path check says so rather than the task
-failing mid-session.
-
-The script is idempotent and refuses to merge into an existing destination,
-so re-running it is safe.
+Before converting the share into a checkout, confirm those two directories
+exist and `git status --ignored` shows them as ignored rather than tracked.
 
 ## 4. Convert the share into the working tree
 

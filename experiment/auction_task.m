@@ -303,10 +303,11 @@ try
             % levelChange below, and the two must not drift apart.
             nParts = 1 + sum(~strcmp({plan(2:end).competition}, ...
                                      {plan(1:end-1).competition}));
-            showClickMessage(window, cfg, sprintf(['That was the practice round.' ...
-                '\n\nThe real markets start now. There are %d of them, in %d ' ...
+            showClickMessage(window, cfg, sprintf(['The practice round is over.' ...
+                '\n\nThe real markets start now. Take a moment to ask any ' ...
+                'questions before continuing.\n\nThere are %d real markets, in %d ' ...
                 'parts, and your decisions from here on are the ones we ' ...
-                'record.\n\nClick when you are ready.'], ...
+                'record.\n\nClick when you are ready to begin the real markets.'], ...
                 numel(plan), nParts));
         end
 
@@ -965,7 +966,7 @@ BL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
 cx = (BL.arcLeft + BL.arcRight) / 2;
 cy = BL.arcBot - 60;
 outerR = min((BL.arcRight - BL.arcLeft)/2 - 30, (BL.arcBot - BL.arcTop) * 0.55);
-innerR = outerR * 0.80;
+scaleR = outerR - s.priceScale.majorTickPx;
 
 % Five labelled ticks, not seven: at seven the labels crowd each other at
 % the shallow ends of the arc, and the extra two carry no information the
@@ -975,28 +976,11 @@ tickVals = linspace(scaleMin, scaleMax, nTicks);
 
 bid = NaN; rt = NaN;
 
-% RANDOMISED START. The cursor used to begin at the arc apex -- the
-% midpoint of the scale -- on every trial. There is no "no anchor" option
-% here: the cursor must start somewhere, and wherever it starts pulls
-% responses. The only question is whether the start point carries
-% information.
-%
-% A constant midpoint is a nuisance anchor; it shifts every bid the same
-% way and lands in an intercept. Starting at the advertised value would be
-% much worse, because the anchor would then covary with the main predictor
-% of the bid and manufacture part of the very effect being measured. A
-% random start has no systematic pull, which turns residual anchoring into
-% noise instead of bias.
-%
-% startFrac is returned and saved per trial. Randomising without recording
-% it would waste the design -- the point is that any residual pull toward
-% the start becomes measurable rather than baked in.
-%
-% Drawn from the auction's PRIVATE stream, not the global one.
-startFrac = rand(rs);
+% Leave the pointer wherever it already is. Forced starts became their own
+% task feature, and random starts were not legible to participants as a
+% neutral choice. NaN marks "not forced" in the saved data.
+startFrac = NaN;
 t0 = GetSecs;
-SetMouse(round(cx + innerR*cos(pi + startFrac*pi)), ...
-         round(cy + innerR*sin(pi + startFrac*pi)), window);
 
 while true
     % Bid screen stays clean too -- competition level was already shown on
@@ -1018,23 +1002,22 @@ while true
     % the 'bid' prefix.
     utils.drawOptionCard(window, cfg, BL.cardRect, stimTbl, tex, sel, idx);
 
-    % Arc
+    % Arc and ticks.
     a = linspace(pi, 2*pi, 180);
-    ax = cx + outerR*cos(a);  ay = cy + outerR*sin(a);
-    bx = cx + innerR*cos(a);  by = cy + innerR*sin(a);
+    ax = cx + scaleR*cos(a);  ay = cy + scaleR*sin(a);
     % s.track, not s.border: this arc IS the scale the participant sets a
-    % bid on. The soft decorative edge colour is not readable enough for a
-    % stroke that carries the response.
-    Screen('DrawLines', window, [reshape([ax;bx],1,[]); reshape([ay;by],1,[])], ...
-        4, s.track);
+    % bid on. It sits at the inner end of the major ticks, so the tick
+    % marks read as rising from the scale rather than hanging below it.
+    Screen('DrawLines', window, [ax; ay], 4, s.track);
 
     % Ticks and labels
-    Screen('TextSize', window, s.sizeLabel);
+    Screen('TextSize', window, s.priceScale.labelSizePx);
     for k = 1:nTicks
         ang = pi + (k-1)/(nTicks-1) * pi;
-        tx1 = cx + innerR*cos(ang); ty1 = cy + innerR*sin(ang);
+        tx1 = cx + scaleR*cos(ang);
+        ty1 = cy + scaleR*sin(ang);
         tx2 = cx + outerR*cos(ang); ty2 = cy + outerR*sin(ang);
-        Screen('DrawLine', window, s.textDim, tx1, ty1, tx2, ty2, s.hairlinePx);
+        Screen('DrawLine', window, s.textDim, tx1, ty1, tx2, ty2, s.borderWidthPx);
 
         lbl = utils.formatCurrency(tickVals(k), 'compact');
         lx = cx + (outerR+38)*cos(ang); ly = cy + (outerR+38)*sin(ang);
@@ -1057,14 +1040,14 @@ while true
         if isfinite(mFrac) && mFrac >= 0 && mFrac <= 1
             mAng = pi + mFrac*pi;
             Screen('DrawLine', window, s.marker, ...
-                cx + (innerR-10)*cos(mAng), cy + (innerR-10)*sin(mAng), ...
+                cx + (scaleR-10)*cos(mAng), cy + (scaleR-10)*sin(mAng), ...
                 cx + (outerR+10)*cos(mAng), cy + (outerR+10)*sin(mAng), 4);
             mLbl = utils.ternary(strcmpi(domain,'houses'), 'listed', 'offered');
             Screen('TextSize', window, s.sizeLabel);
             bnd = Screen('TextBounds', window, mLbl);
             DrawFormattedText(window, mLbl, ...
-                cx + (innerR-34)*cos(mAng) - bnd(3)/2, ...
-                cy + (innerR-34)*sin(mAng), s.marker);
+                cx + (scaleR-34)*cos(mAng) - bnd(3)/2, ...
+                cy + (scaleR-34)*sin(mAng), s.marker);
         end
     end
 
@@ -1078,8 +1061,8 @@ while true
                                            % read reach a Screen() coordinate
     curVal = scaleMin + frac * (scaleMax - scaleMin);
 
-    px = cx + innerR*cos(pi + frac*pi);
-    py = cy + innerR*sin(pi + frac*pi);
+    px = cx + scaleR*cos(pi + frac*pi);
+    py = cy + scaleR*sin(pi + frac*pi);
     Screen('DrawDots', window, [px; py], 20, s.interactive, [], 2);
 
     % Snap to the resolution it is DISPLAYED at, so the recorded bid is
@@ -1094,7 +1077,7 @@ while true
     txt = utils.formatCurrency(curVal, A.priceStyle);
     bnd = Screen('TextBounds', window, txt);
     DrawFormattedText(window, txt, cx - bnd(3)/2, ...
-        max(BL.arcTop - 6, cy - outerR - 52), s.money);
+        max(BL.arcTop - 6, cy - outerR - s.priceScale.readoutLiftPx), s.money);
     Screen('TextSize', window, s.sizeLabel);
     DrawFormattedText(window, 'LEFT CLICK to submit     RIGHT CLICK to go back', ...
         'center', H - 48, s.textDim);

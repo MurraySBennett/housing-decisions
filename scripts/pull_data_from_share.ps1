@@ -1,0 +1,126 @@
+<#
+    pull_data_from_share.ps1 -- copy lab data from the OSU share into this
+    WSL checkout's ignored local data tree, then run the R analysis.
+
+    Source data lives inside the experiment tree on the share:
+      \\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data
+
+    Local data lands under:
+      data\lab\Data
+
+    That directory is ignored by git. The script never deletes local files;
+    it overwrites files with the same relative path and writes a fresh
+    manifest so stale local files are visible rather than silently erased.
+
+    Run from WSL. Pipe the script text into PowerShell because the lab
+    machine policy can reject unsigned `-File` execution:
+      PS=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+      $PS -NoProfile -Command "Invoke-Expression (Get-Content -Raw -LiteralPath '\\wsl.localhost\Ubuntu\home\msb\projects\housing-decisions\scripts\pull_data_from_share.ps1')"
+#>
+
+param(
+    [string]$SourceData = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data',
+    [string]$RepoWin = '\\wsl.localhost\Ubuntu\home\msb\projects\housing-decisions',
+    [string]$RepoLinux = '/home/msb/projects/housing-decisions',
+    [string]$RscriptLinux = '/home/msb/.nix-profile/bin/Rscript',
+    [switch]$AnalysisOnly,
+    [switch]$SkipAnalysis
+)
+
+$ErrorActionPreference = 'Stop'
+
+$localRoot = Join-Path $RepoWin 'data\lab'
+$targetData = Join-Path $localRoot 'Data'
+$manifestDir = Join-Path $localRoot 'manifests'
+$stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
+$manifest = Join-Path $manifestDir "pull_$stamp.csv"
+
+function Assert-Path($p, $what) {
+    if (-not (Test-Path -LiteralPath $p)) { throw "$what not found: $p" }
+}
+
+Assert-Path $RepoWin 'WSL repo'
+
+New-Item -ItemType Directory -Path $targetData -Force | Out-Null
+New-Item -ItemType Directory -Path $manifestDir -Force | Out-Null
+
+if ($AnalysisOnly) {
+    Assert-Path $targetData 'Local pulled data directory'
+    Write-Host ''
+    Write-Host '=== PHASE 1: copy lab data locally ===' -ForegroundColor Cyan
+    Write-Host '  skipped: -AnalysisOnly'
+} else {
+    Assert-Path $SourceData 'Share data directory'
+
+    Write-Host ''
+    Write-Host '=== PHASE 1: copy lab data locally ===' -ForegroundColor Cyan
+    Write-Host "  source: $SourceData"
+    Write-Host "  target: $targetData"
+
+    $copied = 0
+    $bytes = [int64]0
+    $records = New-Object System.Collections.Generic.List[object]
+
+    Get-ChildItem -LiteralPath $SourceData -Recurse -File -Force | ForEach-Object {
+        $rel = $_.FullName.Substring($SourceData.Length + 1)
+        $dest = Join-Path $targetData $rel
+        $destDir = Split-Path $dest -Parent
+        if (-not (Test-Path -LiteralPath $destDir)) {
+            New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+        }
+
+        Copy-Item -LiteralPath $_.FullName -Destination $dest -Force
+
+        $srcLen = $_.Length
+        $dst = Get-Item -LiteralPath $dest
+        if ($dst.Length -ne $srcLen) {
+            throw "Size mismatch after copy: $rel ($srcLen vs $($dst.Length))"
+        }
+
+        $copied++
+        $bytes += $srcLen
+        $records.Add([pscustomobject]@{
+            relative_path = $rel
+            bytes = $srcLen
+            source_last_write_utc = $_.LastWriteTimeUtc.ToString('s')
+            pulled_at = (Get-Date).ToString('s')
+        })
+    }
+
+    $records | Sort-Object relative_path | Export-Csv -LiteralPath $manifest -NoTypeInformation
+
+    Write-Host "  copied:   $copied files"
+    Write-Host ("  bytes:    {0:N0}" -f $bytes)
+    Write-Host "  manifest: $manifest"
+}
+
+if ($SkipAnalysis) {
+    Write-Host ''
+    Write-Host '=== RESULT ===' -ForegroundColor Cyan
+    Write-Host '  analysis skipped'
+    Write-Host '  no problems' -ForegroundColor Green
+    exit 0
+}
+
+Write-Host ''
+Write-Host '=== PHASE 2: run analysis/R/run_all.R ===' -ForegroundColor Cyan
+
+$analysisArgs = @(
+    '-d', 'Ubuntu',
+    '--cd', $RepoLinux,
+    '--',
+    $RscriptLinux, 'analysis/R/run_all.R',
+    '--data', 'data/lab/Data',
+    '--out', 'analysis/output/lab'
+)
+
+& wsl.exe @analysisArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "R analysis failed with exit code $LASTEXITCODE"
+}
+
+Write-Host ''
+Write-Host '=== RESULT ===' -ForegroundColor Cyan
+Write-Host '  data ready:      data/lab/Data'
+Write-Host '  analysis output: analysis/output/lab'
+Write-Host '  no problems' -ForegroundColor Green

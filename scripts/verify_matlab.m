@@ -11,7 +11,7 @@ cfg = utils.config('projRoot', tmpRoot, 'rig', 'dev', 'testing', true);
 assert(isstruct(cfg.contdc.nPairs), 'cfg.contdc.nPairs must be per-domain struct');
 assert(isfield(cfg.contdc.nPairs, 'houses') && isfield(cfg.contdc.nPairs, 'jobs'), ...
     'cfg.contdc.nPairs must define houses and jobs');
-assert(~cfg.contdc.allowCrossLevelReuse, 'cross-level reuse should default off');
+assert(cfg.contdc.allowCrossLevelReuse, 'cross-level reuse should default on');
 assert(isfield(cfg.et, 'sampleRateHz'), 'cfg.et.sampleRateHz missing');
 
 stimCfg = struct();

@@ -182,8 +182,9 @@ try
         % ---- stimulus window ------------------------------------------
         % Selects rows, or keeps them all and fits their prices onto the
         % window, depending on cfg.sampling.fitToWindow for this domain.
-        % This is also what supplies the 36 distinct houses buildPairs
-        % needs for 3 attribute levels with cross-level reuse blocked.
+        % This is also what supplies buildPairs with the full item pool.
+        % Cross-level reuse is allowed by default so later levels are not
+        % starved by earlier ones.
         [inWindow, win] = utils.applyWindow(stimuli, A, anchor, cfg);
         fprintf('Window %s to %s: %d stimuli (%s).\n', ...
             utils.formatCurrency(win.lo, A.priceStyle), ...
@@ -220,11 +221,11 @@ try
             selByLevel.(key) = utils.selectAttributes(A, lvl, poolRatings, ...
                 cfg.attrMethod, lvl == max(levels) && cfg.lateAtMaxOnly);
 
-            % Exclude stimuli already claimed by an earlier level, so a
-            % participant never values the same house/job twice under
-            % different information loads. Reuse WITHIN a level (choose
-            % between a pair, then price each of its two options) is
-            % required by the paradigm and is unaffected by this.
+            % Optionally exclude stimuli already claimed by an earlier
+            % level. The default allows cross-level reuse so every
+            % information-load condition keeps the same trial count.
+            % Reuse WITHIN a level (choose between a pair, then price each
+            % of its two options) is required by the paradigm either way.
             if cfg.contdc.allowCrossLevelReuse
                 exclude = [];
             else
@@ -233,6 +234,13 @@ try
 
             [pairsByLevel.(key), claimed] = utils.buildPairs(inWindow, ...
                 selByLevel.(key), A, nPairsThisRun, rs, exclude);
+            if numel(pairsByLevel.(key)) < nPairsThisRun
+                error('hw:contdc:shortPairs', ...
+                    ['Attribute level %d produced only %d/%d pairs for %s. ' ...
+                     'Do not run imbalanced cells: lower cfg.contdc.nPairs, ' ...
+                     'widen cfg.sampling.spread, or allow cross-level reuse.'], ...
+                    lvl, numel(pairsByLevel.(key)), nPairsThisRun, domain);
+            end
             usedAcrossLevels = unique([usedAcrossLevels, claimed]);
 
             for pk = 1:numel(pairsByLevel.(key))
@@ -559,7 +567,7 @@ scaleMax = win.scaleMax;
 cx = (L.arcLeft + L.arcRight) / 2;
 cy = L.arcBot - 60;
 outerR = min((L.arcRight - L.arcLeft)/2 - 30, (L.arcBot - L.arcTop) * 0.55);
-innerR = outerR * 0.80;
+scaleR = outerR - s.priceScale.majorTickPx;
 % Five, not seven -- see the matching note in auction_task.m.
 nTicks = 5;
 tickVals = linspace(scaleMin, scaleMax, nTicks);
@@ -574,14 +582,9 @@ itemValue = stimTbl.(A.valueVar)(idx);
     'trial', blockInfo.trialInBlock, 'nTrials', blockInfo.nTrialsInBlock, ...
     'label', sprintf('%s - price - %d attributes', domain, blockInfo.level)));
 
-% Randomised start -- see the long note in auction_task.m's getBid. A
-% constant midpoint is a nuisance anchor; the advertised value would be a
-% confounded one; random is the only start that cannot bias an estimate.
-% Recorded as tr.startFrac so residual anchoring stays testable.
-startFrac = rand(rs);
-tr.startFrac = startFrac;
-SetMouse(round(cx + innerR*cos(pi + startFrac*pi)), ...
-         round(cy + innerR*sin(pi + startFrac*pi)), window);
+% Leave the pointer wherever it already is. Forced starts became their own
+% task feature; NaN marks "not forced" in the saved data.
+tr.startFrac = NaN;
 while true
     % Response screen stays clean -- no HUD. Same rationale as the choice
     % trial: progress/condition info already shown on the fixation screen,
@@ -594,19 +597,18 @@ while true
 
     utils.drawOptionCard(window, cfg, L.cardRect, stimTbl, tex, sel, idx);
 
-    % Arc
+    % Arc and ticks.
     a = linspace(pi, 2*pi, 160);
     % s.track, not s.border -- see the matching note in auction_task.m.
-    Screen('DrawLines', window, ...
-        [reshape([cx+outerR*cos(a); cx+innerR*cos(a)],1,[]); ...
-         reshape([cy+outerR*sin(a); cy+innerR*sin(a)],1,[])], 4, s.track);
+    Screen('DrawLines', window, [cx+scaleR*cos(a); cy+scaleR*sin(a)], 4, s.track);
 
-    Screen('TextSize', window, s.sizeLabel);
+    Screen('TextSize', window, s.priceScale.labelSizePx);
     for k = 1:nTicks
         ang = pi + (k-1)/(nTicks-1)*pi;
         Screen('DrawLine', window, s.textDim, ...
-            cx+innerR*cos(ang), cy+innerR*sin(ang), ...
-            cx+outerR*cos(ang), cy+outerR*sin(ang), s.hairlinePx);
+            cx+scaleR*cos(ang), ...
+            cy+scaleR*sin(ang), ...
+            cx+outerR*cos(ang), cy+outerR*sin(ang), s.borderWidthPx);
         lbl = utils.formatCurrency(tickVals(k), 'compact');
         bnd = Screen('TextBounds', window, lbl);
         DrawFormattedText(window, lbl, cx+(outerR+38)*cos(ang)-bnd(3)/2, ...
@@ -622,13 +624,13 @@ while true
         if isfinite(mFrac) && mFrac >= 0 && mFrac <= 1
             mAng = pi + mFrac*pi;
             Screen('DrawLine', window, s.marker, ...
-                cx + (innerR-10)*cos(mAng), cy + (innerR-10)*sin(mAng), ...
+                cx + (scaleR-10)*cos(mAng), cy + (scaleR-10)*sin(mAng), ...
                 cx + (outerR+10)*cos(mAng), cy + (outerR+10)*sin(mAng), 4);
             mLbl = utils.ternary(strcmpi(domain,'houses'), 'listed', 'offered');
             bnd = Screen('TextBounds', window, mLbl);
             DrawFormattedText(window, mLbl, ...
-                cx + (innerR-32)*cos(mAng) - bnd(3)/2, ...
-                cy + (innerR-32)*sin(mAng), s.marker);
+                cx + (scaleR-32)*cos(mAng) - bnd(3)/2, ...
+                cy + (scaleR-32)*sin(mAng), s.marker);
         end
     end
 
@@ -639,8 +641,8 @@ while true
                                            % read reach a Screen() coordinate
     curVal = scaleMin + frac*(scaleMax - scaleMin);
 
-    px = cx + innerR*cos(pi + frac*pi);
-    py = cy + innerR*sin(pi + frac*pi);
+    px = cx + scaleR*cos(pi + frac*pi);
+    py = cy + scaleR*sin(pi + frac*pi);
     Screen('DrawDots', window, [px; py], 18, s.interactive, [], 2);
 
     % Snap to the displayed resolution -- see utils.snapValue.
@@ -651,7 +653,7 @@ while true
     txt = utils.formatCurrency(curVal, A.priceStyle);
     bnd = Screen('TextBounds', window, txt);
     DrawFormattedText(window, txt, cx - bnd(3)/2, ...
-        max(L.arcTop - 6, cy - outerR - 52), s.money);
+        max(L.arcTop - 6, cy - outerR - s.priceScale.readoutLiftPx), s.money);
 
     gazeStore = utils.gazeBuffer('poll', et, gazeStore);
     if et.showGaze && ~isempty(gazeStore.latest)

@@ -183,6 +183,11 @@ integrity_report <- function(auction, contdc, data_dir) {
   } else {
     cells <- contdc %>% count(domain, attrLevel, taskType, .drop = FALSE)
     empty <- cells %>% filter(n == 0)
+    balance <- cells %>%
+      tidyr::pivot_wider(names_from = taskType, values_from = n, values_fill = 0) %>%
+      rename(choice_rows = choice, price_rows = price) %>%
+      mutate(balanced = price_rows == 2 * choice_rows)
+    imbalanced <- balance %>% filter(!balanced)
     rev <- score_reversals(contdc)
     lines <- c(lines,
       "CONTDC",
@@ -204,6 +209,13 @@ integrity_report <- function(auction, contdc, data_dir) {
                 paste(sprintf("%s/L%s/%s", empty$domain, empty$attrLevel,
                               empty$taskType), collapse = ", "))
       else "  design cells    : all populated",
+      if (nrow(imbalanced) > 0)
+        sprintf("  CELL IMBALANCE  : %s",
+                paste(sprintf("%s/L%s choice=%d price=%d",
+                              imbalanced$domain, imbalanced$attrLevel,
+                              imbalanced$choice_rows, imbalanced$price_rows),
+                      collapse = ", "))
+      else "  cell balance    : price rows are exactly 2x choice rows",
       ""
     )
   }

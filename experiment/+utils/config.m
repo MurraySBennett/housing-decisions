@@ -68,27 +68,16 @@ cfg.paths.experiment = fullfile(projRoot, 'housing_wages', 'Experiment');
 cfg.paths.stimuli    = fullfile(cfg.paths.experiment, 'stimuli');
 cfg.paths.prepared   = fullfile(cfg.paths.stimuli, 'prepared');
 
-% --- Everything git must never touch ------------------------------------
-% Participant data and the 605MB house image set both used to live INSIDE
-% housing_wages/, gitignored. That is safe right up until the share becomes
-% a git checkout -- and then `git clean -fdx`, the command anyone reaches
-% for to reset a working tree, deletes every ignored file. Git raises no
-% objection, because they were ignored on purpose. Participant data is not
-% recoverable from that and the Archive backups deliberately exclude both.
-%
-% So they live in a SIBLING of the checkout, where no git command can
-% reach them:
-%
-%   PSY-kvam.4\housing_wages\          <- the checkout, all of it tracked
-%   PSY-kvam.4\housing_wages_local\    <- this. Never tracked, never git's.
-%       Data\
-%       house_images\
+% --- Runtime data and images --------------------------------------------
+% Participant data and the 605MB house image set live inside Experiment on
+% the share and are kept out of git by .gitignore. Do not point the task at
+% a sibling directory: the share layout is the source of truth.
 %
 % demo_battery.m overrides both for a laptop run and is unaffected.
-cfg.paths.local      = fullfile(projRoot, 'housing_wages_local');
-cfg.paths.images     = fullfile(cfg.paths.local, 'house_images');
+cfg.paths.local      = cfg.paths.experiment;
+cfg.paths.images     = fullfile(cfg.paths.stimuli, 'house_images');
 
-cfg.paths.data             = fullfile(cfg.paths.local, 'Data');
+cfg.paths.data             = fullfile(cfg.paths.experiment, 'Data');
 cfg.paths.sessions         = fullfile(cfg.paths.data, 'sessions');
 cfg.paths.taskData.auction = fullfile(cfg.paths.data, 'auction');
 cfg.paths.taskData.contdc  = fullfile(cfg.paths.data, 'cont_dc');
@@ -235,15 +224,13 @@ cfg.auction.thresholdNoise = 0.12;   % without this, high comp guarantees a loss
 % nPairs is PER DOMAIN because the two domains have very different
 % stimulus supply, and because reuse costs more in one than the other.
 %
-% Each level needs nPairs x 2 distinct stimuli, and by default a stimulus
-% is never reused ACROSS attribute levels (see allowCrossLevelReuse). So
-% the requirement is nLevels x nPairs x 2 distinct stimuli per domain.
+% Each level needs nPairs x 2 stimuli. Cross-level reuse is allowed by
+% default so 2/4/6-attribute cells stay balanced: the same item may appear
+% under different information loads, and that repetition is preferable to
+% silently collecting fewer trials at one level than another.
 %
-% Houses: 80 total, but a budget-centred window holds only ~23-39 of them
-% (23 at a $250k anchor, 38-39 mid-range, 28 at $900k). At 3 levels,
-% 6 pairs needs 36 distinct houses -- feasible mid-range, tight at the
-% extremes. 10 pairs would need 60, which no window can supply, forcing
-% reuse. Hence 6.
+% Houses: 80 total. 6 pairs gives 6 choice trials and 12 pricing trials at
+% every attribute level while keeping repetition noticeable but tolerable.
 %
 % Jobs: 128 total, ~96 in a typical window, and a job is a handful of
 % numeric ratings rather than six photographs -- far less episodically
@@ -252,16 +239,16 @@ cfg.auction.thresholdNoise = 0.12;   % without this, high comp guarantees a loss
 cfg.contdc.nPairs.houses     = 6;
 cfg.contdc.nPairs.jobs       = 10;
 
-% Cross-level reuse. FALSE (default) means a given house/job appears at
-% exactly one attribute level for a given participant, so their valuation
-% at level 6 can't be contaminated by having already priced that same item
-% at level 2. TRUE relaxes this when supply is tight -- reuse then gets
-% logged per trial so it can be tested or excluded in analysis.
+% Cross-level reuse. TRUE (default) means a given house/job may appear at
+% multiple attribute levels for a given participant. That is intentional:
+% balanced trial counts across information-load conditions are more
+% important than avoiding every repeated item. FALSE is kept as a diagnostic
+% switch, but can produce short cells when supply is tight.
 %
 % Note this is about reuse ACROSS LEVELS only. Reuse WITHIN a level (the
 % same pair being both chosen between and priced) is required by the
 % preference-reversal paradigm and always happens.
-cfg.contdc.allowCrossLevelReuse = false;
+cfg.contdc.allowCrossLevelReuse = true;
 
 % Raised from 15/25 after the 2026-09-16 pilot: both felt tight to sit
 % through, and a timeout is a lost trial, not a slow one. These are
@@ -305,7 +292,12 @@ cfg.et.showGaze  = false;
 % the participant's eyes versus where they need to be. Calibration can
 % succeed from a poor position and then drift or drop an eye mid-block,
 % by which point the trials are spent.
-cfg.et.positionGuide.enabled   = true;
+%
+% Disabled 2026-09-18 after the rig showed no track-box feedback: the guide
+% stayed on "Looking for your eyes..." even while the tracker was otherwise
+% available. Keep calibration on; diagnose the SDK sample fields with
+% utils.diagnoseTrackBox before turning this participant screen back on.
+cfg.et.positionGuide.enabled   = false;
 cfg.et.positionGuide.tolerance = 0.12;  % allowed deviation from track-box
                                         % centre, in normalised units, on
                                         % each of x, y and z
@@ -313,7 +305,7 @@ cfg.et.positionGuide.holdSec   = 1.0;   % time in position before it
                                         % accepts -- stops a participant
                                         % passing through the right spot
                                         % from counting as settled in it
-cfg.et.positionGuide.timeoutSec = 90;   % give up and continue rather than
+cfg.et.positionGuide.timeoutSec = 10;   % give up and continue rather than
                                         % strand a session on a setup screen
 cfg.et.positionGuide.mirrorX   = true;  % display behaves like a mirror;
                                         % flip if the rig reads backwards

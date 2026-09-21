@@ -10,9 +10,8 @@ function ok = verifyPaths(cfg)
 %
 %   MUST ALREADY EXIST (not auto-created; a missing one is a real problem):
 %     root, tobii, experiment, stimuli, local, images, house/job stimulus
-%     files. paths.local is the sibling of the checkout holding everything
-%     git must never touch -- if it is MISSING on the lab machine, the move
-%     out of the tree has not been done yet and the checkout is unsafe.
+%     files. paths.local is the Experiment directory; participant data and
+%     images are kept out of git by .gitignore, not by a second share root.
 %   AUTO-CREATED if missing (fine to be absent on a fresh machine):
 %     data, sessions, taskData.auction/contdc, gaze, crashed, prepared
 

@@ -6,20 +6,25 @@ project: housing-decisions
 
 ## Now
 
-**Session end 2026-09-16. Everything is committed, pushed and deployed;
-clean at `e11fc1f`, `main` level with `origin/main`, share current.** Of the
-pilot's 21 notes, 17 are done. Four remain: the track-box property name (9)
-and running the drag-and-drop ratings (2) both need a rig visit; the
-mid-task drift flag (15) is buildable; the 998/999 QA (20) waits on the
-`dataMat` exporter.
+**Session update 2026-09-21.** The pricing scale baseline now sits at the
+inner end of the major ticks and is drawn as a solid arc rather than the old
+minor-tick comb. Auction bidding and contdc pricing were changed together;
+`bash scripts/verify_static.sh` passes. MATLAB/Psychtoolbox execution still
+has to happen at the rig.
+
+**Session update 2026-09-18.** `utils.verifyPaths(utils.config('rig','lab'))`
+has run at the rig and confirmed all required paths look correct, so the
+out-of-tree move no longer gates the next pilot check. Of the pilot's 21
+notes, 17 are done; the active remaining pilot gate is executing the
+drag-and-drop ratings (2) on the rig. The track-box guide (9) is pinned off
+after the rig showed no live feedback; the 998/999 QA (20) waits on the
+`dataMat` exporter; the mid-task drift flag (15) is deliberately
+down-prioritised.
 
 **In flight, on the lab machine, not here.** Murray is at the rig
 converting the share into a git checkout --
-`docs/lab-machine-git.md` is the runbook, and **step 0 is the gate**: this
-session moved 2,796 MB of participant data and 605 MB of images out of the
-tree and changed `cfg.paths.*` to match, and none of it has run in MATLAB.
-`utils.verifyPaths` at the rig is the first thing that can confirm the move
-and the config agree. Handoff packet:
+`docs/lab-machine-git.md` is the runbook. Step 0 (`utils.verifyPaths`) passed
+on 2026-09-18; continue with the remaining runbook steps when ready. Handoff packet:
 `~/.agents/handoffs/HANDOFF-housing-pilot.md`.
 
 **Blocked on one call:** a name for a GitHub organisation. OSU has no
@@ -46,10 +51,11 @@ surfaced a live bug: the card AOI geometry existed in three copies and
 preflight's had drifted 12 px, so the assertion `verify_matlab.m` runs
 first at the rig was validating the wrong rectangles. The copies are gone.
 
-**What is left of the pilot backlog:** the rig diagnostic (9, track-box
-property name), verifying the drag-and-drop ratings actually run (2), the
-mid-task drift flag (15), and the 998/999 data QA (20) -- which still needs
-the `dataMat` exporter before its gaze half can be done.
+**What is left of the pilot backlog:** verifying the drag-and-drop ratings
+actually run (2) is the active rig-side next check; the rig diagnostic (9,
+track-box property name) remains; the 998/999 data QA (20) still needs the
+`dataMat` exporter before its gaze half can be done; the mid-task drift flag
+(15) is not a collection gate for now.
 
 **Earlier changes from the same day, still unrun.** First, the
 attribute rating screen no longer hides the mouse cursor on the way out.
@@ -109,6 +115,9 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-21 pricing scale baseline moved to the bottom/inner edge of
+  the major ticks in both auction bidding and contdc pricing, with the old
+  dense minor-tick comb removed so the scale reads as one solid line.
 - [x] 2026-09-16 pilot round, decided items: attribute ratings are now
   drag-and-drop (`+utils/elicitVASDrag.m`, whole set visible, rearrangeable,
   Done gated on all placed) behind `cfg.elicit.ratingMode` with the original
@@ -121,7 +130,7 @@ pleasantly.**
   the single constant `s.identityTextHeightPx` read by both the draw and the
   AOI mirror; the vacancy gap keeps its 4 s mean but gains a 10 s cap so
   only the gamma tail is cut. No pixel-art job icons -- declined
-- [ ] now (S) **drag-and-drop has never been executed.** It is the largest
+- [ ] now (S) **execute the drag-and-drop ratings at the rig.** It is the largest
   unrun surface in the battery and it is a mouse-interaction screen, which
   is the class of thing static checks cannot touch. Watch for: chips wider
   than the bank row, label collisions on the line, and whether dropping
@@ -219,9 +228,9 @@ pleasantly.**
   126:1 in price against a 2.67:1 window left **7-23 stimuli in a window at
   every anchor except $500k**, so the same house appeared ~21 times over 24
   trials, ~5 per block. That is the pilot's repeated-house complaint and it
-  is also **item 14, now diagnosed rather than guessed**: contdc needs
-  `nLevels x nPairs x 2` = 36 distinct houses with cross-level reuse
-  blocked, and `utils.buildPairs` was hitting its `:short` warning. Fitting
+  is also **item 14, now diagnosed rather than guessed**: under the old
+  cross-level reuse block, contdc needed `nLevels x nPairs x 2` = 36
+  distinct houses and `utils.buildPairs` was hitting its `:short` warning. Fitting
   gives all 80 at every anchor, occupancy 20/21/21/20 across four
   log-slices, reuse down to 3.6x over the whole task and under 1x per
   block. Rank order and tied prices survive exactly, so the Spearman
@@ -347,11 +356,12 @@ pleasantly.**
   access wrapped -- a positioning aid must never be why a session cannot run.
   Whether the participant got in position is saved as
   `dataMat.eyeTracking.positioned`
-- [ ] now (S) **verify the track-box property name against this SDK build.**
-  `positionGuide` tries `in_track_box_coordinate_system` then
-  `position_in_track_box_coordinate_system`; if neither matches, the screen
-  says "Looking for your eyes..." forever until the timeout. First rig run
-  will show this immediately
+- [ ] next (S) **diagnose the track-box property name against this SDK build.**
+  `positionGuide` stayed on "Looking for your eyes..." at the rig on
+  2026-09-18, so `cfg.et.positionGuide.enabled` is now false and calibration
+  proceeds without that participant screen. Run `utils.diagnoseTrackBox` at
+  the rig, update the field access, then turn the guide back on only after it
+  shows live dots
 - [x] 2026-09-16 post-pilot round: saving screens with a real staged progress
   bar and a neutral "Did you know..." panel around both blocking writes (the
   end-of-block freeze); value labels now "Offered wage" / "Listed price";
@@ -359,13 +369,24 @@ pleasantly.**
   thinner scale ticks; live price moved above the arc instead of inside it;
   advertised-value marker on the pricing scale; rejected stimulus indices
   added to the auction CSV; quit key announced on every instruction screen
-- [x] 2026-09-16 randomised the pricing-arc start position in both tasks and
-  recorded it (`bidStartFrac` / `startFrac`). The cursor used to begin at the
-  scale midpoint every trial, which is a constant nuisance anchor; starting it
-  at the advertised value would have been worse, since the anchor would then
-  covary with the main predictor of the response. Random is the only start
-  that cannot bias an estimate, and logging it keeps residual anchoring
-  testable rather than baked in
+- [x] 2026-09-18 removed forced pricing-arc cursor starts in both tasks. The
+  2026-09-16 random start was understandable as an anti-anchor move, but in
+  practice it read as another unexplained task feature. The mouse now stays
+  wherever it already is at pricing onset, and `bidStartFrac` / `startFrac`
+  are `NaN` to mark that nothing was forced
+- [x] 2026-09-18 pricing scale adjusted from the rig: minor ticks shortened,
+  major tick labels enlarged, the live updating price lifted above the major
+  tick labels, and the post-practice auction screen now explicitly says the
+  practice round is over and invites questions before real markets begin
+- [x] 2026-09-18 continuous-DC cross-level reuse is now allowed by default
+  (`cfg.contdc.allowCrossLevelReuse = true`) so 2/4/6-attribute cells keep
+  balanced trial counts. Any remaining short pair generation is fatal before
+  the task starts rather than silently shortening one attribute condition
+- [x] 2026-09-18 added a share-to-local data pull path:
+  `scripts/pull_data_from_share.ps1` copies `Experiment\Data` into ignored
+  `data/lab/Data`, writes a pull manifest, and runs `analysis/R/run_all.R`;
+  the R integrity report now flags continuous-DC cells where price rows are
+  not exactly 2x choice rows
 - [ ] now (S) **decide whether to keep `cfg.display.showValueMarker`.** It was
   asked for and it is on, but marking the listed price on the response scale
   is an anchor on the dependent variable under BDM. Worth a deliberate call
@@ -385,7 +406,7 @@ pleasantly.**
   new `+utils/roundRect.m`, run-time font probing via `+utils/resolveFonts.m`,
   and `+utils/style.m` restructured as an `HW_THEME` switch with the original
   look kept verbatim as `arcade`. Statically verified only
-- [ ] now (S) first real execution of all of the above, at the rig:
+- [ ] next (S) first real execution of all of the above, at the rig:
   `scripts/verify_matlab.m` (asserts `allAoiOK`), then `preflight`, then
   `demo_battery` -- budget 20 minutes for the demo, not 6. Look hardest at
   the price arc and the VAS line, which are where the softer palette was most
@@ -411,6 +432,21 @@ pleasantly.**
   `Archive\Experiment_pre-2026-09-16_181240`, 80 replaced, 3 added) and
   pushed 30 commits to GitHub, which had been stale since 2026-08-18. The
   repo already existed and was simply not being pushed to
+- [x] 2026-09-18 deployed the runnable manifest to the lab share for rig
+  testing: 108 files backed up to
+  `Archive\Experiment_pre-2026-09-18_112856`, 91 replaced, 0 added, no
+  problems reported. `Experiment\Data` and `Experiment\stimuli\house_images`
+  were deliberately untouched
+- [x] 2026-09-18 redeployed with the broken head-position guide pinned off:
+  108 files backed up to `Archive\Experiment_pre-2026-09-18_113316`, 91
+  replaced, 1 added (`Experiment\+utils\diagnoseTrackBox.m`), no problems
+  reported
+- [x] 2026-09-18 redeployed the pricing-scale and practice-boundary updates:
+  109 files backed up to `Archive\Experiment_pre-2026-09-18_113740`, 92
+  replaced, 0 added, no problems reported
+- [x] 2026-09-18 redeployed the balanced continuous-DC reuse policy: 92 files
+  backed up to `Archive\Experiment_pre-2026-09-18_114559`, 92 replaced, 0
+  added, no problems reported
 - [ ] now (M) **put the lab machine on git** -- steps written up in
   `docs/lab-machine-git.md`, needs a keyboard at the rig. Plan is to make
   the share's `housing_wages/` itself the working tree: `utils.config`
@@ -426,17 +462,11 @@ pleasantly.**
   `WORK.md` and `docs/` -- not the 605MB image set, the Tobii SDK, or
   participant data, so it is enough to read the project and run the
   analysis on exported CSVs but not to run a session
-- [x] 2026-09-16 **participant data and the image set are out of the git
-  tree.** Both were gitignored and inside what is about to become the
-  working tree, so `git clean -fdx` would have deleted every participant
-  with git raising no objection -- and the deploy script's `Archive/`
-  backups exclude both, so there was no second copy.
-  `scripts/move_out_of_tree.ps1` moved them to `housing_wages_local/`
-  (41 files / 2,796 MB of data, 485 files / 605 MB of images), verifying
-  counts and bytes on both sides. `cfg.paths.local` is the new root and
-  `utils.verifyPaths` lists it under MUST ALREADY EXIST, so a restored old
-  layout is reported rather than discovered mid-session. The clone is no
-  longer blocked
+- [x] 2026-09-18 **reverted the sibling-directory path strategy.**
+  Participant data and house images stay in `Experiment\Data` and
+  `Experiment\stimuli\house_images`; `.gitignore` is the protection. The
+  task config and pull script point back at the in-tree ignored locations,
+  and the old mover script is removed so it cannot be run again
 - [ ] next (S) `config.m` hardcodes the OSU UNC as `projRoot`, which is why
   `demo_battery.m` has to re-point every path by hand on WSL. `STIMULI.md`
   already documents a `$DATA_ROOT` env-var convention that nothing reads.

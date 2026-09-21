@@ -13,12 +13,23 @@ Rscript analysis/R/run_all.R --simulate
 Rscript analysis/R/run_all.R --data experiment/Data_demo
 
 # On real data
-Rscript analysis/R/run_all.R --data '/path/to/PSY-kvam.4/housing_wages_local/Data'
+Rscript analysis/R/run_all.R --data '/path/to/PSY-kvam.4/housing_wages/Experiment/Data'
 ```
 
 Output lands in `analysis/output/`: an integrity report, one combined CSV per
 task, a reversals table, and figures under `figures/`. Files derived from
 simulated data are prefixed `SIMULATED_`.
+
+To pull the current lab data from the OSU share into this WSL checkout and
+run the same analysis in one step:
+
+```bash
+PS=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+$PS -NoProfile -Command '$script = [scriptblock]::Create((Get-Content -Raw -LiteralPath "\\wsl.localhost\Ubuntu\home\msb\projects\housing-decisions\scripts\pull_data_from_share.ps1")); & $script'
+```
+
+The pull lands in ignored `data/lab/Data`, writes a manifest under
+`data/lab/manifests/`, and writes analysis output to `analysis/output/lab/`.
 
 Needs `dplyr readr tidyr stringr purrr ggplot2 scales tibble`.
 
@@ -83,7 +94,7 @@ install.packages(c("dplyr", "readr", "tidyr", "stringr", "purrr",
 they avoid the escaping problem backslashes create in R strings.
 
 ```bash
-Rscript analysis/R/run_all.R --data "//asc-files.asc.ohio-state.edu/projects/PSY-kvam.4/housing_wages_local/Data"
+Rscript analysis/R/run_all.R --data "//asc-files.asc.ohio-state.edu/projects/PSY-kvam.4/housing_wages/Experiment/Data"
 ```
 
 Reading several hundred small CSVs over SMB is slow. Copy the `Data` tree

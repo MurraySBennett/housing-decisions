@@ -312,12 +312,12 @@ estimated duration.
 | `cfg.auction.trialTimeoutSec` | 90 | `+utils/config.m` | Main driver of auction duration. |
 | Auction practice | 1 saved practice episode before real trials | `auction_task.m` | Keeps practice analyzable/excludable via `practice=true`. |
 | `cfg.attrLevels` | `[2 4 6]` | `+utils/config.m` | Continuous/DC information-load manipulation. Counts include both the core attribute and, at the top level, the late-tier one, so a level of 6 renders exactly 6 cells. |
-| `cfg.contdc.nPairs.houses` | 6 | `+utils/config.m` | Fits mid-range house stimulus windows without cross-level reuse. |
+| `cfg.contdc.nPairs.houses` | 6 | `+utils/config.m` | Six choice pairs per attribute level; pricing gives two rows per pair. |
 | `cfg.contdc.nPairs.jobs` | 10 | `+utils/config.m` | Uses the larger, less memorable jobs stimulus supply. |
-| `cfg.contdc.allowCrossLevelReuse` | `false` | `+utils/config.m` | Blocks the same item appearing at multiple attribute levels. |
+| `cfg.contdc.allowCrossLevelReuse` | `true` | `+utils/config.m` | Allows the same item appearing at multiple attribute levels so 2/4/6-attribute cells stay balanced. |
 | `TRIALS_PER_CELL` | `2` | `run_battery.m` | Dress-rehearsal knob. `[]` = the full study; an integer = that many trials in every design cell and **nothing else changes** (full screen, real pacing, real elicitation, instructions and practice, real participant number). Auction cells are the two competition levels, so N per cell means 2N trials; contdc cells are attribute level x task type, so it maps straight onto `nPairs`. Not the same as `cfg.testing.nTrialsPerType`, which sets the auction's *total* and only applies in developer mode. Saved as `dataMat.trialsPerCell`. |
 | `cfg.display.showValueMarker` | `true` | `+utils/config.m` | Draws the advertised figure (listed price / offered wage) on the pricing scale. **Not cosmetic:** under BDM the optimal bid is the participant's own valuation, and a salient reference point on the response scale pulls stated values toward it. Expect reduced bid variance. Set `false` for an unanchored scale. |
-| `cfg.et.positionGuide.*` | enabled, tol `0.12`, hold `1.0s` | `+utils/config.m` | Live head-position feedback before calibration, using Tobii track-box coordinates. `tolerance` is the allowed deviation from centre on each axis; `mirrorX` flips the display if the rig reads backwards. Always skippable by click and times out after 90s -- it can never strand a session. |
+| `cfg.et.positionGuide.*` | disabled, tol `0.12`, hold `1.0s` | `+utils/config.m` | Live head-position feedback before calibration, using Tobii track-box coordinates. Disabled after the rig showed no track-box samples on 2026-09-18; run `utils.diagnoseTrackBox` at the rig before turning it back on. Always skippable by click and times out after 10s. |
 | Theme | `warm` | `+utils/style.m`, or `setenv('HW_THEME','arcade')` | Warm/rounded vs. the original dark arcade look. Geometry is identical between themes -- only colour, radius, stroke and font differ -- so switching cannot move an AOI. Recorded as `dataMat.theme` on every run. |
 
 ## Debugging tools
@@ -400,26 +400,26 @@ between and priced (each option separately). That identity is the entire
 basis of the preference-reversal measure; without it there's nothing to
 compare.
 
-**Across attribute levels -- BLOCKED by default**
-(`cfg.contdc.allowCrossLevelReuse = false`). A participant should not
-value the same house at level 2 and again at level 6 -- their second
-judgement is anchored on the first, and worse, if they *recognise* the
-item they may try to stay consistent, which compresses exactly the level
-difference the manipulation exists to detect. That biases toward the null.
+**Across attribute levels -- ALLOWED by default**
+(`cfg.contdc.allowCrossLevelReuse = true`). The same stimulus item may appear
+at more than one attribute level, because balanced 2/4/6-attribute cells are
+more important than avoiding every repeated item. This is especially relevant
+for houses, where no anchor-centred window has enough distinct stimuli to
+support every level without reuse.
 
-Note the level ORDER is randomised per participant, so reuse wouldn't be
-systematically confounded with level -- at the group level it adds noise
-rather than bias. The recognition-and-consistency risk is the real reason
-to block it, not confounding.
+Note the level ORDER is randomised per participant, so reuse is not
+systematically confounded with level. The remaining risk is recognition and
+consistency pressure, which should be watched in pilot testing rather than
+handled by silently shortening later cells.
 
 **Across tasks (auction and contdc) -- currently unconstrained.** Worth
 deciding on if you run both in one session, especially for houses where
 photos make an item much more recognisable than a job's numeric ratings.
 
-### The supply constraint this creates
+### The supply constraint
 
-Each level needs `nPairs x 2` distinct stimuli, so blocking cross-level
-reuse costs `nLevels x nPairs x 2` distinct stimuli per domain.
+Each level needs `nPairs x 2` stimuli. If cross-level reuse is blocked, that
+becomes `nLevels x nPairs x 2` distinct stimuli per domain.
 
 | budget anchor | houses in window |
 |---|---|
@@ -428,19 +428,19 @@ reuse costs `nLevels x nPairs x 2` distinct stimuli per domain.
 | $600k | 39 |
 | $900k | 28 |
 
-At 3 levels, 10 pairs would need **60 distinct houses** -- more than any
-window holds, so reuse was previously forced and silent. 6 pairs needs 36,
-which fits a mid-range window. Hence `cfg.contdc.nPairs.houses = 6`.
+At 3 levels, 10 pairs would need **60 distinct houses** if reuse were
+blocked -- more than any window holds. Even 6 pairs can fail at extreme
+anchors without reuse. Hence cross-level reuse is on by default, and any
+remaining shortfall is a fatal setup error rather than an imbalanced run.
 
 Jobs are less constrained (~96 in a typical window) and far less
 episodically memorable -- a handful of numeric ratings rather than six
 photographs -- so `cfg.contdc.nPairs.jobs = 10`.
 
-**Known cost:** 6 pairs per level is thin for detecting reversals. Worth
-checking observed reversal rates in pilot data before committing. At
-extreme budget anchors (23-28 houses) even 6 pairs won't fit; the code
-warns clearly, and the options are to widen `cfg.sampling.spread`, lower
-`nPairs.houses`, or set `allowCrossLevelReuse = true` and log it.
+**Known cost:** 6 pairs per level is thin for detecting reversals, and
+cross-level reuse may make repeated houses recognisable. Worth checking
+observed reversal rates and recognition complaints in pilot data before
+committing.
 
 ## Verify paths before you run anything
 

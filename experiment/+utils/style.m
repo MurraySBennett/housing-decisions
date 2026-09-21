@@ -216,6 +216,14 @@ s.sizeContent   = 26;
 s.sizeLabel     = 20;
 s.sizeMicro     = 14;   % elicitVAS placed-item labels; was a literal
 
+% Pricing scale. The dense radial strokes are minor ticks, not the
+% response track itself; keep them short so they do not read as labels or
+% compete with the live value readout.
+s.priceScale.minorTickPx   = 8;
+s.priceScale.majorTickPx   = 32;
+s.priceScale.labelSizePx   = 24;
+s.priceScale.readoutLiftPx = 84;
+
 % --- Trial-screen chrome ----------------------------------------------
 % The HUD is genuinely informative and lives outside the stimulus AOIs.
 % But it must be STATIC during a trial -- a ticking timer or a live

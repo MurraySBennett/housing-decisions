@@ -53,6 +53,10 @@ check_absent 'rs[[:space:]]*=[[:space:]]*RandStream\.getGlobalStream' experiment
 check_grep 'ch\(k\)\.timedOut' experiment/continuous_DC_task.m 'skip timed-out reversals'
 check_grep 'isnan\(ch\(k\)\.choseMoney\)' experiment/continuous_DC_task.m 'skip NaN reversals'
 check_grep 'cfg\.contdc\.nPairs\.\(lower\(domain\)\)' experiment/continuous_DC_task.m 'domain-specific pair counts'
+check_grep 'cfg\.contdc\.allowCrossLevelReuse[[:space:]]*=[[:space:]]*true' experiment/+utils/config.m 'cross-level reuse defaults on for balanced contdc cells'
+check_grep "error\\('hw:contdc:shortPairs'" experiment/continuous_DC_task.m 'short contdc pair generation is fatal'
+check_grep 'numel\(pairsByLevel\.\(key\)\)[[:space:]]*< nPairsThisRun' experiment/continuous_DC_task.m 'contdc checks pair count per attribute level'
+check_grep 'The same stimulus item may appear' experiment/README.md 'cross-level reuse docs'
 check_grep 'aoiLayouts' experiment/continuous_DC_task.m 'contdc saved AOI layouts'
 check_grep 'buildAoiLayouts' experiment/continuous_DC_task.m 'contdc AOI layout helper'
 check_grep 'utils\.drawOptionCard\(' experiment/continuous_DC_task.m 'contdc draws through the shared card'
@@ -69,6 +73,14 @@ check_grep 'utils\.clockSync' experiment/continuous_DC_task.m 'contdc clock sync
 check_grep 'actualSampleRateHz' experiment/+utils/setupEyeTracker.m 'actual sample-rate field'
 check_grep 'get_gaze_output_frequency' experiment/+utils/setupEyeTracker.m 'query Tobii sample rate'
 check_file experiment/+utils/clockSync.m
+check_file scripts/pull_data_from_share.ps1
+check_grep 'housing_wages\\Experiment\\Data' scripts/pull_data_from_share.ps1 'pulls data from share Experiment data tree'
+check_absent 'housing_wages_local' experiment/+utils/config.m 'config must not use housing_wages_local'
+check_absent 'housing_wages_local' scripts/pull_data_from_share.ps1 'pull script must not use housing_wages_local'
+check_grep 'data\\lab\\Data' scripts/pull_data_from_share.ps1 'copies data into ignored local analysis tree'
+check_grep 'analysis/R/run_all.R' scripts/pull_data_from_share.ps1 'pull script runs analysis pipeline'
+check_grep 'CELL IMBALANCE' analysis/R/io.R 'analysis reports imbalanced contdc cells'
+check_grep 'price_rows == 2 \* choice_rows' analysis/R/io.R 'analysis checks contdc price-choice row ratio'
 check_grep 'right-click' experiment/+utils/incentives.m 'instructions mention right click'
 check_grep 'runComprehensionChecks' experiment/auction_task.m 'auction comprehension checks'
 check_grep 'runPracticeEpisode' experiment/auction_task.m 'auction practice episode'
@@ -188,6 +200,19 @@ check_grep 'rejectedStimIdx' experiment/auction_task.m 'rejected options in the 
 
 check_grep 'showValueMarker' experiment/+utils/config.m 'value-marker knob'
 check_grep 's\.marker' experiment/+utils/style.m 'scale marker colour'
+check_grep 'priceScale\.minorTickPx[[:space:]]*=[[:space:]]*8;' experiment/+utils/style.m 'short pricing minor ticks'
+check_grep 'priceScale\.majorTickPx[[:space:]]*=[[:space:]]*32;' experiment/+utils/style.m 'pricing major tick length'
+check_grep 'priceScale\.labelSizePx[[:space:]]*=[[:space:]]*24;' experiment/+utils/style.m 'larger pricing tick labels'
+check_grep 'priceScale\.readoutLiftPx[[:space:]]*=[[:space:]]*84;' experiment/+utils/style.m 'pricing readout lifted above tick labels'
+check_grep 'scaleR[[:space:]]*=[[:space:]]*outerR - s\.priceScale\.majorTickPx;' experiment/auction_task.m 'auction scale baseline sits at the bottom of major ticks'
+check_grep 'scaleR[[:space:]]*=[[:space:]]*outerR - s\.priceScale\.majorTickPx;' experiment/continuous_DC_task.m 'contdc scale baseline sits at the bottom of major ticks'
+check_absent 'minorA[[:space:]]*=[[:space:]]*linspace\(pi,[[:space:]]*2\*pi,[[:space:]]*25\)' experiment/auction_task.m 'auction price scale must not use a dotted minor-tick comb'
+check_absent 'minorA[[:space:]]*=[[:space:]]*linspace\(pi,[[:space:]]*2\*pi,[[:space:]]*25\)' experiment/continuous_DC_task.m 'contdc price scale must not use a dotted minor-tick comb'
+check_absent 'SetMouse\(round\(cx \+ innerR\*cos\(pi \+ startFrac\*pi\)\)' experiment/auction_task.m 'auction pricing must not reposition mouse'
+check_absent 'SetMouse\(round\(cx \+ innerR\*cos\(pi \+ startFrac\*pi\)\)' experiment/continuous_DC_task.m 'contdc pricing must not reposition mouse'
+check_grep 'startFrac[[:space:]]*=[[:space:]]*NaN' experiment/auction_task.m 'auction records no forced pricing cursor start'
+check_grep 'tr\.startFrac[[:space:]]*=[[:space:]]*NaN' experiment/continuous_DC_task.m 'contdc records no forced pricing cursor start'
+check_grep 'The practice round is over' experiment/auction_task.m 'clear practice-to-real boundary'
 
 # --- Head-position guide -------------------------------------------------
 check_file experiment/+utils/positionGuide.m
@@ -316,14 +341,12 @@ check_grep "isfield\(r, 'auctionBid'\)" experiment/preflight.m 'allAoiOK include
 # that looks fine and throws the first time that branch runs -- mid-session,
 # at the rig, on a screen reached once per trial. Nothing else catches it
 # here: this machine has no MATLAB.
-# --- Data and images live OUTSIDE the checkout --------------------------
-# Not a style rule. Once the share is a git working tree, `git clean -fdx`
-# deletes every ignored file, and both of these were ignored-and-inside.
-check_grep 'cfg\.paths\.local' experiment/+utils/config.m 'the out-of-tree root exists'
-check_grep 'cfg\.paths\.data[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.local' experiment/+utils/config.m 'participant data is out of the tree'
-check_grep 'cfg\.paths\.images[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.local' experiment/+utils/config.m 'the image set is out of the tree'
-check_absent "cfg\.paths\.data[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.experiment" experiment/+utils/config.m 'data must not go back inside Experiment/'
-check_grep 'paths\.local' experiment/+utils/verifyPaths.m 'verifyPaths reports the out-of-tree root'
+# --- Data and images stay in Experiment and are gitignored ---------------
+check_grep "experiment/Data/" .gitignore 'participant data is ignored'
+check_grep "\*\*/stimuli/house_images/" .gitignore 'house images are ignored'
+check_grep "cfg\.paths\.local[[:space:]]*=[[:space:]]*cfg\.paths\.experiment" experiment/+utils/config.m 'local root is Experiment'
+check_grep "cfg\.paths\.data[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.experiment,[[:space:]]*'Data'\)" experiment/+utils/config.m 'participant data stays inside Experiment'
+check_grep "cfg\.paths\.images[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.stimuli,[[:space:]]*'house_images'\)" experiment/+utils/config.m 'house images stay inside stimuli'
 
 if ! python3 scripts/check_utils_calls.py; then
   fail=1
