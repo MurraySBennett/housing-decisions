@@ -214,6 +214,23 @@ check_grep 'startFrac[[:space:]]*=[[:space:]]*NaN' experiment/auction_task.m 'au
 check_grep 'tr\.startFrac[[:space:]]*=[[:space:]]*NaN' experiment/continuous_DC_task.m 'contdc records no forced pricing cursor start'
 check_grep 'The practice round is over' experiment/auction_task.m 'clear practice-to-real boundary'
 
+# --- Standalone house photo preference task -----------------------------
+check_file experiment/photo_preference_task.m
+check_file experiment/+utils/buildPhotoPreferencePlan.m
+check_grep 'taskData\.photo_pref' experiment/+utils/config.m 'photo preference data directory'
+check_grep "TASK_MODE[[:space:]]*=[[:space:]]*'both'" experiment/photo_preference_task.m 'photo preference can run both sections'
+check_grep "case 'rating'" experiment/photo_preference_task.m 'photo preference rating mode'
+check_grep "case 'pwc'" experiment/photo_preference_task.m 'photo preference pairwise mode'
+check_grep 'N_RATING[[:space:]]*=[[:space:]]*80' experiment/photo_preference_task.m 'default 80 photo ratings'
+check_grep 'N_PWC[[:space:]]*=[[:space:]]*160' experiment/photo_preference_task.m 'default 160 pairwise comparisons'
+check_grep 'AREA_QUOTAS' experiment/photo_preference_task.m 'editable area quotas'
+check_grep "utils\.readStimuli\(cfg,[[:space:]]*'houses'\)" experiment/photo_preference_task.m 'photo preference reads houses through shared loader'
+for area in extPic kitPic bedPic bathPic livPic outPic; do
+  check_grep "$area" experiment/+utils/buildPhotoPreferencePlan.m "photo preference planner includes $area"
+done
+check_grep 'chosenPhotoId' experiment/photo_preference_task.m 'pairwise CSV names chosen photo'
+check_grep 'unchosenPhotoId' experiment/photo_preference_task.m 'pairwise CSV names unchosen photo'
+
 # --- Head-position guide -------------------------------------------------
 check_file experiment/+utils/positionGuide.m
 check_grep 'utils\.positionGuide' experiment/+utils/setupEyeTracker.m 'position guide runs before calibration'

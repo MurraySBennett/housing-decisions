@@ -12,6 +12,12 @@ minor-tick comb. Auction bidding and contdc pricing were changed together;
 `bash scripts/verify_static.sh` passes. MATLAB/Psychtoolbox execution still
 has to happen at the rig.
 
+**Same session:** added a standalone house-photo style preference task,
+`experiment/photo_preference_task.m`. It can run direct ratings, pairwise
+choices, or both over individual house photos, sampling 80 photos by editable
+area quotas and defaulting to 160 BTL-ready pairwise comparisons. Statically
+verified only; the first image-load and click-through check needs MATLAB/PTB.
+
 **Session update 2026-09-18.** `utils.verifyPaths(utils.config('rig','lab'))`
 has run at the rig and confirmed all required paths look correct, so the
 out-of-tree move no longer gates the next pilot check. Of the pilot's 21
@@ -115,6 +121,12 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-21 standalone house-photo preference task added:
+  `photo_preference_task.m` writes its own `photo_pref` run, samples
+  individual photos from all six house areas with editable quotas, supports
+  `rating`, `pwc`, or `both`, and emits BTL-ready chosen/unchosen columns.
+  Needs first MATLAB/PTB execution at the rig or a machine with the house
+  images present
 - [x] 2026-09-21 pricing scale baseline moved to the bottom/inner edge of
   the major ticks in both auction bidding and contdc pricing, with the old
   dense minor-tick comb removed so the scale reads as one solid line.
