@@ -1,11 +1,7 @@
 function [val, rt] = elicitAnchor(window, cfg, domain)
 %UTILS.ELICITANCHOR  Collect the participant's budget or reservation wage.
-%
-%   This is the single biggest thing that was missing. Model addition #2 is
-%   multiple anchors, and the participant's own budget (houses) or
-%   reservation wage (jobs) IS the primary personal anchor. It also
-%   determines which stimuli they see, via utils.sampleWindow -- without it,
-%   the price ranges shown may be entirely irrelevant to them.
+%   The primary personal anchor; also determines which stimuli they see,
+%   via utils.sampleWindow.
 
 s = cfg.style;
 isHouse = strcmpi(domain, 'houses');
@@ -14,9 +10,6 @@ if isHouse
     prompt = ['Before we begin.\n\n' ...
               'Imagine you are looking to buy a house.\n\n' ...
               'What is the most you could realistically spend?'];
-    % No note about the comma grouping: the field does it live as they
-    % type, which makes the explanation redundant the moment they press a
-    % key. Pilot note, 2026-09-16.
     hint   = 'Type the digits and press ENTER.';
     lo = 50000; hi = 5000000;
 else
@@ -45,11 +38,7 @@ while true
     utils.roundRect(window, box, s.radiusPanel, s.bgPanel, ...
         s.interactive, s.borderWidthPx);
 
-    % Grouped as they type. A bare "350000" is genuinely hard to read at
-    % a glance, and this is the one field in the study where being an
-    % order of magnitude out silently rescales every stimulus the
-    % participant then sees, via utils.sampleWindow. Commas make a
-    % mistyped zero visible at the moment it is typed.
+    % Live grouping: a mistyped zero here silently rescales every stimulus shown.
     Screen('TextSize', window, s.sizeTitle);
     shown = ['$' groupDigits(str) '_'];
     b = Screen('TextBounds', window, shown);
@@ -98,14 +87,7 @@ end
 %% ======================================================================
 function out = groupDigits(str)
 %GROUPDIGITS  Thousands separators for a raw digit string.
-%
-%   '350000'  -> '350,000'
-%   '1234567' -> '1,234,567'
-%   '24'      -> '24'        (a no-op below four digits, so the same path
-%                             serves hourly wages without special-casing)
-%
-%   Leading zeros are stripped first, so a stray keypress shows as
-%   '350,000' rather than '0,350,000'.
+%   No-op below four digits; leading zeros stripped first.
 
 out = regexprep(str, '^0+(?=\d)', '');
 if isempty(out)

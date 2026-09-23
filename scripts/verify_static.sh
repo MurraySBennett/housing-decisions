@@ -357,10 +357,8 @@ check_grep 'auctionBid' experiment/preflight.m 'preflight reports on the bid scr
 check_grep "isfield\(r, 'auctionBid'\)" experiment/preflight.m 'allAoiOK includes the bid screen'
 
 # --- Every utils.X(...) call resolves to a +utils/X.m --------------------
-# MATLAB resolves package functions at call time, so a rename leaves a file
-# that looks fine and throws the first time that branch runs -- mid-session,
-# at the rig, on a screen reached once per trial. Nothing else catches it
-# here: this machine has no MATLAB.
+# MATLAB resolves package functions at call time, so a rename only throws
+# when the branch runs; this is the only pre-rig check for it.
 # --- Data and images stay in Experiment and are gitignored ---------------
 check_grep "experiment/Data/" .gitignore 'participant data is ignored'
 check_grep "\*\*/stimuli/house_images/" .gitignore 'house images are ignored'
@@ -369,9 +367,8 @@ check_grep "cfg\.paths\.data[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.exper
 check_grep "cfg\.paths\.images[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.stimuli,[[:space:]]*'house_images'\)" experiment/+utils/config.m 'house images stay inside stimuli'
 
 # --- preference_task display setup matches the battery tasks -------------
-# Screen('Preference') rejects MATLAB logicals -- rigProfiles stores
-# skipSyncTests as one, so the cast is load-bearing. And style.m colors are
-# 0-1: without PsychDefaultSetup(2) every panel renders near-black.
+# Screen('Preference') rejects logicals; style colors are 0-1 and need
+# PsychDefaultSetup(2).
 check_grep "SkipSyncTests', double\(cfg\.display\.skipSyncTests\)" experiment/preference_task.m 'pref task casts SkipSyncTests to double'
 check_grep 'PsychDefaultSetup\(2\)' experiment/preference_task.m 'pref task normalizes 0-1 color range'
 check_grep "BlendFunction" experiment/preference_task.m 'pref task enables alpha blending'

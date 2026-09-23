@@ -1,21 +1,8 @@
 function aoi = cardAOIs(cfg, rect, sel, prefix)
 %UTILS.CARDAOIS  AOI rects for the attribute cells drawn on one option card.
 %
-%   Pure geometry, no window, no drawing -- so preflight.m can compute the
-%   same rects the task will draw without PTB.
-%
-%   THIS IS THE ONE COPY. There used to be three: continuous_DC_task.m,
-%   preflight.m, and (in spirit) auction_task.m's detail view. They drifted,
-%   exactly as the comment in verify_static.sh predicted they would. Pilot
-%   note 18 raised the identity header advance from 30 to 42 px and made it
-%   the named constant s.identityTextHeightPx; the task was updated and
-%   verify_static.sh was taught to guard it, but preflight's copy kept the
-%   literal 30. So every AOI rect preflight checked for the contdc choice
-%   and price screens sat 12 px above the cells actually drawn, and
-%   pfAoi.allAoiOK -- the assertion verify_matlab.m runs FIRST at the rig --
-%   was validating the wrong rectangles.
-%
-%   The fix is not a third guard. It is not having a second copy.
+%   Pure geometry, no PTB, so preflight.m computes the same rects the task draws.
+%   Single copy -- never duplicate this geometry in a task or preflight.
 
 rect = rect(:)';
 pad = 18;
@@ -24,8 +11,7 @@ contentRect = utils.reserveIdentityStrip(cfg, sel, innerRect);
 x0 = contentRect(1);
 y0 = contentRect(2) + 8;
 if utils.hasTextIdentity(sel)
-    % Same constant the draw uses, by construction rather than by
-    % agreement. utils.drawOptionCard advances by exactly this.
+    % Same constant utils.drawOptionCard advances by.
     y0 = y0 + cfg.style.identityTextHeightPx;
 end
 

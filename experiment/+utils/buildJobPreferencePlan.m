@@ -1,12 +1,7 @@
 function plan = buildJobPreferencePlan(stimTbl, nPwc, rngStream)
 %UTILS.BUILDJOBPREFERENCEPLAN  Pairwise job-preference trials.
-%
 %   plan = utils.buildJobPreferencePlan(stimTbl, 160, rs)
-%
-%   The stimulus unit is one job shown as industry + job title only --
-%   no wage, no attributes. Unlike the houses version, pairs mix freely
-%   across industries. Pass the ECOLOGICAL arm's table: the synthetic arm
-%   carries placeholder titles (title_001) that must never reach a screen.
+%   Pass the ecological arm's table: synthetic titles are placeholders.
 
 if nargin < 3 || isempty(rngStream), rngStream = RandStream.getGlobalStream; end
 

@@ -1,11 +1,7 @@
 function plan = buildPhotoPreferencePlan(stimTbl, nRating, nPwc, areaQuotas, rngStream)
 %UTILS.BUILDPHOTOPREFERENCEPLAN  Sample house photos and pairwise trials.
-%
 %   plan = utils.buildPhotoPreferencePlan(stimTbl, 80, 160, quotas, rs)
-%
-%   The stimulus unit is an individual house photo, not a full listing.
-%   photoTable has one row per image cell in house_stimuli.csv. Pairwise
-%   trials always compare two photos of the same area.
+%   Pairwise trials always compare two photos of the same area.
 
 if nargin < 5 || isempty(rngStream), rngStream = RandStream.getGlobalStream; end
 if nargin < 4, areaQuotas = struct(); end
@@ -87,10 +83,7 @@ end
 
 
 function [pairs, perArea] = makeWithinAreaPairs(photoRows, photoTable, areaVars, nPwc, rngStream)
-% Every pairwise trial compares two photos of the SAME area (kitchen vs
-% kitchen, bathroom vs bathroom, ...). Trials are allocated across areas
-% proportional to how many rated photos each contributed (largest
-% remainder), built within each area, then shuffled together.
+% Same-area pairs; trials allocated across areas by largest remainder, then shuffled.
 counts = zeros(numel(areaVars), 1);
 rowsByArea = cell(numel(areaVars), 1);
 for a = 1:numel(areaVars)

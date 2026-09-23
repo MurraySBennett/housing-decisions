@@ -1,13 +1,5 @@
-# plots.R -- descriptive figures, one per manipulation.
-#
-# Deliberately descriptive only: counts, distributions, and the two headline
-# measures (bid-vs-value, preference reversal). No model fitting, no
-# inference. The job of these figures is to show that the manipulations
-# landed and the data reads correctly -- not to answer the research question.
-#
-# Colour: categorical slots 1-3 of the validated default palette. Capped at
-# three because the all-pairs colourblind separation only clears the floor
-# for the first three slots; every figure here needs at most three series.
+# plots.R -- descriptive figures, one per manipulation; no models, no inference.
+# Colour: palette slots 1-3 only; colourblind separation clears the floor for three.
 
 suppressPackageStartupMessages({
   library(ggplot2)
@@ -48,18 +40,14 @@ theme_hw <- function(base_size = 11) {
 
 COMP_COLS <- c(low = PAL[1], high = PAL[2])
 
-# Separate colour and fill helpers on purpose: adding both to a plot that uses
-# only one makes ggplot warn that the unused scale matched no levels.
+# Separate colour/fill helpers: an unused scale makes ggplot warn.
 scale_competition_colour <- function()
   scale_colour_manual(values = COMP_COLS, name = "Competition", drop = FALSE)
 
 scale_competition_fill <- function()
   scale_fill_manual(values = COMP_COLS, name = "Competition", drop = FALSE)
 
-# ---------------------------------------------------------------------------
-# Design coverage. Not pretty, but it is the first thing to look at: it says
-# which cells of the design actually have trials in them.
-# ---------------------------------------------------------------------------
+# ---- Design coverage ------------------------------------------------------
 plot_design_coverage <- function(auction, contdc) {
   parts <- list()
 
@@ -94,11 +82,8 @@ plot_design_coverage <- function(auction, contdc) {
   parts
 }
 
-# ---------------------------------------------------------------------------
-# Auction
-# ---------------------------------------------------------------------------
+# ---- Auction --------------------------------------------------------------
 
-#' Bid against the item's true value. The headline valuation readout.
 plot_bid_vs_value <- function(auction) {
   d <- auction %>% filter(!practice, !is.na(bid), !is.na(trueValue))
   if (nrow(d) == 0) return(NULL)
@@ -118,7 +103,6 @@ plot_bid_vs_value <- function(auction) {
     theme_hw()
 }
 
-#' What ended each episode, by competition level. The manipulation check.
 plot_auction_outcomes <- function(auction) {
   d <- auction %>%
     filter(!practice, !is.na(endReason)) %>%
@@ -141,7 +125,6 @@ plot_auction_outcomes <- function(auction) {
     theme_hw()
 }
 
-#' Search effort: how many options were seen and rejected before the episode ended.
 plot_search_effort <- function(auction) {
   d <- auction %>%
     filter(!practice) %>%
@@ -168,7 +151,6 @@ plot_search_effort <- function(auction) {
     theme(legend.position = "none", strip.placement = "outside")
 }
 
-#' Surplus on cleared bids. Zero-centred, because sign is the whole question.
 plot_surplus <- function(auction) {
   d <- auction %>% filter(!practice, !is.na(surplus))
   if (nrow(d) == 0) return(NULL)
@@ -188,11 +170,8 @@ plot_surplus <- function(auction) {
     theme_hw() + theme(legend.position = "none")
 }
 
-# ---------------------------------------------------------------------------
-# Continuous / discrete choice
-# ---------------------------------------------------------------------------
+# ---- Continuous / discrete choice -----------------------------------------
 
-#' Response time by attribute load and block type. The load manipulation check.
 plot_contdc_rt <- function(contdc) {
   d <- contdc %>% filter(!timedOut, !is.na(rt))
   if (nrow(d) == 0) return(NULL)
@@ -212,7 +191,6 @@ plot_contdc_rt <- function(contdc) {
     theme_hw()
 }
 
-#' Probability of choosing the cheaper/money-favouring option, by load.
 plot_choice_share <- function(contdc) {
   d <- contdc %>%
     filter(taskType == "choice", !timedOut, !is.na(choseMoney)) %>%
@@ -235,7 +213,6 @@ plot_choice_share <- function(contdc) {
     theme_hw()
 }
 
-#' Prices assigned to the two options in a pair, by load.
 plot_price_by_option <- function(contdc) {
   d <- contdc %>%
     filter(taskType == "price", !is.na(price), !is.na(isMoneyOption)) %>%
@@ -260,7 +237,6 @@ plot_price_by_option <- function(contdc) {
     theme_hw()
 }
 
-#' Preference reversal rate by attribute load. The headline measure.
 plot_reversals <- function(rev) {
   if (is.null(rev) || nrow(rev) == 0) return(NULL)
 
@@ -273,9 +249,7 @@ plot_reversals <- function(rev) {
     geom_text(aes(label = sprintf("%.0f%%\nn=%d", 100 * p, n)),
               vjust = -0.25, size = 3, colour = INK_SECONDARY, lineheight = 0.95) +
     facet_wrap(~ domain) +
-    # Free y here, unlike the choice-share figure: reversal rates sit well
-    # below 50%, and forcing a 0-100% axis would squash every bar into the
-    # bottom fifth of the panel.
+    # Free y: reversal rates sit well below 50%; a 0-100% axis would squash the bars.
     scale_y_continuous(labels = percent_format(accuracy = 1),
                        expand = expansion(mult = c(0, 0.22))) +
     labs(title = "Preference reversals by attribute load",

@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
 """window_check.py -- distinct anchor values inside an anchor-centred window.
 
-Mirrors +utils/sampleWindow.m exactly, including the widening loop, because
-the failure this exists to catch is invisible in the full stimulus set: a
-column can hold plenty of distinct values and still collapse to one or two
-once the window slices it, and at one value the anchor is collinear with
-the intercept and its coefficient is not identified at all.
+Mirrors +utils/sampleWindow.m exactly, including the widening loop.
+Check the window, never the column.
 
-More levels in the file is NOT the same as more levels inside a window.
-That is the whole point -- check the window, never the column.
-
-    python3 window_check.py prepared/job_stimuli_synthetic.csv wage
-    python3 window_check.py ../house_stimuli.csv listPrice --anchors 250000 350000
+    python3 window_check.py prepared/job_stimuli_synthetic.csv wage [--anchors ...]
 """
 
 import argparse
@@ -43,8 +36,7 @@ def sample_window(values, anchor, spread=SPREAD, min_n=MIN_N):
 
 
 def fit_to_window(values, anchor, spread=SPREAD):
-    """Port of +utils/fitToWindow.m -- rank, averaging ties, then lay the
-    set out geometrically across [lo, hi]. Every stimulus lands inside."""
+    """Port of +utils/fitToWindow.m: rank (ties averaged), laid out geometrically across [lo, hi]."""
     v = np.asarray(values, dtype=float)
     idx = np.where(~np.isnan(v))[0]
     n = len(idx)
@@ -118,10 +110,7 @@ def report(df, column, anchors, label, min_distinct=4, attr_cols=None):
         line = (f'  {a:10.0f}  {lo:9.0f} to {hi:9.0f}  {len(idx):4d}  '
                 f'{widen:5.2f}  {d:8d}')
         if attr_cols:
-            # Orthogonality is optimised over the FULL set, but the
-            # participant only ever sees a window. Selecting on the anchored
-            # column truncates its range, so the design has to be checked
-            # where it is actually used.
+            # Orthogonality is optimised over the full set but seen only through a window; check it where used.
             r = max_abs_r(df.iloc[idx], attr_cols)
             worst_r = max(worst_r, 0.0 if np.isnan(r) else r)
             line += f'  {r:7.3f}'
@@ -152,9 +141,6 @@ def main():
                     help='total option presentations (nTrials x nOptionsPerTrial)')
     args = ap.parse_args()
 
-    # Take the path as given if it resolves from the current directory, and
-    # only then fall back to the script's own directory -- this gets run
-    # both from the repo root and from stimgen/.
     path = Path(args.csv)
     if not path.exists():
         path = Path(__file__).resolve().parent / args.csv

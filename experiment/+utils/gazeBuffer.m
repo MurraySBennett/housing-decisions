@@ -1,20 +1,9 @@
 function out = gazeBuffer(action, et, store)
 %UTILS.GAZEBUFFER  Accumulate Tobii samples without losing them.
 %
-%   Tobii's get_gaze_data() returns everything buffered *since the last
-%   call* and then clears the buffer. The current code calls it once per
-%   redraw to draw the gaze dot, which silently throws away every sample
-%   between the second-to-last and last call -- so with show_eye_pos on,
-%   the saved gaze data is only the final few milliseconds of a block.
-%
-%   Use this instead:
-%       store = utils.gazeBuffer('init');
-%       ...
-%       [samples, store] = deal(...);              % see 'poll' below
-%       store = utils.gazeBuffer('poll', et, store);  % drains AND keeps
-%       latest = store.latest;                     % for the gaze dot
-%       ...
-%       all = utils.gazeBuffer('flush', et, store);   % everything, for saving
+%   store = utils.gazeBuffer('init' | 'poll' | 'flush', et, store)
+%   Tobii get_gaze_data() drains its buffer on every call, so all polls
+%   must go through this accumulator or samples are silently lost.
 
 switch lower(action)
     case 'init'

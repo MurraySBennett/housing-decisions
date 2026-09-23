@@ -1,22 +1,8 @@
 function dataMat = preference_task(sess, run)
 %PREFERENCE_TASK  Style/category preference task, per domain.
-%
-%   dataMat = preference_task(sess, run)
-%
-%   Houses: direct ratings of individual house photos plus pairwise
-%   choices between photos of the SAME area (kitchen vs kitchen, ...).
-%   Jobs: pairwise choices between jobs shown as industry + job title
-%   only, mixed freely across industries. Jobs always reads the
-%   ECOLOGICAL stimulus file regardless of the session's JOBS_ARM -- the
-%   synthetic arm's titles are placeholders (title_001) and must never
-%   reach a screen.
-%
-%   Battery-driven via run_battery ('pref' rows); called with no
-%   arguments it bootstraps its own session and runs standalone.
-%
-%   Pairwise responses are the Z (left) / M (right) keys. Every trial is
-%   preceded by a blank ISI and a brief centered fixation cue, and gaze
-%   is recorded when the session has eye tracking on.
+%   dataMat = preference_task(sess, run); with no arguments it runs standalone.
+%   Houses: photo ratings plus within-area pairwise choices. Jobs: pairwise
+%   choices, always from the ECOLOGICAL file -- synthetic titles never reach a screen.
 
 %% ---- Task constants ---------------------------------------------------
 TASK_MODE = 'both';        % houses only: 'rating' | 'pwc' | 'both'
@@ -191,8 +177,7 @@ try
             fprintf('Saved %d gaze samples.\n', numel(gaze));
         end
         dataMat.(domain).clockSync = clockSync;
-        % The buffer was flushed and recording stopped for this domain's
-        % file; a fresh store (and start) begins with the next domain.
+        % Buffer flushed for this domain; a fresh store begins with the next.
         if d < numel(domainList) && et.enabled && ~isempty(et.obj)
             try, et.obj.get_gaze_data(); catch, end
         end
@@ -224,7 +209,6 @@ end
 end
 
 
-%% =====================================================================
 function sess = bootstrapStandaloneSession()
 % Checkout-local standalone run: dev rig, no eye tracking, local paths.
 RIG = 'dev';
@@ -283,7 +267,6 @@ end
 end
 
 
-%% =====================================================================
 function sections = resolveSections(taskMode, orderMode, participant)
 switch lower(char(taskMode))
     case 'rating'
@@ -311,7 +294,6 @@ end
 end
 
 
-%% =====================================================================
 function txt = introText(sections)
 if numel(sections) == 1 && strcmp(sections{1}, 'rating')
     txt = ['House photo style ratings\n\nThis is a short task ' ...
@@ -326,7 +308,6 @@ end
 end
 
 
-%% =====================================================================
 function tex = loadPhotoTextures(window, cfg, photoTable, photoRows)
 tex = nan(height(photoTable), 1);
 photoRows = unique(photoRows(:))';
@@ -342,7 +323,6 @@ end
 end
 
 
-%% =====================================================================
 function releaseTextures(tex)
 if isempty(tex), return; end
 handles = tex(isfinite(tex));
@@ -352,13 +332,10 @@ end
 end
 
 
-%% =====================================================================
 function [tFix, log, gazeStore] = fixationAndIsi(window, cfg, et, log, ...
     gazeStore, rs, fixSec, isiRange, info)
-% Blank ISI (uniform jitter), then a brief centered fixation cross.
-% Passive and timed, not click-gated: with 160 fast key trials a
-% click-to-start gate would dominate the task's duration. Tobii buffers
-% between polls, so one poll after each wait loses no samples.
+% Blank ISI then fixation, passive and timed, not click-gated; one gaze poll
+% per wait loses no samples.
 s = cfg.style;
 scr = Screen('Rect', window);
 cx = scr(3)/2; cy = scr(4)/2;
@@ -383,7 +360,6 @@ utils.checkForQuit;
 end
 
 
-%% =====================================================================
 function [trials, log, gazeStore] = runRatingTrials(window, cfg, plan, tex, ...
     et, log, gazeStore, rs, fixSec, isiRange)
 s = cfg.style;
@@ -452,7 +428,6 @@ end
 end
 
 
-%% =====================================================================
 function [trials, log, gazeStore] = runPwcTrials(window, cfg, plan, tex, ...
     domain, et, log, gazeStore, rs, fixSec, isiRange)
 s = cfg.style;
@@ -462,8 +437,7 @@ leftRect = G.leftRect;
 rightRect = G.rightRect;
 leftKey = KbName('z');
 rightKey = KbName('m');
-% Responses are keys, so a cursor parked over one option would be the only
-% mouse trace on screen -- hide it for the section. showMessage re-shows.
+% Key responses; hide the cursor for the section. showMessage re-shows.
 HideCursor(window);
 trials = repmat(pwcTrialTemplate(), size(plan.pwcPairs, 1), 1);
 
@@ -473,7 +447,6 @@ for t = 1:size(plan.pwcPairs, 1)
     info = struct('trial', t, 'leftRow', leftRow, 'rightRow', rightRow);
     switch domain
         case 'houses'
-            % Within-area by construction; the prompt names the area.
             prompt = sprintf('Which %s do you prefer?', ...
                 lower(char(plan.photoTable.areaLabel(leftRow))));
         case 'jobs'
@@ -562,11 +535,9 @@ ShowCursor('Arrow', window);
 end
 
 
-%% =====================================================================
 function G = prefLayout(window)
-% Single source of the task's screen geometry. Stored per domain as
-% dataMat.(domain).layout so gaze can be mapped onto rects later --
-% AOI geometry must never exist in two copies.
+% Single source of screen geometry, saved as dataMat.(domain).layout for gaze
+% mapping -- AOI geometry must never exist in two copies.
 scr = Screen('Rect', window);
 G.W = scr(3); G.H = scr(4);
 G.imgRect   = [G.W*0.25, G.H*0.13, G.W*0.75, G.H*0.66];
@@ -579,7 +550,6 @@ G.lineRight = G.W*0.82;
 end
 
 
-%% =====================================================================
 function drawJobCard(window, cfg, jobTable, row, rect)
 s = cfg.style;
 utils.roundRect(window, rect, s.radiusPanel, s.bgPanel, s.border, s.hairlinePx);
@@ -598,16 +568,13 @@ DrawFormattedText(window, title, 'center', 'center', s.text, ...
 end
 
 
-%% =====================================================================
 function drawPhoto(window, tex, box)
-% Center-crop the source to the box's aspect ratio so every photo fills
-% the identical on-screen rect -- displayed size never varies by photo.
+% Center-crop to the box aspect so every photo fills the identical rect.
 src = Screen('Rect', tex);
 Screen('DrawTexture', window, tex, cropSrcRect(src, box), box);
 end
 
 
-%% =====================================================================
 function srcRect = cropSrcRect(src, box)
 sw = src(3) - src(1);
 sh = src(4) - src(2);
@@ -623,7 +590,6 @@ srcRect = [cx-w/2, cy-h/2, cx+w/2, cy+h/2];
 end
 
 
-%% =====================================================================
 function drawProgress(window, cfg, t, n)
 s = cfg.style;
 scr = Screen('Rect', window);
@@ -633,7 +599,6 @@ DrawFormattedText(window, 'Press Q to stop', 42, scr(4) - 54, s.textDim);
 end
 
 
-%% =====================================================================
 function showMessage(window, cfg, msg)
 s = cfg.style;
 ShowCursor('Arrow', window);
@@ -653,7 +618,6 @@ end
 end
 
 
-%% =====================================================================
 function tr = ratingTrialTemplate()
 tr = struct('section', '', 'trial', NaN, 'photoRow', NaN, ...
     'photoId', '', 'houseIdx', NaN, 'areaVar', '', 'imageFile', '', ...
@@ -661,7 +625,6 @@ tr = struct('section', '', 'trial', NaN, 'photoRow', NaN, ...
 end
 
 
-%% =====================================================================
 function tr = pwcTrialTemplate()
 tr = struct('section', '', 'trial', NaN, ...
     'responseSide', '', 'rt', NaN, ...
@@ -678,16 +641,13 @@ tr = struct('section', '', 'trial', NaN, ...
 end
 
 
-%% =====================================================================
 function T = buildTrialTable(dataMat)
 rows = {};
 for dom = {'houses','jobs'}
     domain = dom{1};
     if ~isfield(dataMat, domain), continue; end
     D = dataMat.(domain);
-    % Every text cell goes through string() so each column holds ONE type
-    % -- a cell column mixing char trials with "" placeholders is exactly
-    % what cell2table refuses at the end of a finished session.
+    % string() everywhere so each column holds one type; mixed cells break cell2table.
     if isfield(D, 'rating') && ~isempty(D.rating.trials)
         R = D.rating.trials;
         for t = 1:numel(R)

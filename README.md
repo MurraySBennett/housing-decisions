@@ -27,6 +27,11 @@ This matters, so it is written down rather than remembered.
   no-eye-tracking and test variants). Kept because "probably superseded" was not
   a good enough reason to delete it.
 
+## New to the project?
+
+Start with [docs/CODE-GUIDE.md](docs/CODE-GUIDE.md) — what the study is, what
+runs what, and where the data goes. You should not need to read the code.
+
 ## Stimuli
 
 Not in this repository. See [STIMULI.md](STIMULI.md).

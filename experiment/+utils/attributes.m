@@ -1,39 +1,14 @@
 function A = attributes(domain)
 %UTILS.ATTRIBUTES  Tiered attribute definitions for one domain.
 %
-%   A = utils.attributes('houses')
-%   A = utils.attributes('jobs')
-%
-%   Four tiers, so the attribute-count manipulation is explicit rather than
-%   an accident of table column order (the previous drawItemCard took the
-%   first N columns, which meant Zone/Address and Industry/Title were being
-%   counted as attributes):
-%
-%     identity : always shown, NOT counted toward the attribute level.
-%                Without these the option isn't a coherent object.
-%     core     : always shown, IS counted. Contains the value variable,
-%                because that is the anchor the pricing model needs.
-%     pool     : the attributes that scale with the 2/4/6 manipulation,
-%                selected per participant from their importance ratings.
-%     late     : held back until the highest attribute level, for variables
-%                expected to dominate choice.
+%   Tiers: identity (always shown, not counted), core (counted, holds the
+%   value variable), pool (scales with 2/4/6), late (top level only).
 
 switch lower(char(domain))
 
     case 'houses'
-        % All six photos are IDENTITY now, not pool attributes: always
-        % shown regardless of attribute-count level, never counted toward
-        % it. Two reasons. First, that's the actual design intent -- a
-        % house's photos aren't optional information the way "lot size" is,
-        % they're part of what makes it a coherent, recognizable option.
-        % Second, and more concretely: when a photo WAS a selectable pool
-        % attribute, the attribute-count manipulation could land on an
-        % attribute-level where the only thing shown besides price was a
-        % single photo -- zero NUMERIC non-value attributes on screen, so
-        % utils.buildPairs had no quality dimension to construct a
-        % money-vs-quality pair from at all. Moving photos out of the pool
-        % means the pool is purely numeric, so a quality dimension always
-        % exists.
+        % Photos are identity, not pool: the pool stays purely numeric so
+        % buildPairs always has a quality dimension to pair against money.
         A.identity = struct( ...
             'var',   {'extPic','kitPic','bedPic','bathPic','livPic','outPic'}, ...
             'label', {'Exterior','Kitchen','Bedroom','Bathroom', ...
@@ -41,10 +16,8 @@ switch lower(char(domain))
             'kind',  {'image','image','image','image','image','image'}, ...
             'dir',   {0, 0, 0, 0, 0, 0});
 
-        % dir = -1: for a buyer, a higher price is worse.
-        % "Listed price", not "Price": the participant is about to state a
-        % price of their own, and the card value must read unambiguously
-        % as the advertised figure rather than as the answer.
+        % dir = -1: higher price is worse for a buyer. Label must read as
+        % the advertised figure, not the participant's response.
         A.core = struct( ...
             'var',   {'listPrice'}, ...
             'label', {'Listed price'}, ...
@@ -58,52 +31,28 @@ switch lower(char(domain))
             'kind',  {'count','count','number','number','year'}, ...
             'dir',   {1, 1, 1, 1, 1});
 
-        % No late tier for houses at present. Region (the Zone column) is
-        % NOT in use: it may come back, but it is not part of the current
-        % design, so it is not shown and not rated. Restore by moving the
-        % commented definition below back into A.late.
-        %
-        % The column stays in house_stimuli.csv either way, so this costs
-        % nothing to reverse.
-        %
+        % No late tier: Zone is not in current use (its column stays in
+        % house_stimuli.csv). Restore by moving this back into A.late:
         %   A.late = struct( ...
         %       'var',   {'Zone'}, ...
         %       'label', {'Region'}, ...
         %       'kind',  {'category'}, ...
         %       'dir',   {0});
-        %
-        % When it does come back, note the original reservation: Zone is
-        % 2-level and confounded with lot size, square footage and bedroom
-        % count, so its weight estimate absorbs variance from those. That
-        % is why it was held to the top attribute level rather than put in
-        % the pool.
-        %
-        % A consequence of there being no late tier: houses now has 5 pool
-        % attributes and a max level of 6 (core + 5), which exactly matches
-        % the top of cfg.attrLevels. Every rated attribute can therefore
-        % appear -- no orphaned pool attribute that no level ever reaches.
         A.late = struct('var', {}, 'label', {}, 'kind', {}, 'dir', {});
 
         A.valueVar = 'listPrice';
         A.priceStyle = 'total';
 
     case 'jobs'
-        % 'title' / 'Position' deliberately removed 2026-09-15. Under
-        % JOBS_ARM = 'synthetic' the title column is a generated placeholder
-        % ('title_001'), so every card header read "Healthcare - title_001";
-        % under 'attenuated' it is a real title attached to another job's
-        % wage, which is worse -- a recognizable occupation next to a wage
-        % that occupation does not command. Restore by adding 'title' /
-        % 'Position' / 'category' / 0 back to the four rows below. The
-        % column stays in every prepared CSV either way.
+        % No title in identity: prepared arms carry placeholder or mismatched
+        % titles. Restore by adding 'title'/'Position'/'category'/0 rows.
         A.identity = struct( ...
             'var',   {'industry'}, ...
             'label', {'Industry'}, ...
             'kind',  {'category'}, ...
             'dir',   {0});
 
-        % dir = +1: for a job seeker, a higher wage is better.
-        % "Offered wage", not "Wage" -- see the houses note above.
+        % dir = +1: higher wage is better for a job seeker.
         A.core = struct( ...
             'var',   {'wage'}, ...
             'label', {'Offered wage'}, ...
@@ -120,12 +69,8 @@ switch lower(char(domain))
                       'number','count','count'}, ...
             'dir',   {1, 1, 1, 1, 1, -1, 1, -1});
 
-        % NOTE: this is a judgement call and worth revisiting. Zone's job
-        % analogue isn't obvious -- industry is already a filter, and wage
-        % has to stay in core because it's the anchor. Work arrangement is
-        % the most plausible dominator left. It also has zero variance in
-        % several industries under the realistic generation, so if you keep
-        % it here, check the participant's industry set has variance in it.
+        % workArrangement has zero variance in some industries; check the
+        % participant's industry set has variance in it.
         A.late = struct( ...
             'var',   {'workArrangement'}, ...
             'label', {'Work arrangement'}, ...

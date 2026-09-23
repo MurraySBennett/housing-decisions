@@ -1,53 +1,20 @@
 %DEMO_BATTERY  A short, self-contained walkthrough of every element of the battery.
 %
-% PURPOSE: showing someone (an RA, a collaborator, yourself) what a session
-% actually looks like, end to end, in ~5-8 minutes instead of ~45. It touches
-% every participant-facing element in order:
-%
-%   1. anchor elicitation (budget / reservation wage)
-%   2. attribute importance ratings (VAS), and industry ratings for jobs
-%   3. task instructions
-%   4. comprehension checks
-%   5. auction: practice episode, then 2 real search episodes (one per
-%      competition level)
-%   6. contdc: choice block then pricing block, at 2 attribute levels
-%   7. the end-of-run summary / payout screen
-%
-% THIS IS NOT A PILOT AND NOT A DRESS REHEARSAL.
-% It deliberately distorts the design to fit in a demo slot:
-%   - 2 trials per type instead of 12 / 6-10 pairs
-%   - the auction market runs FAST (see DEMO_FAST below) -- real sessions do
-%     not, and `cfg.auction` timing is deliberately NOT scaled by testing
-%     mode anywhere else in this codebase
-% For a real timing/duration check, use `preflight.m` and a TESTING run of
-% `run_battery.m`, not this.
-%
-% WHERE THE DATA GOES: a sandbox, `experiment/Data_demo/`, never the real
-% `Data/` tree and never the OSU share. Every saved file is stamped
-% `dataMat.demo = true`. The analysis scripts in `analysis/` read this
-% sandbox by default, so you can run the demo and then immediately produce
-% descriptive plots from it.
-%
-% USAGE
-%   demo_battery                 % jobs, both tasks, no eye tracker
-%   then edit the switches below for houses / eye tracking / a slower market.
+% ~5-8 minute demo, NOT a pilot: trial counts are cut and DEMO_FAST distorts
+% market pacing. Data go to the experiment/Data_demo/ sandbox, stamped demo = true.
 
 clear; clc;
 KbName('UnifyKeyNames');
 
 %% ---- Demo switches ----------------------------------------------------
 DEMO_DOMAIN  = 'jobs';   % 'jobs' | 'houses'. Houses need the ~605MB image
-                         % set (see STIMULI.md); if it isn't found this
-                         % falls back to jobs rather than crashing.
+                         % set; if missing this falls back to jobs.
 DEMO_TASKS   = {'auction', 'contdc'};  % drop one to shorten further;
                                        % add 'pref' to demo the preference task
 DEMO_FAST    = true;     % compress the auction market clock so a search
-                         % episode resolves in ~20s instead of up to 90s.
-                         % Set false to show real market pacing.
+                         % episode resolves in ~20s; false = real pacing.
 SHOW_INTAKE  = true;     % false = skip elicitation + instructions +
                          % comprehension + practice, straight to trials.
-                         % Use false for a 2-minute "here are the screens"
-                         % pass; true to show the whole intake.
 RIG          = 'dev';    % 'dev' (laptop, windowed, no tracker) or 'lab'
 EYETRACKING  = false;    % true only on the rig with the Tobii attached
 SHOW_GAZE    = false;    % gaze dot overlay -- nice for a demo, needs
@@ -60,23 +27,16 @@ DEMO_PARTICIPANT = 9999;
 DEMO_SESSION     = 1;
 
 %% ---- Locate the checkout ----------------------------------------------
-% The demo runs entirely out of this repository so it works on a laptop with
-% no access to the OSU share. utils.config defaults to the share; everything
-% below re-points it at the checkout.
+% Runs entirely out of this repository; paths below re-point cfg at the checkout.
 here = fileparts(mfilename('fullpath'));
 if isempty(here), here = pwd; end
 addpath(here);
 
 utils.trace(utils.ternary(TRACE, 'on', 'off'));
 
-% utils.config defaults projRoot to the OSU share and CREATES its data
-% directories as a side effect of being called. On a laptop with no share
-% that either errors or hangs on a network timeout, so resolve a root that
-% actually exists before calling startSession rather than repairing it after.
-% isfolder, not exist(...,'dir'): exist searches the MATLAB path for the name
-% first and is unreliable on UNC paths, which is exactly what this is. Note
-% this call can block for ~20s on the SMB timeout if the machine is off the
-% OSU network -- that is the network, not a hang.
+% utils.config defaults to the OSU share and creates data directories on call,
+% so resolve an existing root first. isfolder, not exist: exist is unreliable
+% on UNC paths. Off-network, isfolder can block ~20s on the SMB timeout.
 shareRoot = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4';
 if isfolder(shareRoot)
     demoRoot = shareRoot;           % lab machine: keep the real Tobii path
@@ -98,8 +58,7 @@ sess = utils.startSession( ...
     'eyeTracking', EYETRACKING, ...
     'showEyePos',  SHOW_GAZE);
 
-% startSession already wrote a manifest under the root resolved above. The
-% data paths get re-pointed at the sandbox below, so that one is stray.
+% Data paths get re-pointed at the sandbox below, so this manifest is stray.
 strayManifest = sess.manifestFile;
 
 cfg = sess.cfg;
@@ -109,8 +68,7 @@ cfg.paths.experiment = here;
 cfg.paths.stimuli    = fullfile(here, 'stimuli');
 cfg.paths.prepared   = fullfile(cfg.paths.stimuli, 'prepared');
 
-% Images: prefer a local copy, fall back to whatever cfg already resolved
-% (the share, if this is the lab machine and it's mounted).
+% Images: prefer a local copy, fall back to whatever cfg already resolved.
 localImages = fullfile(cfg.paths.stimuli, 'house_images');
 if isfolder(localImages)
     cfg.paths.images = localImages;
@@ -136,8 +94,7 @@ for k = 1:numel(demoDirs)
     if ~isfolder(demoDirs{k}), mkdir(demoDirs{k}); end
 end
 
-% startSession computed the manifest path from the OLD cfg, so it has to be
-% recomputed now or the demo would append to the real manifest.
+% Recompute the manifest path or the demo would append to the real manifest.
 sess.manifestFile = fullfile(cfg.paths.sessions, ...
     sprintf('sub-%05d_manifest.mat', sess.participant));
 if ~strcmp(strayManifest, sess.manifestFile) && isfile(strayManifest)
@@ -177,8 +134,6 @@ cfg.testing.forceCompetition = [];     % keep both levels so the demo shows both
 cfg.testing.forceAttrLevel   = [2 6];  % lowest and highest load, skip the middle
 
 if DEMO_FAST
-    % Loud, because this is the one thing the demo changes that a viewer
-    % could mistake for the real design.
     fprintf(2, ['\n*** DEMO_FAST is on: the auction market clock is compressed.\n' ...
                 '    Arrivals, dwell and the trial timeout are all shortened so an\n' ...
                 '    episode resolves in ~20s. THIS IS NOT REAL SESSION PACING.\n' ...
@@ -244,9 +199,7 @@ fprintf('    Rscript analysis/R/run_all.R --data %s\n\n', demoData);
 
 %% ======================================================================
 function markDemoFile(matFile)
-%MARKDEMOFILE  Stamp demo = true on a saved run so it can never be mistaken
-%   for pilot or participant data, even if the file is moved out of the
-%   sandbox directory.
+%MARKDEMOFILE  Stamp demo = true on a saved run so it is never mistaken for real data.
 if ~isfile(matFile), return; end
 S = load(matFile, 'dataMat');
 dataMat = S.dataMat;

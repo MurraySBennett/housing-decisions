@@ -1,15 +1,8 @@
 function tl = timeline(action, tl, label)
 %UTILS.TIMELINE  Flat wall-clock section log for one run.
 %
-%   tl = utils.timeline('start');                 % opens section 'setup'
-%   tl = utils.timeline('section', tl, 'name');   % closes current, opens name
-%   tl = utils.timeline('stop', tl);              % closes the open section
-%   T  = utils.timeline('table', tl);             % section/tStart/tEnd/seconds
-%
-%   Times are GetSecs. Sections are contiguous by construction: every
-%   boundary closes the previous section, so the rows tile the run and
-%   their seconds sum to the run's wall clock. Store the 'table' result as
-%   dataMat.timing; run_battery collects it into the session timing CSV.
+%   Actions: 'start' / 'section' / 'stop' / 'table'. Times are GetSecs.
+%   Sections tile the run: every boundary closes the previous section.
 
 switch lower(char(action))
     case 'start'

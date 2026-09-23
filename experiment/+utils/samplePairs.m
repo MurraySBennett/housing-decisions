@@ -2,14 +2,6 @@ function pairs = samplePairs(rows, nPairs, rngStream)
 %UTILS.SAMPLEPAIRS  Non-repeating pairwise trials with balanced exposure.
 %
 %   pairs = utils.samplePairs(rows, nPairs, rs)
-%
-%   Returns an nPairs x 2 matrix of values drawn from rows. No pair of
-%   items ever repeats (in either order), left/right assignment is
-%   randomized per trial, and items are dealt from repeated shuffled decks
-%   so exposure counts stay as balanced as the trial count allows.
-%
-%   Extracted from buildPhotoPreferencePlan so the jobs preference task
-%   can build cross-industry pairs from the same machinery.
 
 n = numel(rows);
 if n < 2

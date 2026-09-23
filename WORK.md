@@ -121,6 +121,20 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-23 **pre-sharing sweep before adding a collaborator.** Privacy
+  audit came back clean: one git identity across all history, no personal
+  content in any current or historical file, no AI mentions in any file.
+  Comment diet across the whole codebase: MATLAB comment lines 2,569 -> 796
+  (-69%), R/Python/PowerShell similarly, every change machine-verified as
+  comment-only (line counts, Python AST compare, PowerShell code compare)
+  and `verify_static.sh` green. Deleted rationale essays live only in git
+  history now — the Lichtenstein & Slovic citation and design notes from
+  buildPairs/elicitVASDrag may be wanted for the methods write-up. New
+  `docs/CODE-GUIDE.md` is the grad-student orientation, linked from README.
+  Still pending Murray's call: scrub the 40 Co-Authored-By trailers from
+  history (rewrite + force-push), keep or fold AGENTS.md, then invite
+  `moontran044`. No-AI-attribution is now policy in the daisywheel working
+  agreement and ~/.claude/settings.json
 - [x] 2026-09-23 **the preference task is now a battery task** (`pref` rows in
   `utils.batteryPlan`), renamed `photo_preference_task.m` ->
   `preference_task.m` and converted to the `(sess, run)` function form.

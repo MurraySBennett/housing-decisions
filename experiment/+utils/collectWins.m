@@ -1,14 +1,8 @@
 function wins = collectWins(dataMat)
 %UTILS.COLLECTWINS  Every successful acquisition, for the incentive draw.
 %
-%   Walks the saved data and returns one entry per trial where the
-%   participant's bid cleared the threshold. utils.incentives('compute') draws
-%   one of these at random.
-%
-%   Under the BDM rule the participant acquires at the THRESHOLD price, not
-%   at their bid, so surplus does not depend on how much they bid -- only on
-%   whether they chose to transact. That is what makes truthful bidding
-%   optimal, and it is why pricePaid below is the threshold.
+%   One entry per accepted bid; utils.incentives('compute') draws one at random.
+%   Under BDM pricePaid is the threshold, not the bid.
 
 wins = struct('domain', {}, 'trial', {}, 'competition', {}, ...
               'stimIdx', {}, 'bid', {}, 'pricePaid', {}, 'anchor', {}, ...
@@ -31,9 +25,7 @@ for d = 1:numel(dataMat.domains)
         w.stimIdx     = T(t).bidStimIdx;
         w.bid         = T(t).bid;
         w.pricePaid   = T(t).pricePaid;
-        % Carried because surplus is only interpretable relative to the
-        % participant's own budget or reservation wage -- see the scale
-        % note in utils.incentives.
+        % Surplus is only interpretable relative to the anchor -- see utils.incentives.
         w.anchor      = dataMat.(dom).anchor;
 
         if strcmpi(dom, 'houses')

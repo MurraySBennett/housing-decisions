@@ -1,15 +1,5 @@
 #!/usr/bin/env Rscript
-# run_all.R -- read every run CSV under a data root, print an integrity
-# report, and write the descriptive figures.
-#
-#   Rscript analysis/R/run_all.R                                  # demo sandbox
-#   Rscript analysis/R/run_all.R --data experiment/Data_demo
-#   Rscript analysis/R/run_all.R --data /path/to/share/Data --out analysis/output
-#   Rscript analysis/R/run_all.R --simulate                       # no MATLAB needed
-#
-# --simulate fabricates data first (analysis/R/simulate_demo_data.R) so the
-# whole pipeline can be shown working before participant 1 exists. Figures
-# produced that way are stamped as simulated in their file names.
+# run_all.R -- read run CSVs, print an integrity report, write the figures. Usage: Rscript analysis/R/run_all.R [--data <dir>] [--out <dir>] [--simulate]
 
 suppressPackageStartupMessages({
   library(ggplot2)
@@ -71,8 +61,6 @@ cat(strrep("=", 72), "\n\n", sep = "")
 writeLines(report, file.path(out_dir, paste0(tag, "integrity_report.txt")))
 
 # ---- tidy exports ---------------------------------------------------------
-# One combined CSV per task, so the next person can start from a single file
-# rather than re-deriving the concatenation.
 if (!is.null(auction))
   readr::write_csv(auction, file.path(out_dir, paste0(tag, "auction_trials.csv")))
 if (!is.null(contdc))

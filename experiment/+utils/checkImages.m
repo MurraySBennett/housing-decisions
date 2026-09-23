@@ -1,14 +1,7 @@
 function report = checkImages(cfg, domain)
 %UTILS.CHECKIMAGES  Diagnose why identity images aren't loading.
-%
 %   utils.checkImages(utils.config('rig','lab'), 'houses')
-%
-%   Run this directly -- no PTB, no open window, no running task needed --
-%   to find out exactly why images aren't rendering. For a sample of
-%   stimulus rows, checks whether the exact filename the CSV references
-%   actually exists in cfg.paths.images, and if not, looks for a
-%   near-match on disk (case, extension, stray whitespace) so the actual
-%   mismatch is visible instead of a silent blank image.
+%   No PTB needed; reports near-matches (case, extension, whitespace).
 
 A = utils.attributes(domain);
 T = utils.readStimuli(cfg, domain);

@@ -2,17 +2,7 @@ function dataMat = auction_task(sess, run)
 %AUCTION_TASK  Sequential search with a continuous price response.
 %
 %   dataMat = auction_task(sess, run)
-%
-%   Converted from a script to a function so it can be called back to back
-%   with continuous_DC_task inside one MATLAB session. Called directly with
-%   no arguments it will bootstrap its own session, so it still runs
-%   standalone for a between-subjects design.
-%
-%   A "trial" here is a whole search episode: options arrive and expire on
-%   the market, the participant inspects and rejects until they find one
-%   worth bidding on, and the episode ends when a bid clears or the options
-%   run out. Twelve of those fills roughly twelve minutes and yields a lot
-%   of gaze data per trial.
+%   A trial is one whole search episode; with no arguments it bootstraps its own session.
 
 if nargin < 1 || isempty(sess)
     sess = utils.startSession();
@@ -24,9 +14,6 @@ else
     standalone = false;
 end
 
-% Domains belong to the RUN now (see utils.beginRun), so the same task can be
-% called for jobs only, houses only, or both, independently of what other
-% tasks this participant is doing.
 if isfield(run, 'domains') && ~isempty(run.domains)
     domainList = run.domains;
 else
@@ -39,23 +26,16 @@ tl  = utils.timeline('start');
 
 dataMat = struct();
 dataMat.domains = domainList;
-% Which visual theme this run was collected under. Without it a
-% session that was rolled back mid-way cannot be stratified later.
+% Theme is saved so a rolled-back session can be stratified in analysis.
 dataMat.theme   = cfg.style.themeName;
-% [] on a full study run; an integer on a shortened rehearsal. A
-% rehearsal saves into the real Data tree like any other run, so
-% this is what keeps it filterable out of the analysis later.
+% [] on a full run, integer on a rehearsal -- the analysis filter for rehearsal runs.
 dataMat.trialsPerCell = cfg.rehearsal.trialsPerCell;
 window = [];
 et = struct('enabled', false, 'obj', [], 'showGaze', false, 'analyzable', false);
 
 try
     % =============================================== display setup
-    % Defensive reset even on a clean start: if a PREVIOUS run in this same
-    % MATLAB session crashed in a way that didn't reach our own cleanup
-    % code (e.g. a Ctrl-C, or an error thrown by something outside our
-    % try/catch), PsychImaging's persistent configuration-phase state can
-    % still be dirty here. This is a no-op if everything was already clean.
+    % Clear PsychImaging's persistent config state left dirty by a prior crashed run.
     clear PsychImaging;
     utils.trace('display setup starting');
     PsychDefaultSetup(2);
@@ -71,18 +51,12 @@ try
     utils.trace('window opened, handle=%g rect=[%s]', window, mat2str(winRect));
     Screen('BlendFunction', window, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');
 
-    % The window exists but nothing has been drawn yet, which is the
-    % only point at which fonts can be probed. This is the sole place
-    % cfg.style is mutated after utils.config builds it -- safe, since
-    % every consumer reads cfg.style at draw time.
+    % Fonts can only be probed here (window open, nothing drawn); sole post-config mutation of cfg.style.
     cfg.style = utils.resolveFonts(window, cfg.style);
     utils.trace('fonts: content=%s chrome=%s', ...
         cfg.style.fontContent, cfg.style.fontChrome);
 
     Priority(MaxPriority(window));
-    % Cursor stays visible throughout -- almost every screen in this task
-    % is click-driven (grid boxes, detail panel, pricing arc / choice
-    % cards), so participants need to see where they're pointing.
     ShowCursor('Arrow', window);
     ListenChar(2);
 
@@ -112,14 +86,7 @@ try
         utils.trace('domain %s: %d stimuli loaded', domain, height(stimuli));
 
         % ---- elicitation ------------------------------------------
-        % Reuse the participant's budget/reservation-wage anchor and
-        % attribute ratings if this domain was already elicited earlier
-        % THIS SESSION (e.g. contdc ran first, auction runs next) -- no
-        % reason to make them state their budget or re-rate ten attributes
-        % twice in one sitting. A different session number (a real day
-        % break) is a deliberate cache miss: re-eliciting there gives a
-        % fresh, consistent measurement rather than reusing a stated
-        % preference that may not still hold.
+        % Same-session elicitations are reused; a new session is a deliberate cache miss.
         tl = utils.timeline('section', tl, sprintf('%s:elicitation', domain));
         cached = utils.elicitationCache('load', sess, domain);
         if ~isempty(cached)
@@ -159,10 +126,7 @@ try
                 fprintf('Filtered to %d jobs across %d industries.\n', height(stimuli), numel(keepIndustries));
             end
 
-            % Listed price / offered wage is rated on the same line as the
-            % pool, and then excluded from the selection that follows --
-            % it is always shown, so its rating cannot decide anything.
-            % See utils.elicitAttrRatings for why it is collected at all.
+            % Price/wage is rated with the pool but excluded from selection (see utils.elicitAttrRatings).
             attrR       = utils.elicitAttrRatings(window, cfg, A, rs);
             poolRatings = attrR.pool;
             attrRTs     = attrR.poolRTs;
@@ -182,20 +146,13 @@ try
         end
 
         % ---- attribute selection ----------------------------------
-        % Fixed level in this task: 12 trials over 2 competition levels is
-        % 6 per level, which works; adding 3 attribute levels would leave 2
-        % per cell, which does not. The attribute-count manipulation lives
-        % in continuous_DC_task, which has short trials and can afford it.
+        % Attribute count is fixed here; the attribute-count manipulation lives in continuous_DC_task.
         sel = utils.selectAttributes(A, cfg.auction.nAttrs, poolRatings, ...
                                   cfg.attrMethod, false);
         fprintf('Showing %d attributes (mean importance rank %.1f).\n', ...
             numel(sel.shown), sel.meanRank);
 
         % ---- stimulus window --------------------------------------
-        % Selects rows, or keeps them all and fits their prices onto the
-        % window, depending on cfg.sampling.fitToWindow for this domain.
-        % Either way inWindow is the set to use and win.fitted/win.priceMap
-        % record what the participant was actually shown.
         [inWindow, win] = utils.applyWindow(stimuli, A, anchor, cfg);
         fprintf('Window %s to %s: %d stimuli (%s, widened %.2fx).\n', ...
             utils.formatCurrency(win.lo, A.priceStyle), ...
@@ -204,11 +161,7 @@ try
         % ---- trial plan -------------------------------------------
         nTrials = cfg.auction.nTrials;
         if ~isempty(cfg.rehearsal.trialsPerCell)
-            % The auction's design cells are the two competition levels,
-            % and utils.trialPlan balances them by alternating, so N per
-            % cell means 2N trials. This is what cfg.testing.nTrialsPerType
-            % gets wrong: it sets the TOTAL, so asking for 2 there gives
-            % one trial per competition level, not two.
+            % trialsPerCell is per competition level (2N total); cfg.testing.nTrialsPerType sets the TOTAL.
             nTrials = cfg.rehearsal.trialsPerCell * 2;
         end
         if cfg.testing.enabled
@@ -216,10 +169,7 @@ try
         end
         planCfg = cfg; planCfg.auction.nTrials = nTrials;
         planCfg.auction.nOptionsPerTrial = min(cfg.auction.nOptionsPerTrial, win.n);
-        % Participant number decides which competition level comes first --
-        % same parity trick utils.batteryPlan uses for task order, so the
-        % two counterbalancings stay consistent and neither needs a
-        % condition file.
+        % Participant parity picks the first competition level, matching utils.batteryPlan's task-order parity.
         plan = utils.trialPlan(planCfg, win.n, rs, sess.participant);
 
         if ~isempty(cfg.testing.forceCompetition)
@@ -227,9 +177,6 @@ try
         end
 
         % ---- textures ---------------------------------------------
-        % Loaded ONLY for stimuli that actually appear across the trial
-        % plan, not every candidate in the sampled window -- the window
-        % can hold several times more stimuli than any trial ever shows.
         neededIdx = [];
         for t = 1:numel(plan)
             neededIdx = [neededIdx, plan(t).stimIdx]; %#ok<AGROW>
@@ -250,9 +197,6 @@ try
 
         % ---- layout + AOI validation ------------------------------
         L = layoutGrid(winRect, cfg);
-        % 'dev' rig runs (laptop, no tracker) get this as information only --
-        % it's still useful to see spacing before the lab session, but there
-        % is nothing to protect since no gaze data will be collected.
         [aoiOK, aoiReport] = utils.checkAOIs(L.aoiRects, L.aoiNames, geom, true);
         if ~aoiOK && strcmp(cfg.aoiEnforcement, 'strict')
             warning('hw:auction:aoiTooClose', ...
@@ -266,12 +210,7 @@ try
                 'Some detail-view AOIs are below the minimum separation -- see report above.');
         end
 
-        % The bid screen now shows the option beside the scale, so it has
-        % attribute AOIs of its own -- and they are the ones that make
-        % attribute re-inspection DURING pricing visible in the gaze
-        % record, which is the whole reason the screen changed. Same
-        % layout and the same AOI function contdc's price card uses, so
-        % gaze on the two pricing screens is directly comparable.
+        % Same layout and AOI functions as contdc's price card, so gaze on the two pricing screens is comparable.
         bidL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
         bidAOIs = utils.cardAOIs(cfg, bidL.cardRect, sel, 'bid');
         [bidAoiOK, bidAoiReport] = utils.checkAOIs( ...
@@ -294,17 +233,7 @@ try
                 inWindow, tex, sel, A, domain, plan(1), rs, win);
             trials = practiceTrial;
 
-            % The practice market used to end straight into the first real
-            % one with nothing between them, so the participant had no way
-            % to tell the boundary had been crossed -- they were still in
-            % try-anything mode on trial 1. Pilot note, 2026-09-16.
-            % Deliberately says nothing about earnings: cfg.incentives is
-            % off by default, and when it is on only ONE randomly chosen
-            % trial pays, so "every offer counts towards what you earn" is
-            % false either way.
-            % Parts = runs of one competition level, which is what they
-            % will actually see breaks between. Counted the same way as
-            % levelChange below, and the two must not drift apart.
+            % Parts = runs of one competition level; must match the levelChange computation below.
             nParts = 1 + sum(~strcmp({plan(2:end).competition}, ...
                                      {plan(1:end-1).competition}));
             showClickMessage(window, cfg, sprintf(['The practice round is over.' ...
@@ -315,13 +244,7 @@ try
                 numel(plan), nParts));
         end
 
-        % What the participant experiences is RUNS of one competition level,
-        % which is not the same as blocks: ABBA puts blocks 2 and 3 at the
-        % same level, so they are one continuous 12-market run. Breaks
-        % belong at level changes, not at every block index -- announcing
-        % "the market has changed" halfway through an unchanged regime
-        % would be false, and would break the expectation the blocking
-        % exists to build.
+        % Breaks go at competition-level changes, not block indices: ABBA makes blocks 2-3 one continuous run.
         tl = utils.timeline('section', tl, sprintf('%s:trials', domain));
         levelChange = [false, ~strcmp({plan(2:end).competition}, ...
                                       {plan(1:end-1).competition})];
@@ -330,13 +253,7 @@ try
             domain, numel(plan), numel(unique([plan.block])), nRuns);
         runIdx = 1;
         for t = 1:numel(plan)
-            % The break is what makes competition a REGIME rather than a
-            % per-trial coin flip: it marks that the market the participant
-            % has been learning has been replaced, so the expectation they
-            % built is retired deliberately instead of being quietly
-            % contradicted. It says the level has changed without saying
-            % which way -- naming the direction would hand them the
-            % manipulation.
+            % Break message must not name the direction of the competition change.
             if levelChange(t)
                 log = utils.eventLog('add', log, 'block_break', GetSecs, ...
                     struct('trial', t, 'fromBlock', plan(t-1).block, ...
@@ -363,13 +280,7 @@ try
 
             if isempty(trials), trials = trial; else, trials(end+1) = trial; end %#ok<AGROW>
 
-            % A WON item leaves the market for good. Items that were
-            % rejected, lost, or simply expired may come back in a later
-            % market -- a real listing that did not sell gets relisted, and
-            % the repeat is deliberate (utils.trialPlan logs repIdx for
-            % exactly this reliability check). But an item the participant
-            % has already bought cannot be bought again, and seeing it
-            % re-listed reads as the task not keeping track.
+            % Only WON items are retired; rejected/expired items may deliberately relist (repIdx tracks repeats).
             if trial.bidAccepted && isfinite(trial.bidStimIdx)
                 [plan, nStruck] = retireStimulus(plan, t, trial.bidStimIdx, ...
                     cfg.auction.minOptionsAfterRetire);
@@ -411,12 +322,7 @@ try
         dataMat.(domain).bidAoiReport     = bidAoiReport;
         dataMat.(domain).bidCardRect      = bidL.cardRect;
 
-        % Gaze goes to its own file: it is orders of magnitude larger than
-        % everything else and does not belong in the behavioural .mat.
-        % This is the end of a domain's trials, and what follows is
-        % several seconds of blocking disk writes. Previously nothing was
-        % drawn here, so the last trial screen simply froze -- which is
-        % what a participant reads as a crash.
+        % Gaze goes to its own file: far too large for the behavioural .mat.
         savingFact = utils.didYouKnow(run.seed);
         utils.savingScreen(window, cfg, 0.10, 'Collecting eye-tracking samples', savingFact);
 
@@ -460,20 +366,7 @@ try
 
 catch ME
     ListenChar(0); ShowCursor; Priority(0);
-    % Always call sca, even if `window` never got assigned -- a failed
-    % OpenWindow leaves PsychImaging's internal configuration state dirty,
-    % and if that's never cleared the NEXT task's OpenWindow call fails
-    % too ("did not finalize the previous phase"), which is exactly the
-    % cascade that made one bad run take a whole session down with it.
-    % Screen('CloseAll') is safe to call even when nothing is open.
-    %
-    % sca resets Screen-level window state but NOT PsychImaging's own
-    % persistent configuration-phase variables (they live inside the
-    % psychimaging.m function itself, not in Screen's MEX state). Without
-    % clearing those too, the NEXT OpenWindow call in this MATLAB session
-    % can come back with a handle that LOOKS valid but isn't fully
-    % initialized -- which shows up as a generic Screen "Usage:" error on
-    % the first real draw call after it opens, not at OpenWindow itself.
+    % sca resets Screen state but not PsychImaging's persistent config; both must run or the next OpenWindow in this MATLAB session fails.
     sca;
     clear PsychImaging;
     crashFile = fullfile(cfg.paths.crashed, [run.runId '_crash.mat']);
@@ -498,9 +391,7 @@ trial = struct();
 trial.trial       = planRow.trial;
 trial.domain      = domain;
 trial.competition = planRow.competition;
-% Not utils.ternary: it is an ordinary function, so both branches are
-% evaluated before the call, and planRow.block would throw in exactly the
-% case the guard exists for.
+% Not utils.ternary: both branches evaluate, and planRow.block may not exist.
 if isfield(planRow, 'block'), trial.block = planRow.block; else, trial.block = NaN; end
 if isfield(planRow, 'blockPos'), trial.blockPos = planRow.blockPos; else, trial.blockPos = NaN; end
 trial.stimIdx     = planRow.stimIdx;
@@ -508,8 +399,7 @@ trial.repIdx      = planRow.repIdx;
 trial.nAttrs      = numel(sel.shown);
 trial.practice    = isfield(planRow, 'practice') && planRow.practice;
 
-% Arrival schedule. Competition drives turnover: under high competition
-% options come and go faster, so there is more pressure to decide.
+% Arrival schedule: higher competition means faster turnover.
 onMarket = cfg.auction.onMarketMean.(lower(planRow.competition));
 nInit = min(nBoxes, numel(planRow.stimIdx));
 nLater = max(0, numel(planRow.stimIdx) - nBoxes);
@@ -534,18 +424,11 @@ trial.threshold   = NaN;
 trial.trueValue   = NaN;
 trial.bidStimIdx  = NaN;
 trial.bidRT       = NaN;
-% NaN on any trial that never reached the bid screen -- a timeout, an
-% exhausted market, or a cancelled bid. Must be defaulted here or
-% buildTrialTable hits a missing field on exactly those trials.
+% Must default here or buildTrialTable hits a missing field on trials with no bid.
 trial.bidStartFrac = NaN;
 trial.endReason   = 'exhausted';
 
-% Fixation-start gate: sets a known gaze anchor before the episode begins,
-% and lets the participant start when ready. Crucially this happens BEFORE
-% the market clock starts (t0 below) -- the arrival/expiry schedule starts
-% ticking from when they click ready, not from whenever this function
-% happened to be called, so an option's on-market window is never silently
-% eaten by them still reading the fixation screen.
+% Fixation gate runs BEFORE t0: the arrival/expiry clock starts at the ready click.
 [t0, log] = utils.awaitFixationStart(window, cfg, log, struct( ...
     'trial', planRow.trial, 'nTrials', nTrials, ...
     'label', sprintf('%s - %s competition', domain, planRow.competition)));
@@ -569,10 +452,7 @@ while true
     end
 
     % ---- fill empty boxes -------------------------------------------
-    % A box must ALSO have cleared its vacancy timer, not just be empty
-    % with a queued arrival ready -- otherwise a rejection or expiry that
-    % happens to coincide with an arrival backlog gets an instant
-    % replacement, which is the "market" not behaving like one.
+    % A box must also have cleared its vacancy timer, or a backlog gives instant replacements.
     for b = 1:nBoxes
         if isnan(boxStim(b)) && nextIdx <= numel(planRow.stimIdx) ...
                 && now >= arrivals(nextIdx) && now >= boxVacantUntil(b)
@@ -665,11 +545,7 @@ while true
         continue
     end
 
-    % BDM: the bid decides WHETHER you transact, never what you pay. That
-    % is what makes truthful bidding optimal -- under the old first-price
-    % rule the recorded numbers were strategically shaded bids, not
-    % valuations, and the model would have absorbed the shading into its
-    % threshold and start-point parameters.
+    % BDM: the bid decides WHETHER you transact, never what you pay -- keeps truthful bidding optimal.
     isHouse  = strcmpi(domain, 'houses');
     accepted = utils.ternary(isHouse, bid >= threshold, bid <= threshold);
 
@@ -720,17 +596,12 @@ function [trial, log, gazeStore] = runPracticeEpisode(window, cfg, geom, L, et, 
 practiceRow = planRow;
 practiceRow.trial = 0;
 practiceRow.practice = true;
-% The practice market borrows block 1's schedule but is not part of it.
-% Leaving block = 1 here would put a trial the participant was told does
-% not count inside a block that does.
+% Practice borrows block 1's schedule but must not carry its block index.
 practiceRow.block = NaN;
 practiceRow.blockPos = NaN;
 practiceRow.stimIdx = planRow.stimIdx(1:min(numel(planRow.stimIdx), size(L.boxRects, 2)));
 practiceRow.repIdx = planRow.repIdx(1:numel(practiceRow.stimIdx));
 
-% What the round is flagged as in the saved data is our business, not
-% theirs -- it told the participant nothing they could act on and invited
-% the thought that this round counts for something. Pilot note, 2026-09-16.
 showClickMessage(window, cfg, ['Practice round\n\nTry inspecting, rejecting, and making ' ...
     'or cancelling an offer. Nothing here counts.\n\nClick to begin.']);
 [trial, log, gazeStore] = runSearchEpisode(window, cfg, geom, L, et, log, ...
@@ -743,11 +614,7 @@ end
 %% ======================================================================
 function L = layoutGrid(winRect, cfg)
 %LAYOUTGRID  Six option tiles below the HUD, with AOI rects.
-%
-%   Each tile carries ONE preview image rather than two. The old layout put
-%   the exterior and living-room thumbnails 40 px apart -- about 1 deg --
-%   which no remote tracker can separate. One image per tile removes the
-%   problem instead of papering over it.
+%   One preview image per tile: thumbnails ~1 deg apart are inseparable to a remote tracker.
 
 s = cfg.style;
 W = winRect(3); H = winRect(4);
@@ -789,20 +656,13 @@ end
 
 %% ======================================================================
 function drawGrid(window, cfg, L, stimTbl, tex, sel, A, boxStim, domain, hud) %#ok<INUSD>
-% hud is intentionally unused: the search grid stays clean of progress or
-% condition chrome so nothing here competes with the options themselves
-% for gaze. That information is shown once, on the fixation-start screen
-% that precedes each search episode (see utils.awaitFixationStart), and
-% again at block boundaries -- never during the response itself.
+% hud is unused: no progress chrome during the response; it is shown on the fixation-start screen.
 s = cfg.style;
 Screen('FillRect', window, s.bg);
 
 for b = 1:size(L.boxRects, 2)
     r = L.boxRects(:,b)';
     if isnan(boxStim(b))
-        % Ghost outline for an empty slot. Filled with s.bg -- the ground
-        % it is drawn over -- so it shares a silhouette with a filled tile
-        % instead of reading as a different shape.
         utils.roundRect(window, r, s.radiusPanel, s.bg, s.bgPanel, s.hairlinePx);
         continue
     end
@@ -816,8 +676,7 @@ for b = 1:size(L.boxRects, 2)
         Screen('DrawTexture', window, tex.extPic(idx), [], L.imgRects(:,b)');
     end
 
-    % Preview text: identity plus the core value plus the single highest
-    % rated attribute the participant actually cares about.
+    % Preview text
     Screen('TextFont', window, s.fontContent);
     tr = L.txtRects(:,b)';
     y = tr(2) + 8;
@@ -839,11 +698,7 @@ end
 function [action, gazeStore, log] = showDetail(window, cfg, geom, et, log, ...
     gazeStore, stimTbl, tex, sel, A, idx, domain, hud) %#ok<INUSD>
 %SHOWDETAIL  Full-width attribute panel for one option.
-%
-%   Fixed-size identity photo grid and fixed attribute-slot positions,
-%   shared with continuous_DC_task's card -- a house's photos and
-%   attribute layout look identical regardless of which task or screen
-%   they're shown on.
+%   Photo grid and attribute-slot layout shared with continuous_DC_task's card.
 
 winRect = Screen('Rect', window);
 s = cfg.style;
@@ -853,8 +708,6 @@ detailAOIs = utils.layoutDetailAOIs(winRect, cfg, sel);
 
 action = '';
 while true
-    % Detail view stays clean for the same reason as the search grid --
-    % no HUD here, only the option's own attributes.
     Screen('FillRect', window, s.bg);
 
     Screen('TextFont', window, s.fontContent);
@@ -870,9 +723,7 @@ while true
 
     for k = 1:n
         pr = detailAOIs.rects(:, k)';
-        % pr IS an AOI rect. Painting it rounded is fine -- the rect
-        % itself is untouched and still what layoutDetailAOIs and
-        % preflight.m's mirror of it both compute.
+        % pr is an AOI rect, mirrored in preflight.m; painting it rounded leaves the rect untouched.
         utils.roundRect(window, pr, s.radiusCell, s.bgPanel, ...
             s.border, s.hairlinePx);
 
@@ -881,9 +732,6 @@ while true
         DrawFormattedText(window, attr.label, pr(1)+12, pr(2)+24, s.textDim, ...
             floor((pr(3)-pr(1))/8), 0, 0, 1.15);
 
-        % Value follows the label closely -- fixed offset, not
-        % bottom-anchored to a variable-height cell -- so the gap between
-        % title and value stays the same regardless of attribute count.
         valueY = pr(2) + 50;
         if strcmp(attr.kind, 'image')
             if isfield(tex, attr.var) && idx <= numel(tex.(attr.var)) && isfinite(tex.(attr.var)(idx))
@@ -892,10 +740,7 @@ while true
             end
         else
             Screen('TextSize', window, s.sizeContent);
-            % Not emphasised inside the grid -- see the matching note in
-            % continuous_DC_task.m. The search-grid preview tile (drawGrid)
-            % deliberately KEEPS s.money: there it is the only price
-            % information on screen and participants have to find it.
+            % Plain s.text here (matching note in continuous_DC_task.m); drawGrid's preview keeps s.money.
             col = s.text;
             DrawFormattedText(window, utils.valueString(stimTbl, attr, idx), ...
                 pr(1)+12, valueY, col);
@@ -929,31 +774,8 @@ end
 function [bid, rt, startFrac, gazeStore, log] = getBid(window, cfg, geom, et, log, gazeStore, ...
     stimTbl, tex, sel, A, idx, domain, planRow, nTrials, win, rs)
 %GETBID  Option card on the left, semicircular price scale on the right.
-%
-%   THE OPTION STAYS ON SCREEN WHILE THE BID IS MADE. It did not until
-%   2026-09-16: bidding was a separate full-screen step that replaced the
-%   detail view, so for the entire duration of the pricing response there
-%   was nothing on screen but the arc.
-%
-%   That is not a presentation detail, it is the measurement. The reversal
-%   hypothesis is specifically that PRICING pulls attention onto the
-%   monetary dimension while CHOOSING pulls it onto the qualitative ones --
-%   and you cannot see that in the gaze record if the attributes are not on
-%   screen to be looked at. contdc's price trial already had the card
-%   beside the scale, so the effect was testable in one of the two tasks
-%   and not the other.
-%
-%   Same layout function as contdc's price trial (utils.layoutCardAndArc),
-%   so the two screens are geometrically identical and a fixation is
-%   unambiguously on an attribute cell or on the scale, never on both.
-%
-%   Two older fixes, still true. The scale maximum comes from the sampled
-%   WINDOW rather than the item's own list price -- the old rule meant a
-%   participant could never bid above list, and with a $9.98M outlier in
-%   the set an item-derived scale put every realistic bid in the leftmost
-%   few percent of the arc. And tick labels go through
-%   utils.formatCurrency, which picks its unit from the magnitude; the old
-%   hard-coded '$%.0fk' rendered every tick on the wage scale as '$0k'.
+%   The option must stay on screen during the bid -- that is the measurement.
+%   Layout shared with contdc's price trial; scale range comes from the sampled window, not the item.
 
 s = cfg.style;
 winRect = Screen('Rect', window);
@@ -962,13 +784,9 @@ H = winRect(4);
 scaleMin = win.scaleMin;
 scaleMax = win.scaleMax;
 
-% The advertised figure for THIS option, for the scale marker below.
-% Recomputed here rather than passed in: the caller has it, but threading
-% one more argument through an already-long signature is how signatures rot.
 % NOTE the parameter here is `idx`, not the caller's `stimIdx`.
 itemValue = stimTbl.(A.valueVar)(idx);
 
-% The arc lives entirely inside its own zone, side by side with the card.
 % Identical arithmetic to contdc's price trial.
 BL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
 cx = (BL.arcLeft + BL.arcRight) / 2;
@@ -976,23 +794,16 @@ cy = BL.arcBot - 60;
 outerR = min((BL.arcRight - BL.arcLeft)/2 - 30, (BL.arcBot - BL.arcTop) * 0.55);
 scaleR = outerR - s.priceScale.majorTickPx;
 
-% Five labelled ticks, not seven: at seven the labels crowd each other at
-% the shallow ends of the arc, and the extra two carry no information the
-% endpoints and midpoint do not already give.
 nTicks = 5;
 tickVals = linspace(scaleMin, scaleMax, nTicks);
 
 bid = NaN; rt = NaN;
 
-% Leave the pointer wherever it already is. Forced starts became their own
-% task feature, and random starts were not legible to participants as a
-% neutral choice. NaN marks "not forced" in the saved data.
+% Pointer is not forced; NaN marks "not forced" in the saved data.
 startFrac = NaN;
 t0 = GetSecs;
 
 while true
-    % Bid screen stays clean too -- competition level was already shown on
-    % the fixation-start screen at the top of this search episode.
     Screen('FillRect', window, s.bg);
 
     Screen('TextFont', window, s.fontContent);
@@ -1004,18 +815,12 @@ while true
     end
     DrawFormattedText(window, q, 'center', BL.promptY, s.text);
 
-    % The option being priced, drawn from the same function that draws it
-    % on the contdc cards and returning the cells it drew into. Its AOIs
-    % are computed once per domain in the caller via utils.cardAOIs with
-    % the 'bid' prefix.
+    % Same draw function as the contdc cards; its AOIs are computed per domain via utils.cardAOIs('bid').
     utils.drawOptionCard(window, cfg, BL.cardRect, stimTbl, tex, sel, idx);
 
     % Arc and ticks.
     a = linspace(pi, 2*pi, 180);
     ax = cx + scaleR*cos(a);  ay = cy + scaleR*sin(a);
-    % s.track, not s.border: this arc IS the scale the participant sets a
-    % bid on. It sits at the inner end of the major ticks, so the tick
-    % marks read as rising from the scale rather than hanging below it.
     Screen('DrawLines', window, [ax; ay], 4, s.track);
 
     % Ticks and labels
@@ -1033,16 +838,7 @@ while true
         DrawFormattedText(window, lbl, lx - bnd(3)/2, ly, s.textDim);
     end
 
-    % Where the advertised figure sits on this scale.
-    %
-    % METHODOLOGICAL NOTE, read before assuming this is harmless: under
-    % BDM the optimal bid is the participant's own valuation, and drawing
-    % the listed price on the response scale gives them a salient
-    % reference point right where they are about to answer. Expect bids to
-    % cluster nearer it than they otherwise would. That is a real effect
-    % on the dependent variable, not a display detail -- it is switched on
-    % because it was asked for, and cfg.display.showValueMarker turns it
-    % off without touching this code.
+    % Listed-price marker anchors bids toward it -- a real DV effect; cfg.display.showValueMarker toggles it off.
     if cfg.display.showValueMarker
         mFrac = (itemValue - scaleMin) / max(scaleMax - scaleMin, eps);
         if isfinite(mFrac) && mFrac >= 0 && mFrac <= 1
@@ -1065,22 +861,17 @@ while true
     ang = atan2(max(dy, 0), dx);
     frac = 1 - ang/pi;
     frac = min(max(frac, 0), 1);
-    if ~isfinite(frac), frac = 0.5; end   % defensive: never let a bad mouse
-                                           % read reach a Screen() coordinate
+    if ~isfinite(frac), frac = 0.5; end   % GetMouse can return NaN; never reach Screen()
     curVal = scaleMin + frac * (scaleMax - scaleMin);
 
     px = cx + scaleR*cos(pi + frac*pi);
     py = cy + scaleR*sin(pi + frac*pi);
     Screen('DrawDots', window, [px; py], 20, s.interactive, [], 2);
 
-    % Snap to the resolution it is DISPLAYED at, so the recorded bid is
-    % exactly the number the participant saw when they clicked.
+    % Snap to display resolution so the recorded bid equals what was seen.
     curVal = utils.snapValue(curVal, A.priceStyle);
 
-    % Above the arc, not inside its bowl. Inside, the number sat between
-    % the two arms of the scale and read as a tick label rather than as
-    % the answer being given. Clamped into the arc zone so it cannot ride
-    % up over the card or the question -- same expression as contdc.
+    % Readout above the arc, clamped into the arc zone -- same expression as contdc.
     Screen('TextSize', window, s.sizeTitle);
     txt = utils.formatCurrency(curVal, A.priceStyle);
     bnd = Screen('TextBounds', window, txt);
@@ -1125,14 +916,7 @@ style = utils.ternary(isHouse, 'total', 'hourly');
 
 if accepted
     if isHouse
-        % The houses market is rival BUYERS, not a private sale. The old
-        % wording read as a seller accepting less than an offer already on
-        % the table, which is what the pilot objected to. Name the
-        % mechanism instead: you win at what it took to beat the next best
-        % offer. Saying the second-price rule out loud is not a leak -- it
-        % is what makes truthful bidding optimal, and a participant who is
-        % not told it assumes first-price and shades the bid, which is the
-        % primary DV. verify_static.sh guards the old phrasing out.
+        % Second-price wording is deliberate (truthful bidding); verify_static.sh guards the old phrasing out.
         msg = sprintf(['You won the house.\n\n' ...
             'You offered %s.\nThe next best offer was %s, so that is what you pay.'], ...
             utils.formatCurrency(bid, style), utils.formatCurrency(pricePaid, style));
@@ -1173,10 +957,6 @@ txt = utils.incentives('instructions', domain, cfg.incentives);
 Screen('FillRect', window, s.bg);
 Screen('TextFont', window, s.fontContent);
 Screen('TextSize', window, s.sizeContent);
-% utils.checkForQuit has always listened for 'q' on every screen; it
-% was simply never told to the participant, which makes it a
-% researcher's escape hatch rather than the participant's right to
-% withdraw that it is supposed to be.
 DrawFormattedText(window, [txt quitNotice()], ...
     'center', 'center', s.text, 62, 0, 0, 1.6);
 Screen('Flip', window);
@@ -1222,11 +1002,7 @@ end
 
 %% ======================================================================
 function choice = askComprehension(window, cfg, question, choices)
-% This screen asks for a click on one of two boxes, so it owns its cursor
-% rather than trusting whatever ran before it to have left one visible.
-% What ran before it is elicitation, which used to hide the cursor on the
-% way out -- and an aimed click at an invisible pointer is the worst kind
-% of dead time, because the participant cannot tell it from a crash.
+% Owns its cursor: elicitation may leave it hidden.
 ShowCursor('Arrow', window);
 s = cfg.style;
 scr = Screen('Rect', window);
@@ -1344,16 +1120,7 @@ end
 %% ======================================================================
 function [plan, nStruck] = retireStimulus(plan, afterTrial, stimIdx, minOptions)
 %RETIRESTIMULUS  Remove a won item from every trial that has not run yet.
-%
-%   Struck from plan(afterTrial+1:end), keeping stimIdx and repIdx aligned.
-%   A trial that would drop below minOptions keeps the item rather than
-%   running a market thinner than the design calls for -- a duplicated
-%   listing is a smaller problem than a market with nothing in it, and the
-%   case only arises if the sampled window was already thin.
-%
-%   repIdx is NOT renumbered. It records how many times the participant had
-%   seen that item by that point, which stays true whether or not later
-%   occurrences are struck; renumbering would rewrite history.
+%   Trials that would drop below minOptions keep the item; repIdx is never renumbered (records exposures to date).
 
 nStruck = 0;
 for k = (afterTrial + 1):numel(plan)
@@ -1371,19 +1138,13 @@ end
 %% ======================================================================
 function gap = vacancyGap(cfg, rs)
 %VACANCYGAP  Seconds a freed box stays empty before it may refill.
-%
-%   Gamma-distributed so turnover is irregular rather than metronomic, but
-%   with a hard ceiling: the untruncated tail produced slots that sat empty
-%   long enough for the 2026-09-16 pilot to read them as the market having
-%   stalled. Capping beats lowering the mean -- typical turnover is
-%   unchanged and only the outliers are cut.
+%   Gamma with a hard cap so a slot never sits empty long enough to read as a stall.
 gap = utils.gammaSample(cfg.auction.vacancyShape, ...
     cfg.auction.vacancyGapMean/cfg.auction.vacancyShape, 1, rs);
 gap = min(gap, cfg.auction.vacancyGapMax);
 end
 
 
-%% ======================================================================
 %% ======================================================================
 function list = struct2texlist(tex)
 list = [];
@@ -1426,16 +1187,7 @@ end
 %% ======================================================================
 function s = rejectedList(idx)
 %REJECTEDLIST  Rejected stimulus indices as one semicolon-joined string.
-%
-%   The identities were always recorded -- trial.rejected in the .mat, and
-%   an option_reject event carrying stimIdx and dwellSec in the event log
-%   -- but the CSV only ever carried the COUNT. That made "which options
-%   did they turn down" a question you had to open the .mat to answer,
-%   which in practice means nobody asks it.
-%
-%   A long-format CSV cannot hold a variable-length list in a cell, so it
-%   goes in as text: '' for none, '14', '14;27;31'. Order is the order
-%   they were rejected in.
+%   '' for none, '14', '14;27;31'; order is rejection order.
 
 if isempty(idx)
     s = "";

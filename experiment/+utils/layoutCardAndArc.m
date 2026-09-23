@@ -1,17 +1,8 @@
 function L = layoutCardAndArc(winRect, cfg, geom, nAttrs)
 %UTILS.LAYOUTCARDANDARC  Option card on the left, pricing arc on the right.
 %
-%   The layout for every screen where a participant sets a price while
-%   looking at the option they are pricing: contdc's price trial, and --
-%   since 2026-09-16 -- the auction's bid screen.
-%
-%   Side by side rather than stacked. Stacking put the scale's tick labels
-%   directly beneath the attribute card with no reliable gap between them,
-%   and the fixed-size photo/attribute grids need more vertical room than a
-%   stacked layout could spare once the arc claimed the bottom of the
-%   screen. Side by side gives both components their own clear zone, which
-%   is also what makes the gaze record interpretable: a fixation is either
-%   on an attribute cell or on the scale, never ambiguously on both.
+%   Layout for every screen where a price is set while viewing the option.
+%   Side by side so a fixation is on an attribute cell or the scale, never both.
 
 s = cfg.style;
 W = winRect(3); H = winRect(4);

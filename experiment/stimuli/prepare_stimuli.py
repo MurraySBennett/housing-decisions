@@ -1,31 +1,11 @@
 #!/usr/bin/env python3
-"""
-prepare_stimuli.py -- reproducible stimulus preparation.
+"""prepare_stimuli.py -- reproducible stimulus preparation; prepare once, commit output + provenance, treat as frozen.
 
-Reads a raw stimulus table plus a JSON config, writes a prepared stimulus
-table plus a provenance record. Nothing here happens at runtime: prepare
-once, commit the output and the provenance, and treat the result as frozen.
+Modes: ecological (impute only; weights not identifiable), permuted (impute,
+then attenuate correlations; marginals and group means preserved exactly),
+synthetic (balanced feature space optimised for orthogonality).
 
-Three modes, selected in the config:
-
-  ecological  Impute missing rows only. Natural covariance preserved.
-              Attribute weights are NOT identifiable in this arm -- it is
-              for out-of-sample validation of weights estimated elsewhere.
-
-  permuted    Impute, then permute values within group to attenuate
-              cross-attribute correlation to a target. Every attribute's
-              marginal distribution and every group mean are preserved
-              EXACTLY; only the row-wise pairing changes.
-
-  synthetic   Generate a fully balanced feature space from scratch. Each
-              attribute takes k levels, each level appears equally often,
-              and the level assignment is optimised for orthogonality.
-              Marginals can be matched to the source so values stay
-              plausible, or spread evenly across the range.
-
-Usage:
-    python3 prepare_stimuli.py --config configs/jobs_ecological.json
-    python3 prepare_stimuli.py --config configs/jobs_synthetic.json --report-only
+Usage: python3 prepare_stimuli.py --config configs/jobs_ecological.json [--report-only]
 """
 
 import argparse
@@ -132,12 +112,7 @@ def impute_hotdeck(df, cfg, rng):
 
 # =========================================================== 2 attenuate
 def decorrelate(df, cols, rng, target, iters, group_column=None):
-    """Swap values within (group x attribute) cells to reduce correlation.
-
-    Permutation is confined to a group-attribute cell, so the marginal
-    distribution of each attribute and the group mean for each attribute
-    are preserved exactly. Only which row holds which value changes.
-    """
+    """Swap values within (group x attribute) cells: marginals and group means preserved exactly."""
     df = df.copy()
     M = np.array(df[cols].values, dtype=float, copy=True)
 
@@ -183,13 +158,7 @@ def decorrelate(df, cols, rng, target, iters, group_column=None):
 
 # =========================================================== 3 synthesise
 def synthesise(cfg, rng):
-    """Balanced factorial-style feature space, optimised for orthogonality.
-
-    Each attribute takes k levels; each level appears equally often; the
-    assignment across attributes is optimised so that no two attributes
-    are correlated above the target. Group labels carry no attribute
-    signal unless group_carries_signal is set.
-    """
+    """Balanced factorial-style feature space, optimised for orthogonality."""
     spec = cfg['synthetic']
     n = spec['n_rows']
     cols = cfg['attribute_columns']
@@ -197,13 +166,7 @@ def synthesise(cfg, rng):
     target = spec.get('target_max_r', 0.15)
     iters = spec.get('iterations', 60000)
 
-    # n_levels is the default for every attribute; n_levels_by_column
-    # overrides it for named ones. This exists because an attribute that
-    # ALSO serves as the advertised anchor is the only one the runtime
-    # slices (utils.sampleWindow), and a 4-level grid can leave a single
-    # distinct value inside a window -- collinear with the intercept, so
-    # its coefficient is not identified. The rating attributes want few
-    # levels; the anchored one wants enough to survive the slice.
+    # The anchored attribute needs enough levels to survive the utils.sampleWindow slice, or it is not identified.
     per_col = spec.get('n_levels_by_column', {})
     unknown = set(per_col) - set(cols)
     if unknown:
@@ -211,14 +174,7 @@ def synthesise(cfg, rng):
                          f'{sorted(unknown)}')
     nlevs = [int(per_col.get(c, nlev)) for c in cols]
 
-    # Level SPACING, per column. 'quantile' (the default) puts levels at
-    # quantile midpoints of the real data, so values look like real values
-    # -- but it inherits the source's skew, and for the anchored column
-    # that is the wrong shape: the window is a fixed RATIO band around the
-    # anchor (0.6x to 1.6x), so a skewed grid gives plenty of levels in the
-    # dense middle and almost none at the top. 'geometric' spaces levels
-    # evenly in log space across the same span, which makes the number of
-    # levels inside a window roughly constant at every anchor.
+    # The window is a fixed ratio band (0.6x-1.6x); 'geometric' spacing keeps the level count inside it roughly constant at every anchor.
     spacing_by_col = spec.get('spacing_by_column', {})
     unknown = set(spacing_by_col) - set(cols)
     if unknown:
@@ -229,20 +185,7 @@ def synthesise(cfg, rng):
         raise SystemExit(f'unknown spacing(s): {sorted(bad)} '
                          f'(expected "quantile" or "geometric")')
 
-    # Within-level jitter. A bare factorial shows every participant the same
-    # four numbers over and over, which no real listing set does -- and a
-    # participant who notices that every job pays one of four wages is doing
-    # a different task from the one we think. Jitter buys natural-looking
-    # variation without touching the design: the LEVEL assignment is already
-    # fixed above, so each level still appears equally often and the
-    # orthogonality that was optimised over level indices is untouched.
-    #
-    # The unit is a fraction of the HALF-GAP to the nearest neighbouring
-    # level, not an absolute amount or a percentage of the value. That is
-    # what makes one number safe across a 1-5 rating scale and a $12-$92
-    # geometric wage grid at once: it is derived from the actual spacing, so
-    # at any value below 1.0 a jittered value can never wander into a
-    # neighbouring level's territory. 0.5 is comfortably inside.
+    # Jitter unit: fraction of the half-gap to the nearest level, so below 1.0 a value can never cross into a neighbouring level.
     jitter_default = float(spec.get('jitter', 0.0))
     jitter_by_col = spec.get('jitter_by_column', {})
     unknown = set(jitter_by_col) - set(cols)
@@ -304,8 +247,7 @@ def synthesise(cfg, rng):
         dec = aspec.get('decimals', 1)
         kl = nlevs[k]
         if src is not None and c in src.columns and src[c].notna().any():
-            # Level i -> the midpoint of quantile bin i of the real data,
-            # so values look like real values but the design stays balanced.
+            # Level i -> midpoint of quantile bin i of the real data.
             qs = np.linspace(0, 1, kl + 1)
             edges = np.nanquantile(src[c].astype(float), qs)
             mids = (edges[:-1] + edges[1:]) / 2
@@ -313,28 +255,20 @@ def synthesise(cfg, rng):
             lo, hi = aspec['range']
             mids = np.linspace(lo, hi, kl)
         if spacing_by_col.get(c, 'quantile') == 'geometric':
-            # Same span, log-uniform inside it. Keeping the endpoints means
-            # the values stay in the range the real data occupies.
+            # Same span, log-uniform inside it; endpoints kept.
             if mids[0] <= 0:
                 raise SystemExit(f'geometric spacing needs a positive lower '
                                  f'endpoint; {c} starts at {mids[0]:g}')
             mids = np.geomspace(mids[0], mids[-1], kl)
         exact = mids[M[:, k].astype(int)]
-        # Rounding can collapse two quantile midpoints onto one value, which
-        # silently costs a level. At 4 levels it never happened; with a
-        # finer grid on a skewed column it can, so say so rather than let
-        # the design quietly shrink.
+        # Rounding can collapse two midpoints onto one value, silently costing a level.
         if len(np.unique(np.round(exact, dec))) < kl:
             print(f'  WARNING: {c} asked for {kl} levels but rounding to '
                   f'{dec} decimal(s) leaves '
                   f'{len(np.unique(np.round(exact, dec)))} distinct values')
 
         if jitters[k] > 0 and kl > 1:
-            # Half-gap to the NEAREST neighbour, per level. Edge levels have
-            # one neighbour; interior levels take the smaller of the two, so
-            # an uneven grid (quantile midpoints, or geometric, where gaps
-            # differ by an order of magnitude end to end) is handled without
-            # a special case.
+            # Half-gap to the nearest neighbour; interior levels take the smaller of the two.
             gaps = np.diff(mids)
             half = np.empty(kl)
             half[0] = gaps[0] / 2
@@ -375,13 +309,7 @@ def synthesise(cfg, rng):
 
 # ========================================================= 4 new columns
 def generate_columns(df, cfg, rng):
-    """Add derived/new attributes defined in the config.
-
-    Real-world versions of these correlate with pay and with each other.
-    We deliberately do not reproduce that: correlated predictors are what
-    makes attribute weights unrecoverable. Group means carry plausibility;
-    within-group residuals are independent draws.
-    """
+    """Add derived attributes from the config; within-group residuals are independent draws by design."""
     gen = cfg.get('generate', {})
     if not gen:
         return df, {}
@@ -417,15 +345,7 @@ def generate_columns(df, cfg, rng):
 
 # ================================================================== main
 def resolve(path_str, base):
-    """Resolve a config path relative to the SCRIPT's own directory, not
-    the current working directory and not the config file's location.
-
-    Configs live in stimgen/configs/ while the raw CSVs, this script, and
-    the prepared/ output all live one level up in stimuli/ -- so paths
-    written in a config as 'job_stimuli.csv' or 'prepared/foo.csv' need a
-    single fixed anchor that doesn't change no matter where you run the
-    script from or where the config happens to sit.
-    """
+    """Resolve a config path relative to the script's own directory, not cwd or the config's location."""
     path = Path(path_str)
     return path if path.is_absolute() else (base / path)
 
@@ -448,10 +368,6 @@ def main():
     if args.output: cfg['output_file'] = args.output
     if args.seed is not None: cfg['seed'] = args.seed
 
-    # Anchor to the script's directory (stimuli/), not cwd and not the
-    # config file's directory (stimuli/stimgen/configs/) -- those two do
-    # not match in this repo layout, which is exactly the case this needs
-    # to handle correctly.
     cfg['input_file']  = str(resolve(cfg['input_file'], script_dir))
     if 'output_file' in cfg:
         cfg['output_file'] = str(resolve(cfg['output_file'], script_dir))

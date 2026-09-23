@@ -4,18 +4,7 @@ function [ratings, rts, order] = elicitVAS(window, cfg, items, prompt, anchors, 
 %   ratings : 1 x nItems, NORMALISED 0-1 in the order of `items`
 %   rts     : 1 x nItems response times
 %   order   : the randomised presentation order actually used
-%
-%   Two fixes over the previous rankIndustry/rankAttrs:
-%
-%   1. The old versions returned raw PIXEL x-coordinates, so ratings were in
-%      screen units and not comparable across resolutions or machines. These
-%      are normalised against the line endpoints.
-%   2. Presentation order is randomised and returned, since leaving earlier
-%      marks visible makes this a relative-placement task and order matters.
-%
-%   Note this IS a rating on a continuous line, not a ranking -- previous
-%   marks stay visible so participants place each item relative to the rest.
-%   Worth describing accurately in the write-up.
+%   A rating with previous marks visible, not a ranking -- order matters.
 
 s = cfg.style;
 scr = Screen('Rect', window);
@@ -44,11 +33,8 @@ for k = 1:n
     ShowCursor('Arrow', window);
 
     while true
-        % utils.getMouse, not raw GetMouse(window): this screen runs before
-        % any trial does, right after the window opens and often before it
-        % has taken focus, which is exactly the case where GetMouse(window)
-        % has been seen to return NaN on Windows without throwing. A NaN mx
-        % here goes straight into Screen('DrawLine') below.
+        % utils.getMouse, not GetMouse: GetMouse can return NaN on Windows
+        % right after OpenWindow, and a NaN mx reaches Screen('DrawLine').
         [mx, ~, buttons] = utils.getMouse(window);
         mx = min(max(mx, lineLeft), lineRight);
 
@@ -60,8 +46,7 @@ for k = 1:n
         Screen('TextSize', window, s.sizeTitle);
         DrawFormattedText(window, items{idx}, 'center', cy - 120, s.text);
 
-        % The line. s.track, not s.border: this line IS the response
-        % scale, so it must stay legible even when decorative edges go soft.
+        % s.track, not s.border: this line is the response scale.
         Screen('DrawLine', window, s.track, lineLeft, lineY, lineRight, lineY, 3);
         Screen('DrawLine', window, s.track, lineLeft, lineY-16, lineLeft, lineY+16, 3);
         Screen('DrawLine', window, s.track, lineRight, lineY-16, lineRight, lineY+16, 3);
@@ -98,12 +83,6 @@ for k = 1:n
     placedLabel{end+1} = items{idx}; %#ok<AGROW>
 end
 
-% The cursor is deliberately LEFT VISIBLE. This used to end with
-% HideCursor(window), and that is what made the auction's comprehension
-% check unusable: elicitation runs before the instructions, nothing turned
-% the cursor back on afterwards, and the check asks the participant to
-% click one of two boxes with an invisible pointer. Hiding it here bought
-% nothing either -- every gaze-recorded trial starts at
-% utils.awaitFixationStart, which shows the cursor again anyway.
+% Cursor deliberately left visible: the auction's comprehension check needs it.
 
 end

@@ -1,43 +1,12 @@
 <#
-    deploy_to_share.ps1 -- copy the runnable code from this repo onto the
-    OSU lab share, one explicitly named file at a time.
-
-    THIS IS A STOPGAP. It exists because git is not available on the lab
-    machine yet. A one-way manual copy is exactly the mechanism that let the
-    two copies diverge before (see docs/shared-drive-parity-2026-09-10.md).
-    The moment git is installed there, replace this with a clone and delete
-    this script.
-
-    SAFETY PROPERTIES, deliberately:
-      - Every file is named explicitly or enumerated from a named directory.
-        There is no mirror, no /MIR, no sync, and no delete anywhere in here.
-        A file on the share that this script does not name is left untouched.
-      - The backup directory is timestamped to the second, so it never
-        collides with an earlier deploy. It still refuses to run if that
-        exact path somehow exists, rather than overwriting a backup.
-      - Participant data (Experiment\Data) and the 605MB house image set
-        (Experiment\stimuli\house_images) are never read, written, or backed
-        up. They are excluded by name, not by hoping the manifest misses them.
-      - Nothing outside housing_wages\ is touched. The sibling directories on
-        that share are other people's projects.
-
-    Run from Windows PowerShell. NOT with -ExecutionPolicy Bypass -File:
-    this machine has MachinePolicy = AllSigned, which refuses that, and a
-    local -ExecutionPolicy argument cannot override a machine policy. Pipe
-    the text in as a command instead:
-
+    deploy_to_share.ps1 -- copy the runnable code onto the OSU lab share; stopgap until git exists there.
+    Never deletes, never touches Data or house_images.
+    MachinePolicy AllSigned refuses -ExecutionPolicy Bypass -File, so pipe the text in; the share is reachable from Windows, not from WSL. From Windows PowerShell:
         $PS = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
         & $PS -NoProfile -Command "Invoke-Expression (Get-Content -Raw -LiteralPath '<this file>')"
-
-    From WSL, where the repo lives, the same thing:
-
+    From WSL:
         PS=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
         $PS -NoProfile -Command "Invoke-Expression (Get-Content -Raw -LiteralPath '\\\\wsl.localhost\\Ubuntu\\home\\msb\\projects\\housing-decisions\\scripts\\deploy_to_share.ps1')"
-
-    The share is reachable from Windows (the UNC resolves, nothing is
-    mapped) but NOT from WSL, which only has C: mounted -- so the copy has
-    to be driven from the Windows side, reading the repo over
-    \\wsl.localhost.
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -45,10 +14,7 @@ $ErrorActionPreference = 'Stop'
 $SRC = '\\wsl.localhost\Ubuntu\home\msb\projects\housing-decisions'
 $HW  = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages'
 $EXP = Join-Path $HW 'Experiment'
-# Timestamped, so a second deploy on the same day does not collide with
-# the first. The hardcoded 2026-09-15 name meant the script threw on its
-# own second run -- which is a failure you discover at deploy time, i.e.
-# the worst possible moment.
+# Timestamped so a second deploy on the same day never collides.
 $BK  = Join-Path $HW ('Archive\Experiment_pre-' + (Get-Date -Format 'yyyy-MM-dd_HHmmss'))
 
 # Directories under Experiment\ that this script must never read or write.
@@ -117,9 +83,7 @@ foreach ($f in @('job_stimuli_synthetic.csv',   'job_stimuli_synthetic_provenanc
 foreach ($f in @('jobs_synthetic.json', 'jobs_ecological.json', 'jobs_attenuated.json')) {
     $manifest += [pscustomobject]@{ From = "experiment\stimuli\stimgen\configs\$f"; ToDir = 'Experiment\stimuli\stimgen\configs' }
 }
-# window_check.py goes with prepare_stimuli.py. It is the check that catches
-# a stimulus column that looks fine in the file and collapses inside an
-# anchored window, and a check that exists on only one machine is not one.
+# window_check.py goes with prepare_stimuli.py.
 $manifest += [pscustomobject]@{ From = 'experiment\stimuli\stimgen\window_check.py'; ToDir = 'Experiment\stimuli\stimgen' }
 
 # -- R analysis

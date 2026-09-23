@@ -4,19 +4,7 @@ function cfg = config(varargin)
 %   cfg = utils.config()
 %   cfg = utils.config('rig', 'dev', 'testing', true, 'jobsArm', 'synthetic')
 %
-%   Name-value options:
-%     'projRoot' override the project root
-%     'rig'      'lab' (default) or 'dev' -- see utils.rigProfiles. Controls
-%                screen geometry, eye-tracking default, and whether AOI
-%                spacing failures are enforced or just informational.
-%     'testing'  logical. THIS IS THE FIX for the bug where cfg.testing.
-%                enabled stayed false regardless of what was passed to
-%                utils.startSession: previously utils.config() took no testing
-%                argument at all, so the flag never reached the struct
-%                that auction_task/continuous_DC_task actually read.
-%     'jobsArm'  'synthetic' (default), 'ecological', or 'attenuated' --
-%                see stimgen/README.md. Selects which prepared job stimulus
-%                file to load; see also the note on reproducibility below.
+%   Options: projRoot, rig ('lab'|'dev'), testing, trialsPerCell, jobsArm.
 
 p = inputParser;
 p.addParameter('projRoot', '', @(x) ischar(x) || isstring(x));
@@ -40,40 +28,20 @@ cfg.rig = rp.name;
 cfg.aoiEnforcement = rp.aoiEnforcement;
 
 % --- Display / PTB preferences -----------------------------------------
-% SkipSyncTests used to be tied to cfg.testing.enabled, which is the wrong
-% lever: whether PTB can verify vblank timing is a property of THIS
-% MACHINE (OS, driver, compositor), not of whether you're piloting or
-% collecting real data. On Windows 10/11 with the DWM compositor active,
-% PTB frequently cannot verify sync at all and Screen('OpenWindow') fails
-% outright with a hard error rather than a warning -- skipping the test is
-% the documented workaround, not a hack. This does mean sub-frame flip
-% timing isn't independently verified; if that precision ever matters,
-% validate separately with a photodiode rather than relying on PTB's
-% internal check on this hardware.
+% Machine property, not a testing flag: Windows DWM often fails PTB's sync check
+% outright; skipping is the documented workaround (photodiode if timing matters).
 cfg.display.skipSyncTests = rp.skipSyncTests;
 
 cfg.paths.root       = projRoot;
 cfg.paths.tobii      = fullfile(projRoot, 'TobiiPro.SDK.Matlab_1.9.0.59');
 cfg.paths.experiment = fullfile(projRoot, 'housing_wages', 'Experiment');
 
-% "root/stimuli/..." from earlier refers to your local checkout of
-% housing_wages/Experiment (cfg.paths.experiment), NOT the outer network
-% share root (cfg.paths.root) -- those are two different "roots" and this
-% was pointed at the wrong one. Real path on the share:
-%   \\...\PSY-kvam.4\housing_wages\Experiment\stimuli\prepared\...
-% cfg.paths.experiment/stimuli holds the raw CSVs and prepare_stimuli.py,
-% .../stimuli/house_images holds the house photos, .../stimuli/prepared
-% holds prepare_stimuli.py's output (see .../stimuli/stimgen/configs for
-% the configs that produce it).
+% Anchor stimuli paths to cfg.paths.experiment, not cfg.paths.root.
 cfg.paths.stimuli    = fullfile(cfg.paths.experiment, 'stimuli');
 cfg.paths.prepared   = fullfile(cfg.paths.stimuli, 'prepared');
 
 % --- Runtime data and images --------------------------------------------
-% Participant data and the 605MB house image set live inside Experiment on
-% the share and are kept out of git by .gitignore. Do not point the task at
-% a sibling directory: the share layout is the source of truth.
-%
-% demo_battery.m overrides both for a laptop run and is unaffected.
+% Data and images live on the share, gitignored; share layout is the source of truth.
 cfg.paths.local      = cfg.paths.experiment;
 cfg.paths.images     = fullfile(cfg.paths.stimuli, 'house_images');
 
@@ -93,13 +61,7 @@ for k = 1:numel(writeDirs)
 end
 
 % --- Stimulus files -----------------------------------------------------
-% Houses need no preparation. Jobs are read from whichever arm the
-% pipeline produced, named by convention rather than copied/renamed by
-% hand -- prepare_stimuli.py always writes prepared/job_stimuli_<arm>.csv
-% plus a _provenance.json alongside it. Pointing here at the arm name
-% keeps the link to that provenance file intact; a manual copy-and-rename
-% severs it, which is exactly the "how do I know which run produced this"
-% problem this pipeline exists to avoid.
+% Jobs file is named by arm to keep the link to prepare_stimuli.py's provenance JSON.
 cfg.stimuli.jobsArm  = lower(char(opt.jobsArm));
 cfg.stimFiles.houses = fullfile(cfg.paths.stimuli, 'house_stimuli.csv');
 cfg.stimFiles.jobs   = fullfile(cfg.paths.prepared, ...
@@ -131,50 +93,14 @@ cfg.lateAtMaxOnly = true;         % Zone / work arrangement held to top level
 cfg.sampling.spread = [0.6 1.6];  % window around the participant's anchor
 cfg.sampling.minN   = 12;         % widen until this many stimuli are inside
 
-% How the anchor window is filled, per domain. See utils.applyWindow.
-%
-%   false -- SELECT the stimuli whose value already falls in the window
-%            (utils.sampleWindow). Correct when the set is big enough and
-%            evenly enough spread to fill it.
-%   true  -- keep every stimulus and FIT its value onto the window by rank
-%            (utils.fitToWindow). Correct when it is not.
-%
-% Houses are not. There are 80 of them spanning 126:1 in price against a
-% 2.67:1 window, so a $150k budget left 7-14 houses: the same house ~21
-% times over 24 auction trials, and contdc short of the 36 distinct it
-% needs for 3 attribute levels. Fitting gives every participant all 80,
-% spread evenly over their own budget range. Jobs does not need it -- the
-% synthetic arm puts 40-60 in every window -- and paying the cost of
-% fitting where it buys nothing would be the wrong trade.
+% Per domain: false selects in-window rows (sampleWindow), true rank-fits all
+% values onto the window (fitToWindow). Houses need fitting: 80 items, 126:1 spread.
 cfg.sampling.fitToWindow.houses = true;
 cfg.sampling.fitToWindow.jobs   = false;
 cfg.sampling.nTopIndustries = 4;
 
 % --- Auction task -----------------------------------------------------
-% A "trial" is a whole search episode, so 12 of them is roughly 12 minutes
-% and yields a lot of gaze data per trial. Attribute count is FIXED here:
-% 12 trials over 2 competition levels is 6 per level, which works, but
-% adding 3 attribute levels would leave 2 per cell. That manipulation lives
-% in continuous_DC_task, which has short trials and can afford it.
-%
-% These counts are the same for every participant -- personalization lives
-% in WHICH stimuli and attributes are shown (via anchor + ratings), not in
-% how many trials there are. See the project README for why that split is
-% what makes participants comparable at all.
-% 24 trials in 4 blocks of 6, ABBA, with the starting level counterbalanced
-% by participant parity inside utils.trialPlan. Competition used to be
-% re-rolled per trial, which is why neither pilot participant noticed it
-% changing -- with nothing to form an expectation from, the manipulation
-% barely operated. Blocking costs roughly 12-15 min per session on top of
-% the measured ~45.
-%
-% ABBA over 4 blocks rather than one run of 12 per level: it puts both
-% levels at the same mean serial position, so competition is orthogonal to
-% fatigue and practice WITHIN a participant and not merely on average
-% across the sample. Each level still gets 12 trials, and each market
-% yields several bid outcomes, so 6 markets is more feedback about the
-% regime than the trial count suggests. nTrials must divide evenly by
-% nBlocks.
+% ABBA blocking via utils.trialPlan; nTrials must divide evenly by nBlocks.
 cfg.auction.nTrials          = 24;
 cfg.auction.nBlocks          = 4;
 cfg.auction.nAttrs           = 6;    % counts the core attribute
@@ -182,88 +108,43 @@ cfg.auction.nOptionsPerTrial = 12;   % ~10-15 is what the stimulus set supports
 cfg.auction.trialTimeoutSec  = 90;
 cfg.auction.feedbackSec      = 2.2;
 cfg.auction.driftEvery       = 4;    % drift check every N trials
-% A won item is struck from every later market (see retireStimulus), but
-% never so far that a market runs thinner than this.
+% Floor on market size after retireStimulus strikes won items.
 cfg.auction.minOptionsAfterRetire = 6;
 
-% Market dynamics. Competition drives turnover as well as price. THESE ARE
-% NOT SCALED BY TESTING MODE -- cfg.testing.enabled never touches this
-% section, so what you see in a dev/testing run is exactly what a real
-% participant would see. If it feels too fast (or slow), that's this
-% config, not a testing-only artifact -- tune it here.
-%
-% Initial pilot numbers were 14s / 7s mean and felt too frantic under high
-% competition; slowed to the values below. Still worth another pass once
-% you've watched a few real participants play through it.
+% Market dynamics. Not scaled by testing mode; tune here.
 cfg.auction.onMarketMean.low  = 18;  % mean seconds between arrivals
 cfg.auction.onMarketMean.high = 12;
 cfg.auction.arrivalShape      = 2;   % gamma shape
 cfg.auction.dwellFactor       = 3.0; % how long an option stays once it lands
 
-% Vacancy gap: how long a box stays empty after an option leaves (expired,
-% rejected, or bid-rejected) before it's eligible to receive the NEXT
-% queued option. Without this, a box that frees up while there's an
-% arrival backlog gets refilled in the same frame -- rejecting or losing an
-% option instantly produces a replacement, which doesn't read as "this job
-% got filled / this house got listed elsewhere," it reads as an infinite
-% shuffle. Real markets have a gap between a listing coming down and the
-% next one appearing in roughly the same slot.
+% Vacancy gap: delay before an emptied box may receive the next queued option.
 cfg.auction.vacancyGapMean  = 4;   % mean seconds a box stays empty
 cfg.auction.vacancyShape    = 2;   % gamma shape
-% The mean is fine; it is the gamma's right tail that produces the long
-% dead slots the 2026-09-16 pilot noticed. Cap it rather than lower the
-% mean, so typical turnover is unchanged and only the outliers are cut.
+% Cap the gamma tail rather than lowering the mean; only outliers are cut.
 cfg.auction.vacancyGapMax   = 10;  % seconds; hard ceiling on the draw
 
-% Acceptance thresholds. MULTIPLIERS on the item's value, applied in
-% opposite directions per domain: a house buyer must bid above the
-% threshold, a job seeker must ask below it.
+% Acceptance thresholds: multipliers on value, opposite directions per domain
+% (buyer bids above, job seeker asks below).
 cfg.auction.compHigh       = 1.10;
 cfg.auction.compLow        = 0.90;
 cfg.auction.thresholdNoise = 0.12;   % without this, high comp guarantees a loss
 
 % --- Continuous / discrete-choice task ---------------------------------
-% nPairs is PER DOMAIN because the two domains have very different
-% stimulus supply, and because reuse costs more in one than the other.
-%
-% Each level needs nPairs x 2 stimuli. Cross-level reuse is allowed by
-% default so 2/4/6-attribute cells stay balanced: the same item may appear
-% under different information loads, and that repetition is preferable to
-% silently collecting fewer trials at one level than another.
-%
-% Houses: 80 total. 6 pairs gives 6 choice trials and 12 pricing trials at
-% every attribute level while keeping repetition noticeable but tolerable.
-%
-% Jobs: 128 total, ~96 in a typical window, and a job is a handful of
-% numeric ratings rather than six photographs -- far less episodically
-% memorable, so a repeat is much less likely to be recognised. 10 pairs
-% (60 distinct) fits comfortably.
+% nPairs is per domain; each attribute level needs nPairs x 2 stimuli.
 cfg.contdc.nPairs.houses     = 6;
 cfg.contdc.nPairs.jobs       = 10;
 
-% Cross-level reuse. TRUE (default) means a given house/job may appear at
-% multiple attribute levels for a given participant. That is intentional:
-% balanced trial counts across information-load conditions are more
-% important than avoiding every repeated item. FALSE is kept as a diagnostic
-% switch, but can produce short cells when supply is tight.
-%
-% Note this is about reuse ACROSS LEVELS only. Reuse WITHIN a level (the
-% same pair being both chosen between and priced) is required by the
-% preference-reversal paradigm and always happens.
+% Across-level reuse only; within-level reuse (same pair chosen and priced) is
+% required by the preference-reversal paradigm. False is a diagnostic switch.
 cfg.contdc.allowCrossLevelReuse = true;
 
-% Raised from 15/25 after the 2026-09-16 pilot: both felt tight to sit
-% through, and a timeout is a lost trial, not a slow one. These are
-% ceilings, not pacing -- nobody who has decided waits them out.
 cfg.contdc.choiceTimeoutSec  = 25;
 cfg.contdc.priceTimeoutSec   = 40;
 cfg.contdc.itiSec            = 0.6;
 cfg.contdc.driftEvery        = 2;    % drift check every N blocks
 
 % --- Screen geometry ----------------------------------------------------
-% Comes from the rig profile. AOI thresholds are defined in DEGREES, so the
-% same numbers stay meaningful on the lab machine and on a laptop; only the
-% pixel conversion changes.
+% AOI thresholds are in degrees; only the pixel conversion changes per rig.
 cfg.geom = utils.geom(rp.geomArgs{:});
 
 % --- Eye tracking -----------------------------------------------------
@@ -273,66 +154,32 @@ cfg.et.driftCheck    = true;
 cfg.et.driftTolDeg   = 1.5;
 cfg.et.recalOnFail   = true;
 
-% Built-in participant calibration (ScreenBasedCalibration via utils.calibrate)
-% vs. any vendor/desktop calibration utility are two different things: the
-% desktop tool is a one-time HARDWARE setup (lens/angle/lighting), while
-% utils.calibrate is the PER-PARTICIPANT, per-session calibration every
-% tracker needs regardless of hardware setup. Leave this on; turning it off
-% only makes sense if calibration is being driven by an external harness
-% that calls the Tobii SDK directly instead of through this code.
+% Per-participant calibration (utils.calibrate); distinct from the vendor's
+% one-time hardware setup. Leave on unless an external harness calibrates.
 cfg.et.useBuiltInCalibration = true;
 
-% Media mode: gaze dot visible for screen recording. Deliberately separate
-% from 'testing' so it can't be left on by accident -- showGaze is ignored
-% unless mediaMode is also true, and any run with it on is tagged
+% showGaze is ignored unless mediaMode is true; mediaMode runs are tagged
 % non-analyzable in the saved file.
 cfg.et.mediaMode = false;
 cfg.et.showGaze  = false;
 
 % --- Head-position guide ----------------------------------------------
-% Shown once before calibration: live feedback on where the tracker sees
-% the participant's eyes versus where they need to be. Calibration can
-% succeed from a poor position and then drift or drop an eye mid-block,
-% by which point the trials are spent.
-%
-% Disabled 2026-09-18 after the rig showed no track-box feedback: the guide
-% stayed on "Looking for your eyes..." even while the tracker was otherwise
-% available. Keep calibration on; diagnose the SDK sample fields with
-% utils.diagnoseTrackBox before turning this participant screen back on.
+% Disabled: rig gave no track-box feedback; run utils.diagnoseTrackBox before re-enabling.
 cfg.et.positionGuide.enabled   = false;
-cfg.et.positionGuide.tolerance = 0.12;  % allowed deviation from track-box
-                                        % centre, in normalised units, on
-                                        % each of x, y and z
-cfg.et.positionGuide.holdSec   = 1.0;   % time in position before it
-                                        % accepts -- stops a participant
-                                        % passing through the right spot
-                                        % from counting as settled in it
-cfg.et.positionGuide.timeoutSec = 10;   % give up and continue rather than
-                                        % strand a session on a setup screen
-cfg.et.positionGuide.mirrorX   = true;  % display behaves like a mirror;
-                                        % flip if the rig reads backwards
+cfg.et.positionGuide.tolerance = 0.12;  % deviation from track-box centre, normalised, per axis
+cfg.et.positionGuide.holdSec   = 1.0;   % dwell in position before accepting
+cfg.et.positionGuide.timeoutSec = 10;   % give up and continue, don't strand the session
+cfg.et.positionGuide.mirrorX   = true;  % mirror display; flip if rig reads backwards
 
 % --- Display options --------------------------------------------------
-% Draw the advertised figure (listed price / offered wage) on the pricing
-% scale, so the participant can see where it sits relative to the value
-% they are about to state.
-%
-% THIS IS NOT COSMETIC. Under BDM the optimal bid is the participant's own
-% valuation, and a salient reference point on the response scale is
-% exactly the kind of cue that pulls stated values toward it. Turning this
-% on is a deliberate design choice with a measurable cost in bid variance;
-% turning it off restores the scale to an unanchored one.
-cfg.display.showValueMarker = false;  % held OFF after the 2026-09-16 pilot
+% Not cosmetic: under BDM a salient reference on the scale anchors stated values.
+cfg.display.showValueMarker = false;
 
-% How the attribute/industry importance ratings are collected. 'drag' shows
-% the whole set at once and lets them be dragged onto the line in any order
-% and rearranged; 'sequential' is the original one-at-a-time version. This
-% is a REVERT SWITCH, not a preference -- see utils.elicitRatings for why
-% the two are not the same measurement.
+% Revert switch: 'drag' and 'sequential' are not the same measurement (see utils.elicitRatings).
 cfg.elicit.ratingMode = 'drag';   % 'drag' | 'sequential'
 
 % --- Testing mode -----------------------------------------------------
-cfg.testing.enabled          = opt.testing;   % <-- now actually wired up
+cfg.testing.enabled          = opt.testing;
 cfg.testing.windowed         = rp.windowedDefault || opt.testing;
 cfg.testing.skipInstructions = true;
 cfg.testing.skipElicitation  = true;
@@ -342,36 +189,15 @@ cfg.testing.forceAttrLevel   = [];
 cfg.testing.participant      = 9999;
 
 % --- Rehearsal mode ---------------------------------------------------
-% A SHORT run that is otherwise a REAL run. Deliberately separate from
-% cfg.testing, which is a developer mode: testing also goes windowed,
-% skips elicitation, instructions and practice, and pins participant
-% 9999. None of that is wanted for a dress rehearsal, where the point is
-% to sit through the genuine article at genuine pacing and only stop
-% sooner.
-%
-% [] means the full study. An integer means that many trials in EVERY
-% design cell, and it is the ONLY thing that changes -- full screen, real
-% pacing, real elicitation, real instructions, real practice, real
-% participant number, eye tracker on.
-%
-% "Cell" means one combination of the manipulated factors, so the count
-% is comparable across tasks, which cfg.testing.nTrialsPerType is not:
-%   auction -- cells are the competition levels, so nTrials = N * 2
-%   contdc  -- cells are attribute level x task type, so nPairs = N
-%              (a price block prices both options of every pair, so it
-%              still yields 2N trials to a choice block's N)
-%
-% Going to a full participant run is then exactly one edit: set this back
-% to [].
+% [] = full study; N = trials per design cell (auction: per competition level,
+% contdc: nPairs). Only trial counts change, everything else is a real run.
 cfg.rehearsal.trialsPerCell = opt.trialsPerCell;
 
 % --- Incentives -------------------------------------------------------
 cfg.incentives = utils.incentives('config');
 
 % --- Styling ------------------------------------------------------------
-% utils.style reads $HW_THEME. This is the only place it is built; the
-% one place it is later MUTATED is utils.resolveFonts, called once per
-% task after the window opens. Everything else reads cfg.style at draw time.
+% Built only here; mutated only in utils.resolveFonts after the window opens.
 cfg.style = utils.style();
 
 cfg.codeVersion = 'hw-2026.09';

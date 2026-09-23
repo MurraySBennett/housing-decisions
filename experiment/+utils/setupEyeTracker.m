@@ -1,8 +1,5 @@
 function et = setupEyeTracker(cfg, window, doCalibrate)
 %UTILS.SETUPEYETRACKER  Connect, calibrate, and start a Tobii recording.
-%
-%   Consolidated from the two copies that had drifted apart between the
-%   auction and continuous-DC scripts.
 
 if nargin < 3, doCalibrate = true; end
 
@@ -22,10 +19,7 @@ if ~et.enabled
     return
 end
 
-% Media mode guard: showGaze is ignored unless mediaMode is explicitly set,
-% and any run with the dot visible is flagged non-analyzable. A visible
-% gaze dot creates a feedback loop -- participants chase it -- so this must
-% never quietly end up in a real dataset.
+% A visible gaze dot creates a feedback loop; any run with it visible is flagged non-analyzable.
 if cfg.et.showGaze && ~cfg.et.mediaMode
     warning('hw:setupEyeTracker:gazeIgnored', ...
         'cfg.et.showGaze is set but cfg.et.mediaMode is false -- gaze dot NOT shown.');
@@ -51,9 +45,7 @@ try
     end
 
     if doCalibrate
-        % Start the gaze stream BEFORE the position guide: the first call
-        % to get_gaze_data() is what subscribes, and the guide needs live
-        % samples to show anything at all.
+        % First get_gaze_data() call subscribes; must run before the position guide.
         et.obj.get_gaze_data();
         et.positioned = utils.positionGuide(et, window, cfg);
 

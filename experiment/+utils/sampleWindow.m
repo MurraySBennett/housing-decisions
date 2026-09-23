@@ -2,17 +2,7 @@ function w = sampleWindow(values, anchor, spread, minN, hardBounds)
 %UTILS.SAMPLEWINDOW  Budget-centred stimulus window with a minimum-n guarantee.
 %
 %   w = utils.sampleWindow(stimuli.listPrice, budget, [0.6 1.6], 12)
-%
-%   Replaces the hard-coded price bands. Those bands held 11-16 houses each,
-%   which is not enough to fill a block AND filter to a participant's budget
-%   -- and filtering hard to budget destroys the variance in list price that
-%   the anchor manipulation depends on.
-%
-%   So: centre on the anchor, keep deliberate spread either side, and widen
-%   automatically until at least minN stimuli are inside. Returns the window
-%   plus a flag saying how much widening was needed, which is worth logging
-%   -- a participant whose window had to triple is not comparable to one
-%   whose window didn't move.
+%   Widens around the anchor until at least minN stimuli fall inside.
 
 if nargin < 3 || isempty(spread),     spread = [0.6 1.6]; end
 if nargin < 4 || isempty(minN),       minN = 12;          end
@@ -52,11 +42,7 @@ if ~w.sufficient
         w.n, lo, hi, widen, anchor, minN);
 end
 
-% Scale bounds for the pricing response come from the WINDOW, not from the
-% individual item. The old code used item.listPrice as the scale maximum,
-% which meant a participant could never bid above list -- and with a
-% $9.98M outlier in the set, an item-derived scale puts every realistic
-% bid in the leftmost few percent of the arc.
+% Pricing-scale bounds come from the window, not the individual item.
 w.scaleMin = 0;
 w.scaleMax = hi * 1.25;
 

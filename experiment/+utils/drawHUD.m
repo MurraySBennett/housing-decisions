@@ -1,10 +1,7 @@
 function rect = drawHUD(window, cfg, info)
 %UTILS.DRAWHUD  Static status strip along the top of the screen.
-%
-%   The HUD is the highest-value retro element because it is genuinely
-%   informative and lives OUTSIDE the stimulus AOIs. It must stay static
-%   during a search episode: a ticking timer or a live earnings counter is
-%   an off-task attention magnet that pulls gaze away from the options.
+%   Must stay static during a search episode: a ticking timer or live counter
+%   is an off-task gaze magnet.
 
 s = cfg.style;
 if ~s.hud.enabled
@@ -17,22 +14,15 @@ w = scr(3);
 hgt = s.hud.heightPx;
 rect = [0 0 w hgt];
 
-% The HUD band is flush to three screen edges, and a rounded rect glued to
-% the screen edge looks broken. So inset the DRAWN panel inside the band
-% rather than rounding the band itself. s.hud.heightPx is unchanged, which
-% is what makes this safe: hudH feeds every layout function in both tasks
-% AND preflight.m's hand-copied mirrors of them, so changing it would move
-% every AOI in the battery. Changing only the painted inset moves nothing.
+% Inset only the painted panel, never s.hud.heightPx: hudH feeds every layout
+% function and preflight's mirrors, so changing it moves every AOI.
 panel = [12, 6, w - 12, hgt - 6];
 utils.roundRect(window, panel, s.radiusPanel, s.bgPanel, s.border, s.hairlinePx);
 
 oldFont = Screen('TextFont', window, s.fontChrome);
 Screen('TextSize', window, s.sizeLabel);
 
-% The uppercase, zero-padded forms existed to suit a pixel font that
-% only really worked in caps. s.hudUppercase keeps them under the arcade
-% theme and drops them elsewhere -- shouting reads as harsh, and the HUD
-% is the one piece of chrome the participant sees on every single screen.
+% s.hudUppercase keeps the caps forms under the arcade theme only.
 left = '';
 if s.hud.showBlock && isfield(info, 'trial')
     if s.hudUppercase

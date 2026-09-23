@@ -1,41 +1,13 @@
 function sel = selectAttributes(A, nAttrs, poolRatings, method, isMaxLevel)
 %UTILS.SELECTATTRIBUTES  Choose which attributes to display on a trial.
 %
-%   sel = utils.selectAttributes(A, nAttrs, poolRatings)
-%   sel = utils.selectAttributes(A, nAttrs, poolRatings, 'topk')
-%
-%   A           : struct from utils.attributes
-%   nAttrs      : attribute level for this block (e.g. 2, 4, 6) -- COUNTS
-%                 the core attributes, so nAttrs=2 means core + 1 from pool
-%   poolRatings : 1 x A.nPool vector of this participant's importance
-%                 ratings, normalised 0-1, in the order of A.pool
-%   method      : 'stratified' (default) or 'topk'
-%   isMaxLevel  : logical; if true, A.late attributes are appended
-%
-%   Method matters more than it looks:
-%
-%     'topk'        shows the participant's k most important attributes.
-%                   Ecologically valid, but each step up the attribute
-%                   ladder adds a LESS important attribute, so a load
-%                   effect and a diminishing-importance effect become
-%                   indistinguishable.
-%
-%     'stratified'  picks evenly spaced ranks, holding mean importance
-%                   roughly constant across levels. Isolates load.
-%
-%   Either way, the rating and rank of every selected attribute are
-%   returned so you can model it the other way round after the fact.
+%   nAttrs counts the core attributes; 'stratified' (default) holds mean
+%   importance roughly constant across levels, 'topk' takes the k most important.
 
 if nargin < 4 || isempty(method),     method = 'stratified'; end
 if nargin < 5 || isempty(isMaxLevel), isMaxLevel = false;    end
 
-% The late tier is RESERVED inside nAttrs, not bolted on after it. It used
-% to be appended once the count was already assigned, so an attribute level
-% of 6 rendered seven cells: the manipulation was mislabelled in the data,
-% and the seventh cell landed alone on row 4 of a 2-column grid -- always
-% the same attribute (Region / Work arrangement), always in a visually
-% unique isolated position. That is a position confound on precisely the
-% attribute the design expects to dominate choice.
+% The late tier is reserved inside nAttrs, so numel(sel.shown) == nAttrs at every level.
 nLate = 0;
 if isMaxLevel && ~isempty(A.late)
     nLate = numel(A.late);
@@ -101,9 +73,7 @@ sel.method   = method;
 sel.nAttrs   = nAttrs;
 
 if nLate > 0
-    % nAttrs is NOT incremented here -- the late slot was already reserved
-    % out of nFromPool above, so sel.nAttrs == nAttrs at every level and
-    % numel(sel.shown) == nAttrs always.
+    % Late slot was already reserved out of nFromPool; do not increment nAttrs.
     sel.shown   = [sel.shown, A.late];
     sel.ratings = [sel.ratings, nan(1, numel(A.late))];
     sel.ranks   = [sel.ranks,   nan(1, numel(A.late))];

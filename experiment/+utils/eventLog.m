@@ -1,17 +1,9 @@
 function out = eventLog(action, varargin)
 %UTILS.EVENTLOG  Timestamped screen-change markers, synced to flip times.
-%
 %   log = utils.eventLog('init', capacity)
 %   log = utils.eventLog('add', log, name, flipTime, info)
 %   tbl = utils.eventLog('table', log)
-%
-%   Without this you cannot align gaze to what was on screen, and no amount
-%   of careful AOI geometry rescues that. Every screen change gets a marker
-%   keyed to the value RETURNED by Screen('Flip') -- not GetSecs before the
-%   flip, which can be a frame or more early.
-%
-%   'info' is an optional struct of extras (box number, stimulus index,
-%   reason for removal, ...). Fields are flattened into the output table.
+%   Keyed to the value returned by Screen('Flip'), not GetSecs (up to a frame early).
 
 switch lower(char(action))
 
@@ -57,7 +49,6 @@ case 'table'
     T = table(log.name(1:n), log.flipTime(1:n), log.sysTime(1:n), ...
         'VariableNames', {'event', 'flipTime', 'sysTime'});
 
-    % Flatten the info structs into columns, filling absent fields with NaN
     allFields = {};
     for k = 1:n
         if isstruct(log.info{k})

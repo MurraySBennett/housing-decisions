@@ -60,10 +60,7 @@ pfAoi = preflight(2, 1, 'projRoot', expDir, 'rig', 'lab', ...
 assert(isfield(pfAoi, 'allAoiOK') && pfAoi.allAoiOK, ...
     'preflight lab AOI checks must pass');
 
-% Rehearsal mode must shorten the run and change NOTHING else. The two
-% properties worth asserting are that it actually shortens the duration
-% estimate, and that it stays independent of testing mode -- the whole
-% point is a short run that is otherwise the real thing.
+% Rehearsal must shorten the run, change nothing else, and stay independent of testing mode.
 cfgFull = utils.config('projRoot', tmpRoot, 'rig', 'lab');
 cfgReh  = utils.config('projRoot', tmpRoot, 'rig', 'lab', 'trialsPerCell', 2);
 assert(isempty(cfgFull.rehearsal.trialsPerCell), ...

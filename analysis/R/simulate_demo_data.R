@@ -1,21 +1,7 @@
-# simulate_demo_data.R -- fabricate CSVs in exactly the schema utils.saveRun
-# writes, so the analysis pipeline can be exercised and demonstrated before
-# any real data exists.
+# simulate_demo_data.R -- fabricate CSVs in the exact schema utils.saveRun writes.
 #
-# THIS IS NOT DATA. Every file it writes goes under a directory named
-# `Data_simulated` and every row carries participant IDs in the 90000s. It
-# exists for two reasons:
-#   1. the analysis scripts can be tested end to end on a machine with no
-#      MATLAB, no Psychtoolbox and no eye tracker
-#   2. the descriptive figures can be shown to someone before participant 1
-#
-# The generating process is a crude stand-in with the manipulations built in
-# (high competition clears fewer bids; more attributes cost more time). If a
-# figure produced from this looks like a result, it is an artefact of these
-# lines, not a finding.
-#
-# Usage:
-#   Rscript analysis/R/simulate_demo_data.R [outdir] [n_participants]
+# NOT DATA: output goes under Data_simulated, participant IDs in the 90000s.
+# Usage: Rscript analysis/R/simulate_demo_data.R [outdir] [n_participants]
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -29,8 +15,7 @@ simulate_battery <- function(outdir, n_participants = 6, seed = 20260915) {
   dir.create(file.path(outdir, "cont_dc"), recursive = TRUE, showWarnings = FALSE)
 
   domains <- c("jobs", "houses")
-  # Matches utils.config: nTrials = 12, attrLevels = [2 4 6],
-  # nPairs = 10 (jobs) / 6 (houses).
+  # Matches utils.config: nTrials = 12, attrLevels = [2 4 6], nPairs = 10 jobs / 6 houses.
   n_trials  <- 12
   levels_   <- c(2, 4, 6)
   n_pairs   <- c(jobs = 10, houses = 6)
@@ -58,8 +43,7 @@ simulate_battery <- function(outdir, n_participants = 6, seed = 20260915) {
       true_value <- if (dom == "jobs") pmax(8, rnorm(length(comp), anchor, anchor * 0.22))
                     else pmax(80000, rnorm(length(comp), anchor, anchor * 0.25))
 
-      # Bid drifts toward the anchor and away from the item's own value --
-      # the multiple-anchor effect the design is built to detect.
+      # Bid drifts toward the anchor -- the effect the design is built to detect.
       bid <- 0.72 * true_value + 0.28 * anchor
       bid <- bid * rnorm(length(comp), 1, 0.09)
 
@@ -67,7 +51,6 @@ simulate_battery <- function(outdir, n_participants = 6, seed = 20260915) {
       threshold <- true_value * mult * rnorm(length(comp), 1, 0.12)
       # Houses: a buyer must bid ABOVE threshold. Jobs: a seeker must ask BELOW it.
       accepted <- if (dom == "houses") bid >= threshold else bid <= threshold
-      # Not every episode ends in a bid.
       bid_made <- runif(length(comp)) > ifelse(comp == "high", 0.22, 0.10)
       accepted <- accepted & bid_made
 
@@ -114,17 +97,11 @@ simulate_battery <- function(outdir, n_participants = 6, seed = 20260915) {
         contrast <- round(runif(np, 0.15, 0.85), 3)
         money_val <- anchor * runif(np, 0.8, 1.2)
 
-        # One latent preference per pair, read by BOTH the choice block and
-        # the pricing block. Without a shared term the two tasks are
-        # independent coin flips near indifference and the reversal rate
-        # sits at chance, which is not what reversal data looks like.
+        # One latent preference per pair, read by both blocks; independent draws would put reversals at chance.
         latent <- 4.0 * (contrast - 0.5) + rnorm(np, 0, 0.6)
 
         # choice block
         block <- block + 1L
-        # Choice tracks the pair contrast strongly, with a mild load-driven
-        # pull toward the money-favouring (simpler) option. Strong contrast
-        # dependence is what keeps choice and pricing mostly consistent.
         p_money <- plogis(2.5 * latent + 0.15 * (lv - 4))
         chose_money <- runif(np) < p_money
         timed_out_c <- runif(np) < 0.03
@@ -142,11 +119,6 @@ simulate_battery <- function(outdir, n_participants = 6, seed = 20260915) {
 
         # pricing block -- same pairs, both options priced separately
         block <- block + 1L
-        # Pricing is driven by the SAME pair contrast the choice saw, plus
-        # noise -- so the two tasks mostly agree and reversals sit well below
-        # chance, which is what real reversal data looks like. An independent
-        # draw here would put the reversal rate at 50% and make the figure
-        # look like a bug.
         base <- money_val
         money_price    <- base * (1 + 0.10 * latent) * rnorm(np, 1, 0.05)
         quality_price  <- base * (1 - 0.10 * latent) * rnorm(np, 1, 0.05)
@@ -177,8 +149,7 @@ simulate_battery <- function(outdir, n_participants = 6, seed = 20260915) {
   invisible(outdir)
 }
 
-# Run only when this file is the script being executed, never when run_all.R
-# sources it -- otherwise run_all.R's own flags get read as an output path.
+# Run only when executed directly, never when sourced by run_all.R.
 .invoked_directly <- local({
   a <- commandArgs(trailingOnly = FALSE)
   f <- sub("^--file=", "", a[grep("^--file=", a)])

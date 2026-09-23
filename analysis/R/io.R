@@ -1,14 +1,7 @@
 # io.R -- find, read and tidy the CSVs that utils.saveRun writes.
 #
-# The MATLAB side writes one .csv per run, long format, one row per trial,
-# into <data>/auction/ and <data>/cont_dc/. Every row carries participant,
-# session, run_id and task, so runs concatenate without further bookkeeping.
-# See experiment/+utils/saveRun.m for where those key columns come from.
-#
-# Nothing here reads .mat. The .mat holds the full dataMat struct (anchors,
-# attribute ratings, AOI rects, event log, gaze pointers); the CSV holds the
-# trial table. Descriptives only need the CSV. Anything needing the struct
-# goes through a MATLAB export step -- see analysis/README.md.
+# One CSV per run, long format, keyed by participant/session/run_id/task.
+# Descriptives need only the CSV; the .mat struct needs a MATLAB export step.
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -18,10 +11,7 @@ suppressPackageStartupMessages({
   library(purrr)
 })
 
-# MATLAB's writetable has emitted logicals as "true"/"false" and as 1/0
-# depending on release. Rather than pin a release, accept both -- plus the
-# NaN that a not-applicable logical arrives as (e.g. choseMoney on a pricing
-# row, which has no choice).
+# writetable emits logicals as "true"/"false" or 1/0 depending on release; NaN means not applicable.
 as_lgl_flex <- function(x) {
   if (is.logical(x)) return(x)
   if (is.numeric(x)) return(ifelse(is.na(x), NA, x != 0))
@@ -48,9 +38,6 @@ read_run_csv <- function(path) {
 }
 
 #' Discover every run CSV under a data root.
-#'
-#' @param data_dir the Data (or Data_demo) directory
-#' @return tibble with task, path
 find_run_files <- function(data_dir) {
   spec <- tibble::tibble(
     task = c("auction", "contdc"),
@@ -74,18 +61,14 @@ load_auction <- function(data_dir) {
       practice    = as_lgl_flex(practice),
       bidAccepted = as_lgl_flex(bidAccepted),
       domain      = factor(domain, levels = c("jobs", "houses")),
-      # Surplus is the point of the BDM: a cleared bid transacts at the market
-      # THRESHOLD, not at the participant's own bid, so surplus is value minus
-      # what was actually paid -- for houses. For jobs the participant is the
-      # seller (asking a wage), so the sign flips.
+      # Cleared bids transact at the threshold, not the bid; jobs flip the sign (seller).
       surplus = case_when(
         !bidAccepted           ~ NA_real_,
         domain == "houses"     ~ trueValue - pricePaid,
         domain == "jobs"       ~ pricePaid - trueValue,
         TRUE                   ~ NA_real_
       ),
-      # Bid expressed relative to the item's true value, so jobs (wages,
-      # ~$25/hr) and houses (~$400k) are on one comparable scale.
+      # Puts wages (~$25/hr) and houses (~$400k) on one comparable scale.
       bid_ratio = bid / trueValue
     ) %>%
     arrange(participant, session, run_id, trial)
@@ -108,13 +91,7 @@ load_contdc <- function(data_dir) {
     arrange(participant, session, run_id, block, pairIdx)
 }
 
-#' Reconstruct the preference-reversal score from the CSV.
-#'
-#' The MATLAB side already computes this into dataMat.<domain>.reversals at
-#' save time (continuous_DC_task.m:scoreReversals). Recomputing it here from
-#' the CSV is deliberate: it is the check that the CSV alone is sufficient
-#' for the headline measure, and it will disagree loudly if the two ever
-#' drift apart.
+#' Reversal score recomputed from the CSV alone; disagrees loudly if it drifts from the MATLAB-side computation.
 score_reversals <- function(contdc) {
   if (is.null(contdc) || nrow(contdc) == 0) return(NULL)
 
@@ -141,11 +118,7 @@ score_reversals <- function(contdc) {
     )
 }
 
-#' Data-integrity report. Printed before any plot.
-#'
-#' This is the part that answers "are we reading the data correctly" -- it
-#' says what is present, what is missing, and which design cells are empty,
-#' rather than silently plotting whatever survived.
+#' Data-integrity report, printed before any plot.
 integrity_report <- function(auction, contdc, data_dir) {
   lines <- c(sprintf("Data root: %s", normalizePath(data_dir, mustWork = FALSE)), "")
 

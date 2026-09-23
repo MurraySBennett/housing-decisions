@@ -1,15 +1,7 @@
 function [ok, report] = checkAOIs(rects, names, g, verbose)
 %UTILS.CHECKAOIS  Validate that AOIs are far enough apart to be separable.
-%
 %   [ok, report] = utils.checkAOIs(rects, names, utils.geom())
-%
-%   rects : 4 x nAOI matrix of PTB rects [left top right bottom]
-%   names : cellstr of AOI labels
-%
-%   Run this ONCE at startup for every screen layout. It is far cheaper to
-%   find out here that two AOIs are 1.1 deg apart than to find out during
-%   analysis that you cannot tell looks at the kitchen photo from looks at
-%   the living-room photo.
+%   rects: 4 x nAOI PTB rects [left top right bottom]; names: cellstr.
 
 if nargin < 4, verbose = true; end
 n = size(rects, 2);
@@ -29,10 +21,9 @@ for i = 1:n
     end
 end
 
-% --- Pairwise separation ---------------------------------------------
+% --- Pairwise separation (edge-to-edge; zero if overlapping) ----------
 for i = 1:n-1
     for j = i+1:n
-        % Edge-to-edge gap; zero if the rects overlap on both axes.
         dx = max([rects(1,j) - rects(3,i), rects(1,i) - rects(3,j), 0]);
         dy = max([rects(2,j) - rects(4,i), rects(2,i) - rects(4,j), 0]);
         gapPx = hypot(dx, dy);

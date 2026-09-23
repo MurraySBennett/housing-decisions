@@ -2,27 +2,9 @@ function [ratings, rts, order, detail] = elicitRatings(window, cfg, items, promp
 %UTILS.ELICITRATINGS  Rate a set of items on one line, in whichever mode
 %   cfg.elicit.ratingMode selects.
 %
-%   This is the only entry point task code should call. The two
-%   implementations behind it are NOT interchangeable measurements even
-%   though they share a signature:
-%
-%     'drag'        utils.elicitVASDrag -- the whole set is visible from the
-%                   first frame and dragged onto the line in any order,
-%                   adjustable until the participant clicks Done. Fixes the
-%                   calibration problem in 'sequential' (the first item is
-%                   placed before its comparators have been seen) at the
-%                   cost of being closer to a ranking, and of per-item RT
-%                   meaning "time to first placement" rather than "time to
-%                   decide".
-%
-%     'sequential'  utils.elicitVAS -- one item at a time in random order,
-%                   previous marks left visible. The original. Keep it
-%                   reachable: it is the fallback if drag-and-drop turns
-%                   out to be fiddly on the rig, and it is what any
-%                   already-collected ratings were measured with.
-%
-%   Ratings are normalised 0-1 in the order of `items` either way.
-%   `detail` is [] in sequential mode.
+%   Only entry point task code should call; the two modes are not
+%   interchangeable measurements (drag RT = time to first placement).
+%   Ratings normalised 0-1 in item order; detail is [] in sequential mode.
 
 if nargin < 6, rngStream = []; end
 

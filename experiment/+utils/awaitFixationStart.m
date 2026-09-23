@@ -3,39 +3,14 @@ function [flipTime, log] = awaitFixationStart(window, cfg, log, info)
 %
 %   [flipTime, log] = utils.awaitFixationStart(window, cfg, log, info)
 %
-%   Two jobs in one screen:
-%     1. Self-paced "ready" signal -- the participant starts each trial
-%        when they choose to, not when the code decides.
-%     2. Sets a known GAZE START POINT. You usually look at the thing
-%        you're about to click, so a click on a known, fixed, central
-%        target anchors gaze to a known location and time immediately
-%        before the trial's first saccade -- without this, "where were
-%        they looking when the trial began" is unknown, which matters a
-%        lot for interpreting first-fixation latency and direction.
-%
-%   This is also the ONLY place (besides block-intro screens) that shows
-%   rich condition/progress info -- trial screens themselves stay clean.
-%   Tempting a gaze shift toward a HUD during the actual response is the
-%   thing we're avoiding; showing that same information here, before the
-%   stimulus appears, gets the participant the information without that
-%   cost.
-%
-%   info is passed straight to utils.drawHUD -- same fields you'd use
-%   there (trial, nTrials, label).
-%
-%   Returns flipTime: the actual Screen('Flip') timestamp of the frame
-%   the participant's click was registered on. Use this as the trial's t0
-%   instead of GetSecs at function entry -- it's the true stimulus-locked
-%   reference point, not "whenever this function happened to be called."
+%   Anchors gaze to a known central point before the first saccade; info goes
+%   to utils.drawHUD. flipTime is the click frame's flip -- use it as trial t0.
 
 s = cfg.style;
 scr = Screen('Rect', window);
 cx = scr(3)/2; cy = scr(4)/2;
 
-% Hit region around the cross. ~1 deg is generous enough to be a fair
-% target but small enough that "clicked near center" still means they were
-% looking there -- a click that lands nowhere near it is ignored rather
-% than silently accepted as a fixation click.
+% ~1 deg hit region; clicks outside it are ignored, not accepted.
 hitR = max(30, cfg.geom.deg2px(1.0));
 
 ShowCursor('Arrow', window);
@@ -74,7 +49,6 @@ while true
         log = utils.eventLog('add', log, 'fixation_start', flipTime, info);
         return
     end
-    % Click landed outside the target -- ignore it, keep waiting.
     while any(buttons), [~,~,buttons] = utils.getMouse(window); end
 end
 

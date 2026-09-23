@@ -1,34 +1,14 @@
 function [pairs, usedIdx] = buildPairs(stimTbl, sel, A, nPairs, rngStream, excludeIdx)
 %UTILS.BUILDPAIRS  Construct money-vs-quality option pairs.
-%
 %   pairs = utils.buildPairs(stimTbl, sel, A, nPairs)
-%
-%   This is what makes the design capable of detecting a preference
-%   reversal at all. Drawing two options at random -- which is what the
-%   previous version did -- gives pairs that mostly differ on everything or
-%   nothing, and the reversal effect washes out.
-%
-%   Classic reversal (Lichtenstein & Slovic) pits a P-bet (likely, small
-%   payoff) against a $-bet (unlikely, large payoff): choice favours the
-%   P-bet, pricing favours the $-bet. The analogue here is a MONEY option
-%   against a QUALITY option:
-%
-%     jobs   : high wage / poor culture & work-life  vs  modest wage / excellent culture
-%     houses : expensive but small & old             vs  cheap but large & modern
-%
-%   The prediction is that stating a dollar value pulls attention to the
-%   monetary dimension while choosing pulls it to the qualitative ones.
-%   Pairs are ranked by how cleanly they oppose the two dimensions, and the
-%   contrast score is returned so weak pairs can be excluded in analysis.
+%   Pairs oppose a money option and a quality option; contrast score is
+%   returned so weak pairs can be excluded in analysis.
 
 if nargin < 5 || isempty(rngStream), rngStream = RandStream.getGlobalStream; end
 if nargin < 6, excludeIdx = []; end
 excludeIdx = excludeIdx(:)';
 
-%   excludeIdx: stimulus indices that must NOT be used in these pairs --
-%   pass the union of everything already used at other attribute levels to
-%   stop a participant seeing the same house/job at more than one level.
-%   Returns usedIdx so the caller can accumulate across levels.
+% excludeIdx: indices already used at other levels; usedIdx lets the caller accumulate.
 
 n = height(stimTbl);
 if n < 4
@@ -40,8 +20,7 @@ end
 money = zscore_(double(stimTbl.(A.valueVar))) * A.core(1).dir;
 
 % --- Quality composite ------------------------------------------------
-% Only numeric pool attributes that are actually on screen contribute, each
-% signed by its direction so "higher is better" holds throughout.
+% Numeric on-screen pool attributes only, signed so higher is better.
 q = [];
 used = {};
 for k = 1:numel(sel.shown)
@@ -66,9 +45,7 @@ else
 end
 
 % --- Score every candidate pair ---------------------------------------
-% A good pair has one option ahead on money and behind on quality, and the
-% other the reverse. Contrast is the product of the two gaps: large only
-% when the dimensions genuinely oppose.
+% Contrast = product of the gaps; large only when the dimensions oppose.
 best = zeros(0, 3);
 for i = 1:n-1
     for j = i+1:n

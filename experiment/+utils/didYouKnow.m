@@ -3,22 +3,9 @@ function fact = didYouKnow(seed)
 %
 %   fact = utils.didYouKnow(seed)
 %
-%   Picked deterministically from `seed` (use run.seed) so the same run
-%   always shows the same fact and nothing consumes the global RNG stream
-%   -- utils.elicitVAS already draws on the global stream, and the auction
-%   deliberately keeps a private one, so silently pulling a random number
-%   here would be a real contamination rather than a stylistic quibble.
-%
-%   DELIBERATE OMISSION. None of these is about judgement under
-%   uncertainty, anchoring, reference points, search, valuation or
-%   willingness to pay. Those are the constructs this study measures, and
-%   a "did you know" about anchoring shown between blocks is a strategy
-%   hint wearing a friendly hat. Everything here is general psychology
-%   with no mapping onto anything a participant is about to do.
-%
-%   Keep it that way when adding to the list. The test for a new fact is:
-%   could a participant plausibly change how they price, bid, search or
-%   choose after reading it? If yes, it does not belong here.
+%   Deterministic from seed (use run.seed); must not consume the global RNG stream.
+%   New facts must not touch measured constructs (anchoring, valuation, search):
+%   nothing a participant could act on when pricing, bidding, or choosing.
 
 FACTS = { ...
     ['Your brain uses roughly 20% of your body''s energy, despite being ' ...

@@ -1,13 +1,8 @@
 function rows = batteryPlan(participant, sessionNum, forceDomain)
 %UTILS.BATTERYPLAN  Resolve the run_battery schedule for one participant.
-%
 %   rows = utils.batteryPlan(participant, sessionNum)
 %   rows = utils.batteryPlan(participant, sessionNum, 'houses')
-%
-%   This is the single source of truth for PLAN resolution: session
-%   filtering, optional FORCE_DOMAIN, and odd-participant task-order
-%   counterbalancing. run_battery.m executes these rows; preflight.m prints
-%   and validates them before a lab run.
+%   Single source of truth; run_battery.m executes rows, preflight.m validates.
 
 if nargin < 3, forceDomain = ''; end
 forceDomain = lower(char(forceDomain));
@@ -37,10 +32,7 @@ if ~isempty(forceDomain)
     end
 end
 
-% Task-order counterbalancing. Three tasks per session get the full set
-% of 6 orders keyed to participant number; any other multi-row session
-% keeps the original parity flip. sortrows pins the permutation list to a
-% fixed order -- perms() row order is an implementation detail.
+% Counterbalancing; sortrows pins the list -- perms() row order is an implementation detail.
 if numel(rows) == 3
     P = sortrows(perms(1:3));
     rows = rows(P(mod(participant, 6) + 1, :));

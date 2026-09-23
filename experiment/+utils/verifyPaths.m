@@ -2,18 +2,7 @@ function ok = verifyPaths(cfg)
 %UTILS.VERIFYPATHS  Print every configured path and whether it exists.
 %
 %   utils.verifyPaths(utils.config('rig','lab'))
-%
-%   Run this ONCE on any new machine before touching run_battery.m. Every
-%   path bug so far has been found by crashing mid-task rather than by
-%   checking up front -- this checks all of them in one pass, in about a
-%   second, with no PTB dependency.
-%
-%   MUST ALREADY EXIST (not auto-created; a missing one is a real problem):
-%     root, tobii, experiment, stimuli, local, images, house/job stimulus
-%     files. paths.local is the Experiment directory; participant data and
-%     images are kept out of git by .gitignore, not by a second share root.
-%   AUTO-CREATED if missing (fine to be absent on a fresh machine):
-%     data, sessions, taskData.auction/contdc, gaze, crashed, prepared
+%   Run once on any new machine before run_battery.m; no PTB dependency.
 
 fprintf('\n=== Path check (rig: %s) ===\n\n', cfg.rig);
 

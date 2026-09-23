@@ -1,24 +1,9 @@
 function tex = loadStimulusTextures(window, cfg, stimTbl, A, idxNeeded, showProgress)
 %UTILS.LOADSTIMULUSTEXTURES  Load identity images for specific stimuli only.
 %
-%   tex = utils.loadStimulusTextures(window, cfg, stimTbl, A, idxNeeded)
-%   tex = utils.loadStimulusTextures(window, cfg, stimTbl, A, idxNeeded, true)
-%
-%   Loads textures ONLY for the rows in idxNeeded, not every stimulus in
-%   the sampled window. A domain typically samples 30-100 candidate
-%   stimuli (utils.sampleWindow's minN and up) but only a much smaller
-%   subset of those ever actually appears in a trial plan or pair set --
-%   loading images for every candidate, for houses' 6 photos each, over a
-%   network share, was both slow and the reason texture loading was
-%   visible as a pause between blocks.
-%
-%   Pass idxNeeded as the UNION of every stimulus index that will actually
-%   be shown across the whole domain (every pair's money/quality index, or
-%   every trial plan's stimIdx) -- compute this BEFORE calling, so loading
-%   happens once, up front, rather than repeatedly per block.
-%
-%   showProgress (default true) draws a simple "FETCHING PHOTOS..." bar
-%   while loading, since this can take a few seconds.
+%   tex = utils.loadStimulusTextures(window, cfg, stimTbl, A, idxNeeded, showProgress)
+%   Pass idxNeeded as the union of every index shown across the whole
+%   domain, computed before calling, so loading happens once up front.
 
 if nargin < 6, showProgress = true; end
 
@@ -102,10 +87,7 @@ DrawFormattedText(window, 'FETCHING PHOTOS...', 'center', cy - 50, s.money);
 
 barW = 420; barH = 22;
 frac = min(1, done / max(total, 1));
-% s.borderStrong, not s.border: this is a functional indicator, and the
-% soft decorative edge colour is too faint to read as one. The fill is the
-% only varying-width rect in the migration -- utils.roundRect clamps the
-% radius to half the width, so it stays a well-formed pill as frac -> 0.
+% borderStrong for legibility; utils.roundRect clamps radius to half width, so the fill stays a pill as frac -> 0.
 utils.roundRect(window, [cx-barW/2, cy, cx+barW/2, cy+barH], ...
     s.radiusPill, s.bg, s.borderStrong, s.hairlinePx);
 if frac > 0

@@ -1,16 +1,8 @@
 function saveRun(sess, run, dataMat, trialTable)
 %UTILS.SAVERUN  Write one task run to disk in a linkable form.
 %
-%   utils.saveRun(sess, run, dataMat)
-%   utils.saveRun(sess, run, dataMat, trialTable)
-%
-%   Writes:
-%     <fileStem>.mat  -- full dataMat struct plus provenance
-%     <fileStem>.csv  -- long-format trial table, if supplied
-%
-%   Every record carries participant / session / run_id / task, so the two
-%   tasks can be concatenated and joined later regardless of whether they
-%   were run together or as separate groups.
+%   Writes <fileStem>.mat (dataMat + provenance) and, if a trial table is
+%   supplied, <fileStem>.csv keyed by participant/session/run_id/task.
 
 % --- Provenance stamped onto the struct -------------------------------
 dataMat.participant   = sess.participant;
@@ -35,7 +27,6 @@ if nargin >= 4 && ~isempty(trialTable)
         repmat(string(run.task),  n, 1), ...
         'VariableNames', {'participant','session','run_id','task'});
 
-    % Don't duplicate columns the task already added.
     dupes = intersect(keys.Properties.VariableNames, ...
                       trialTable.Properties.VariableNames);
     if ~isempty(dupes)

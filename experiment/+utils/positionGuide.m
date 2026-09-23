@@ -2,38 +2,8 @@ function ok = positionGuide(et, window, cfg)
 %UTILS.POSITIONGUIDE  Live head-position feedback before calibration.
 %
 %   ok = utils.positionGuide(et, window, cfg)
-%
-%   Shows the participant where the tracker currently sees their eyes and
-%   where they need to be, and waits until the two agree. Returns true if
-%   they got into position, false if it was skipped or timed out -- either
-%   way the session continues, because a positioning aid must never be the
-%   reason a session cannot run.
-%
-%   WHY. Calibration can succeed from a bad head position and then drift
-%   or lose an eye halfway through a block, and by then the trials are
-%   spent. "Sit comfortably" is not instruction enough, because the track
-%   box is invisible to the person inside it. This is the standard Tobii
-%   positioning guide, reimplemented here because the SDK's own is a
-%   Windows dialog that cannot be shown on a PTB fullscreen window.
-%
-%   THE SIGNAL. Tobii reports gaze origin in TRACK BOX coordinates:
-%   x, y, z each normalised to 0..1 across the volume the tracker can see,
-%   with 0.5, 0.5, 0.5 dead centre. Those are the only numbers here --
-%   nothing is inferred from gaze point, which is not yet calibrated and
-%   would be meaningless at this stage.
-%
-%   MIRRORING. The display acts as a mirror: lean left and the dots move
-%   left. Tobii's track-box x runs the other way, so it is flipped below.
-%   If the rig ever behaves backwards, flip cfg.et.positionGuide.mirrorX
-%   rather than editing the arithmetic.
-%
-%   ROBUSTNESS. Every SDK access is wrapped. The property spelling for
-%   track-box coordinates differs between SDK versions, both known
-%   spellings are tried, and if neither works the screen says so and lets
-%   the experimenter continue rather than stopping the session. A click
-%   always skips.
-%
-%   See also UTILS.CALIBRATE, UTILS.SETUPEYETRACKER.
+%   Uses track-box eye origin only (gaze point is uncalibrated here);
+%   skip or timeout still returns, so this aid can never block a session.
 
 ok = false;
 if ~et.enabled || isempty(et.obj), return; end
@@ -46,13 +16,13 @@ r   = Screen('Rect', window);
 W   = r(3); H = r(4);
 cx  = W/2;
 
-% Track-box panel: a window onto what the tracker can see.
+% Track-box panel
 boxW = min(560, W*0.42);
 boxH = boxW * 0.62;
 boxL = cx - boxW/2;
 boxT = H*0.26;
 
-% Depth bar, below the box.
+% Depth bar, below the box
 barW = boxW;
 barL = boxL;
 barT = boxT + boxH + 64;
@@ -76,8 +46,7 @@ while true
                      && abs(dy) <= g.tolerance ...
                      && abs(dz) <= g.tolerance;
 
-    % Hold steady before accepting, so a moment of passing through the
-    % right spot does not count as being settled in it.
+    % Require holdSec inside tolerance so passing through does not count.
     if inBox
         if isnan(goodFrom), goodFrom = GetSecs; end
         if GetSecs - goodFrom >= g.holdSec
@@ -114,14 +83,14 @@ while true
 
     if haveData
         ex = pos(1);
+        % Display mirrors but track-box x runs the other way; flip cfg.et.positionGuide.mirrorX, not the arithmetic.
         if g.mirrorX, ex = 1 - ex; end
         px = boxL + ex * boxW;
         py = boxT + pos(2) * boxH;
         px = min(max(px, boxL+8), boxL+boxW-8);
         py = min(max(py, boxT+8), boxT+boxH-8);
 
-        % Eye spacing shrinks with distance, which gives the depth cue a
-        % second, non-verbal channel.
+        % Eye spacing shrinks with distance: second, non-verbal depth cue.
         sep = 34 * (1.35 - dz);
         dotCol = utils.ternary(inBox, s.accepted, s.interactive);
         Screen('DrawDots', window, [px-sep, px+sep; py, py], 26, dotCol, [], 2);
@@ -154,8 +123,7 @@ while true
     DrawFormattedText(window, 'further back', barL + barW - b(3), ...
         barT + barH + 30, s.textDim);
 
-    % One instruction at a time -- the largest error, so the participant
-    % is never given two corrections to hold in mind at once.
+    % One instruction at a time: the largest error only.
     Screen('TextSize', window, s.sizeHeading);
     DrawFormattedText(window, nudge(haveData, inBox, dx, dy, dz, g), ...
         'center', barT + barH + 86, utils.ternary(inBox, s.accepted, s.text));
@@ -167,10 +135,7 @@ while true
     Screen('Flip', window);
     utils.checkForQuit;
 
-    % A click always continues. The experimenter may have a good reason
-    % -- glasses, an unusual seating position, a participant who cannot
-    % get centred -- and being trapped on a setup screen is worse than a
-    % slightly off-centre head.
+    % A click always continues; being trapped on a setup screen is worse than an off-centre head.
     [~, ~, buttons] = utils.getMouse(window);
     if any(buttons)
         while any(buttons), [~,~,buttons] = utils.getMouse(window); end
@@ -226,10 +191,7 @@ end
 %% ======================================================================
 function [pos, nEyes] = headPosition(et)
 %HEADPOSITION  Mean track-box position of whichever eyes are visible.
-%
-%   Returns [x y z] normalised to the track box, or NaNs. Every SDK
-%   access is wrapped: property spellings differ across SDK versions and
-%   a positioning aid must never throw into the middle of a session.
+%   Returns [x y z] normalised 0..1 in the track box (0.5 centre), or NaNs; every SDK access wrapped so a positioning aid never throws mid-session.
 
 pos = [NaN NaN NaN];
 nEyes = 0;
@@ -269,8 +231,7 @@ function p = trackBox(eye)
 
 p = [NaN NaN NaN];
 
-% Skip an eye the tracker has explicitly marked invalid. If validity
-% cannot be read at all, fall through and let the finite check decide.
+% Skip an eye marked invalid; unreadable validity falls through to the finite check.
 try
     if eye.gaze_origin.validity ~= Validity.Valid
         return

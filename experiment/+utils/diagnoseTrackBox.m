@@ -1,12 +1,6 @@
 function sample = diagnoseTrackBox(cfg)
 %UTILS.DIAGNOSETRACKBOX  Print Tobii gaze sample fields for positionGuide.
-%
 %   sample = utils.diagnoseTrackBox()
-%
-%   Run at the rig when the head-position guide cannot find track-box
-%   coordinates. It connects to the first tracker, subscribes to gaze data,
-%   waits briefly, then prints the nested sample fields so positionGuide can
-%   use the property names this SDK actually returns.
 
 if nargin < 1 || isempty(cfg)
     cfg = utils.config('rig', 'lab');

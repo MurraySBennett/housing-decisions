@@ -1,32 +1,10 @@
 function savingScreen(window, cfg, frac, label, fact)
 %UTILS.SAVINGSCREEN  "Please wait, saving data" with a real progress bar.
 %
-%   utils.savingScreen(window, cfg, frac, label, fact)
-%
-%   frac  0..1, how far through the save we are
-%   label short line describing the current step, e.g. 'Eye-tracking data'
-%   fact  the "Did you know..." text, from utils.didYouKnow -- pass the
-%         SAME one to every call in a save sequence so it does not flicker
-%         between steps
-%
-%   WHY THIS EXISTS. Saving a run is two blocking -v7.3 writes: the gaze
-%   file (large) and the behavioural .mat, plus a CSV. Previously nothing
-%   was drawn during either, so the last trial screen simply froze for
-%   several seconds. It was working, but a frozen screen at the end of a
-%   block reads as a crash, and a participant who thinks the experiment
-%   crashed behaves differently for the rest of the session.
-%
-%   THE PROGRESS IS REAL, NOT DECORATIVE. save() is a single blocking call
-%   and reports nothing, so the bar cannot advance DURING a write. Instead
-%   the caller brackets each real step -- flip at 0.15, write the gaze
-%   file, flip at 0.55, and so on. The bar therefore genuinely tracks how
-%   much of the save is done; it just moves in steps rather than smoothly.
-%   Do not add a fake animated bar. A progress indicator that lies is
-%   worse than none, because the next person to debug a slow save will
-%   trust it.
-%
-%   See also UTILS.DIDYOUKNOW, UTILS.ROUNDRECT.
+%   utils.savingScreen(window, cfg, frac, label, fact)  -- frac 0..1
+%   Pass the same fact to every call in a save sequence to avoid flicker.
 
+% save() blocks and reports nothing, so the caller brackets real steps; the bar is honest -- do not fake-animate it.
 if nargin < 5, fact = ''; end
 if nargin < 4, label = ''; end
 
@@ -67,8 +45,6 @@ if ~isempty(label)
 end
 
 % --- Did you know ------------------------------------------------------
-% Framed as a panel so it reads as an aside rather than as an instruction
-% the participant is meant to act on.
 if ~isempty(fact)
     panW = min(760, W * 0.56);
     panL = cx - panW/2;

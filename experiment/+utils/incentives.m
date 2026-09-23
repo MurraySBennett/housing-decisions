@@ -4,18 +4,6 @@ function out = incentives(action, varargin)
 %   cfg  = utils.incentives('config')
 %   txt  = utils.incentives('instructions', domain, cfg)
 %   bonus = utils.incentives('compute', sess, dataMat, cfg)
-%
-%   Design note. The grant's scheme pays a weighted sum of attribute values
-%   using the participant's own self-reported importance weights. That gives
-%   participants a reason to misreport those weights at elicitation -- and
-%   those same weights are what you validate the model's estimated weights
-%   against. It's an effort payment wearing an incentive's clothes.
-%
-%   What's implemented instead: the auction's existing accept/reject rule is
-%   already a BDM-style mechanism (bid at or above threshold wins), which IS
-%   incentive-compatible. This just attaches money to it, paid on ONE
-%   randomly selected trial. Random-incentivised-trial is standard and
-%   avoids hedging and wealth effects across trials.
 
 switch lower(char(action))
 
@@ -26,26 +14,11 @@ case 'config'
     out.basePayment  = 10.00;   % guaranteed, for showing up
     out.bonusMin     = 0.00;
     out.bonusMax     = 10.00;
-    % ANCHOR-RELATIVE, not absolute. Surplus is only interpretable against
-    % the participant's own budget: a $20k gain is a windfall on a $150k
-    % budget and rounding error on a $750k one, so a flat $1-per-$20k rule
-    % paid high-budget participants several times more for identical
-    % behaviour. That was already true under stimulus windowing -- the
-    % window has always been [0.6, 1.6] x anchor -- and fitting prices onto
-    % the window (cfg.sampling.fitToWindow) only makes it uniform.
-    %
-    % The unit is bonus dollars per 1.0 of surplus/anchor. Values chosen to
-    % reproduce the old payout at a typical anchor rather than to re-open
-    % the calibration: 10% surplus on a $350k budget paid $1.75 before and
-    % $2.00 now; $5/hr over a $25 reservation paid $2.50 before and $2.40
-    % now. Worth re-checking against real pilot payouts before this is ever
-    % switched on.
+    % Anchor-relative: unit is bonus dollars per 1.0 of surplus/anchor; re-check against real payouts before enabling.
     out.houseScale   = 20.0;
     out.wageScale    = 12.0;
     out.currency     = 'USD';
-    % showRunning defaults OFF because a live earnings counter on the trial
-    % screen is exactly the kind of off-task, changing, high-salience
-    % element that pulls gaze away from the stimuli.
+    % showRunning defaults off: a live counter on the trial screen pulls gaze from the stimuli.
     return
 
 case 'instructions'
@@ -162,8 +135,7 @@ case 'compute'
         raw = (out.surplus / base) * cfg.wageScale;
     end
     if ~isfinite(base) || base <= 0
-        % No usable anchor means no defensible scale. Pay the base rather
-        % than invent a bonus from a divide-by-zero.
+        % No usable anchor: pay the base rather than a divide-by-zero bonus.
         raw = 0;
     end
 

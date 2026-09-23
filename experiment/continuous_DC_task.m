@@ -2,22 +2,6 @@ function dataMat = continuous_DC_task(sess, run)
 %CONTINUOUS_DC_TASK  Pricing versus discrete choice, crossed with attribute count.
 %
 %   dataMat = continuous_DC_task(sess, run)
-%
-%   Rebuilt rather than refactored: the previous main loop referenced five
-%   variables that were never defined (stimTbl, allTextures, type, saveName,
-%   subID), so it could not run at all.
-%
-%   Design. Each pair of options is both CHOSEN between and PRICED
-%   separately, which is what makes a preference reversal measurable -- the
-%   old version drew choice and pricing items independently, so the two
-%   responses could never be compared for the same options. Task type is
-%   blocked and counterbalanced, following the classic paradigm, so that
-%   participants are not visibly trying to stay consistent with a choice
-%   they made moments earlier.
-%
-%   This task now carries the attribute-count manipulation (2/4/6), handed
-%   over from auction_task, which has too few trials to cross it with
-%   competition.
 
 if nargin < 1 || isempty(sess)
     sess = utils.startSession();
@@ -29,9 +13,7 @@ else
     standalone = false;
 end
 
-% Domains belong to the RUN now (see utils.beginRun), so the same task can be
-% called for jobs only, houses only, or both, independently of what other
-% tasks this participant is doing.
+% Domains belong to the run, not the session (see utils.beginRun).
 if isfield(run, 'domains') && ~isempty(run.domains)
     domainList = run.domains;
 else
@@ -44,22 +26,15 @@ tl  = utils.timeline('start');
 
 dataMat = struct();
 dataMat.domains = domainList;
-% Which visual theme this run was collected under. Without it a
-% session that was rolled back mid-way cannot be stratified later.
+% Theme recorded so a rolled-back session can be stratified later.
 dataMat.theme   = cfg.style.themeName;
-% [] on a full study run; an integer on a shortened rehearsal. A
-% rehearsal saves into the real Data tree like any other run, so
-% this is what keeps it filterable out of the analysis later.
+% [] on a full run; integer on a rehearsal, filterable in analysis.
 dataMat.trialsPerCell = cfg.rehearsal.trialsPerCell;
 window = [];
 
 try
     % =============================================== display
-    % Defensive reset even on a clean start: if a PREVIOUS run in this same
-    % MATLAB session crashed in a way that didn't reach our own cleanup
-    % code (e.g. a Ctrl-C, or an error thrown by something outside our
-    % try/catch), PsychImaging's persistent configuration-phase state can
-    % still be dirty here. This is a no-op if everything was already clean.
+    % Defensive: a prior crashed run can leave PsychImaging config state dirty.
     clear PsychImaging;
     utils.trace('display setup starting');
     PsychDefaultSetup(2);
@@ -75,26 +50,18 @@ try
     utils.trace('window opened, handle=%g rect=[%s]', window, mat2str(winRect));
     Screen('BlendFunction', window, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');
 
-    % The window exists but nothing has been drawn yet, which is the
-    % only point at which fonts can be probed. This is the sole place
-    % cfg.style is mutated after utils.config builds it -- safe, since
-    % every consumer reads cfg.style at draw time.
+    % Fonts can only be probed here; sole mutation of cfg.style after utils.config.
     cfg.style = utils.resolveFonts(window, cfg.style);
     utils.trace('fonts: content=%s chrome=%s', ...
         cfg.style.fontContent, cfg.style.fontChrome);
 
     Priority(MaxPriority(window));
-    % Cursor stays visible throughout -- almost every screen in this task
-    % is click-driven (grid boxes, detail panel, pricing arc / choice
-    % cards), so participants need to see where they're pointing.
     ShowCursor('Arrow', window);
     ListenChar(2);
 
     geom = cfg.geom;
     geom.widthPx = winRect(3); geom.heightPx = winRect(4);
 
-    % Eye tracking now runs here too -- the old file created an `et`
-    % variable and then never used it.
     utils.trace('setting up eye tracker (enabled=%d)', cfg.et.enabled);
     et = utils.setupEyeTracker(cfg, window, ~cfg.testing.enabled);
     utils.trace('eye tracker setup done (connected=%d)', et.enabled);
@@ -115,14 +82,7 @@ try
         utils.trace('domain %s: %d stimuli loaded', domain, height(stimuli));
 
         % ---- elicitation ---------------------------------------------
-        % Reuse the participant's budget/reservation-wage anchor and
-        % attribute ratings if this domain was already elicited earlier
-        % THIS SESSION (e.g. auction ran first, contdc runs next) -- no
-        % reason to make them state their budget or re-rate ten attributes
-        % twice in one sitting. A different session number (a real day
-        % break) is a deliberate cache miss: re-eliciting there gives a
-        % fresh, consistent measurement rather than reusing a stated
-        % preference that may not still hold.
+        % Cached per session; a new session number deliberately re-elicits.
         tl = utils.timeline('section', tl, sprintf('%s:elicitation', domain));
         cached = utils.elicitationCache('load', sess, domain);
         if ~isempty(cached)
@@ -159,10 +119,7 @@ try
                 keepIndustries = cellstr(inds(ord(1:min(cfg.sampling.nTopIndustries, numel(ord)))));
                 stimuli = stimuli(ismember(stimuli.industry, keepIndustries), :);
             end
-            % Listed price / offered wage is rated on the same line as the
-            % pool, and then excluded from the selection that follows --
-            % it is always shown, so its rating cannot decide anything.
-            % See utils.elicitAttrRatings for why it is collected at all.
+            % Price/wage is rated with the pool but excluded from selection (see utils.elicitAttrRatings).
             attrR       = utils.elicitAttrRatings(window, cfg, A, rs);
             poolRatings = attrR.pool;
             attrRTs     = attrR.poolRTs;
@@ -182,11 +139,6 @@ try
         end
 
         % ---- stimulus window ------------------------------------------
-        % Selects rows, or keeps them all and fits their prices onto the
-        % window, depending on cfg.sampling.fitToWindow for this domain.
-        % This is also what supplies buildPairs with the full item pool.
-        % Cross-level reuse is allowed by default so later levels are not
-        % starved by earlier ones.
         [inWindow, win] = utils.applyWindow(stimuli, A, anchor, cfg);
         fprintf('Window %s to %s: %d stimuli (%s).\n', ...
             utils.formatCurrency(win.lo, A.priceStyle), ...
@@ -199,16 +151,10 @@ try
         end
         blocks = buildBlocks(levels, sess.participant, rs);
 
-        % Pairs for every attribute level, built EAGERLY here rather than
-        % lazily inside the block loop -- this is what lets us know the
-        % full set of stimuli that will ever be shown BEFORE loading any
-        % images, instead of loading per block.
+        % Pairs built eagerly so every stimulus ever shown is known before image loading.
         nPairsThisRun = cfg.contdc.nPairs.(lower(domain));
         if ~isempty(cfg.rehearsal.trialsPerCell)
-            % contdc's design cells are attribute level x task type, and
-            % nPairs is already per level, so this maps straight across.
-            % A price block prices BOTH options of every pair, so it still
-            % yields twice a choice block's trials at the same nPairs.
+            % Cells are level x task type; nPairs is per level, so this maps directly.
             nPairsThisRun = cfg.rehearsal.trialsPerCell;
         end
         if cfg.testing.enabled
@@ -223,11 +169,7 @@ try
             selByLevel.(key) = utils.selectAttributes(A, lvl, poolRatings, ...
                 cfg.attrMethod, lvl == max(levels) && cfg.lateAtMaxOnly);
 
-            % Optionally exclude stimuli already claimed by an earlier
-            % level. The default allows cross-level reuse so every
-            % information-load condition keeps the same trial count.
-            % Reuse WITHIN a level (choose between a pair, then price each
-            % of its two options) is required by the paradigm either way.
+            % Cross-level reuse allowed by default; within-level reuse is required by the paradigm.
             if cfg.contdc.allowCrossLevelReuse
                 exclude = [];
             else
@@ -261,12 +203,7 @@ try
             showInstructions(window, cfg, domain);
         end
 
-        % Load images ONCE for the domain, only for stimuli that will
-        % actually appear -- not the whole sampled window (which can be
-        % several times larger than what any trial ever shows), and not
-        % once per block. This is also what makes the "fetching photos"
-        % screen show up once, up front, rather than as a pause between
-        % every block.
+        % Images loaded once per domain, only for stimuli that will appear.
         utils.trace('domain %s: loading images for %d stimuli (of %d sampled)', ...
             domain, numel(unique(neededIdx)), win.n);
         tex = utils.loadStimulusTextures(window, cfg, inWindow, A, neededIdx, true);
@@ -297,10 +234,7 @@ try
 
             order = randperm(rs, numel(pairs));
 
-            % Trial-within-block counting, separate from block counting.
-            % Choice blocks run one trial per pair; price blocks run TWO
-            % (money option and quality option, each priced separately),
-            % so the total differs by task type even at the same nPairs.
+            % Price blocks run two trials per pair, so totals differ by task type.
             if strcmp(task, 'choice')
                 nTrialsInBlock = numel(order);
             else
@@ -320,8 +254,6 @@ try
                     tr.pairIdx = order(pi);
                     if isempty(trials), trials = tr; else, trials(end+1) = tr; end %#ok<AGROW>
                 else
-                    % Each pair yields two pricing trials, one per option,
-                    % presented in random order.
                     items = [p.moneyIdx, p.qualityIdx];
                     isMoney = [true, false];
                     o2 = randperm(rs, 2);
@@ -361,8 +293,7 @@ try
         dataMat.(domain).reversals     = scoreReversals(trials);
         dataMat.(domain).aoiLayouts    = aoiLayouts;
 
-        % Blocking disk writes from here. See the matching note in
-        % auction_task.m -- a frozen screen reads as a crash.
+        % Blocking disk writes from here; see the matching note in auction_task.m.
         tl = utils.timeline('section', tl, sprintf('%s:saving', domain));
         savingFact = utils.didYouKnow(run.seed);
         utils.savingScreen(window, cfg, 0.10, 'Collecting eye-tracking samples', savingFact);
@@ -396,25 +327,9 @@ try
 
 catch ME
     ListenChar(0); ShowCursor; Priority(0);
-    % Always call sca, even if `window` never got assigned -- a failed
-    % OpenWindow leaves PsychImaging's internal configuration state dirty,
-    % and if that's never cleared the NEXT task's OpenWindow call fails
-    % too ("did not finalize the previous phase"), which is exactly the
-    % cascade that made one bad run take a whole session down with it.
-    % Screen('CloseAll') is safe to call even when nothing is open.
-    %
-    % sca resets Screen-level window state but NOT PsychImaging's own
-    % persistent configuration-phase variables (they live inside the
-    % psychimaging.m function itself, not in Screen's MEX state). Without
-    % clearing those too, the NEXT OpenWindow call in this MATLAB session
-    % can come back with a handle that LOOKS valid but isn't fully
-    % initialized -- which shows up as a generic Screen "Usage:" error on
-    % the first real draw call after it opens, not at OpenWindow itself.
+    % sca does not reset PsychImaging's persistent config state; both are needed or the next OpenWindow in this MATLAB session fails or returns a bad handle.
     sca;
     clear PsychImaging;
-    % sprintf, not string concatenation -- the old ['CRASH_SAVE_' subjectNum]
-    % concatenated a number into a char array and produced a garbage
-    % filename at exactly the moment the file mattered most.
     crashFile = fullfile(cfg.paths.crashed, sprintf('%s_crash.mat', run.runId));
     save(crashFile, 'ME', 'dataMat', 'sess', 'run');
     fprintf(2, '\nCrashed. Partial data saved to:\n  %s\n', crashFile);
@@ -473,19 +388,13 @@ tr.contrast   = pair.contrast;
 log = utils.eventLog('add', log, 'choice_onset', GetSecs, ...
     struct('leftIdx', leftIdx, 'rightIdx', rightIdx, 'level', blockInfo.level));
 
-% Fixation-start gate: known gaze anchor at trial onset, self-paced start.
-% t0 becomes the fixation click's own flip time -- the true stimulus-locked
-% reference for RT -- rather than whenever this function was entered.
+% t0 is the fixation click's flip time, the stimulus-locked RT reference.
 [t0, log] = utils.awaitFixationStart(window, cfg, log, struct( ...
     'trial', blockInfo.trialInBlock, 'nTrials', blockInfo.nTrialsInBlock, ...
     'label', sprintf('%s - choose - %d attributes', domain, blockInfo.level)));
 
 while true
-    % Trial screen stays clean -- no HUD here. Progress and condition
-    % (block, level, task type) were already shown on the fixation-start
-    % screen above; showing them again here would be exactly the kind of
-    % off-task, gaze-competing chrome we're trying to avoid during the
-    % actual response.
+    % No HUD on the response screen by design.
     Screen('FillRect', window, s.bg);
 
     Screen('TextFont', window, s.fontContent);
@@ -539,11 +448,7 @@ end
 function [tr, log, gazeStore] = runPriceTrial(window, cfg, geom, et, log, ...
     gazeStore, stimTbl, tex, sel, A, idx, isMoneyOption, win, domain, rs, blockInfo)
 %RUNPRICETRIAL  One option, priced on the continuous scale.
-%
-%   The card stays on screen throughout. The old version blanked it once
-%   the participant clicked "ready to price" (clearAttrs), which removed the
-%   very anchor the multiple-anchor model addition exists to study, and
-%   turned the trial into a memory task.
+%   Card stays on screen throughout; blanking it turns pricing into a memory task.
 
 s = cfg.style;
 winRect = Screen('Rect', window);
@@ -568,9 +473,6 @@ log = utils.eventLog('add', log, 'price_onset', GetSecs, ...
 scaleMin = win.scaleMin;
 scaleMax = win.scaleMax;
 
-% Arc lives entirely within its own zone from utils.layoutCardAndArc -- side by
-% side with the card, not stacked beneath it, so there is no vertical
-% competition between the price scale and the attribute content.
 cx = (L.arcLeft + L.arcRight) / 2;
 cy = L.arcBot - 60;
 outerR = min((L.arcRight - L.arcLeft)/2 - 30, (L.arcBot - L.arcTop) * 0.55);
@@ -579,23 +481,16 @@ scaleR = outerR - s.priceScale.majorTickPx;
 nTicks = 5;
 tickVals = linspace(scaleMin, scaleMax, nTicks);
 
-% The advertised figure for this option, for the scale marker below.
 itemValue = stimTbl.(A.valueVar)(idx);
 
-% Fixation-start gate: known gaze anchor at trial onset, self-paced start.
-% t0 becomes the fixation click's own flip time, the true stimulus-locked
-% RT reference, rather than whenever this function happened to be entered.
+% t0 is the fixation click's flip time, the stimulus-locked RT reference.
 [t0, log] = utils.awaitFixationStart(window, cfg, log, struct( ...
     'trial', blockInfo.trialInBlock, 'nTrials', blockInfo.nTrialsInBlock, ...
     'label', sprintf('%s - price - %d attributes', domain, blockInfo.level)));
 
-% Leave the pointer wherever it already is. Forced starts became their own
-% task feature; NaN marks "not forced" in the saved data.
+% NaN startFrac marks "not forced" in the saved data.
 tr.startFrac = NaN;
 while true
-    % Response screen stays clean -- no HUD. Same rationale as the choice
-    % trial: progress/condition info already shown on the fixation screen,
-    % nothing here should compete with the card and scale for gaze.
     Screen('FillRect', window, s.bg);
 
     Screen('TextFont', window, s.fontContent);
@@ -604,7 +499,6 @@ while true
 
     utils.drawOptionCard(window, cfg, L.cardRect, stimTbl, tex, sel, idx);
 
-    % Arc and ticks.
     a = linspace(pi, 2*pi, 160);
     % s.track, not s.border -- see the matching note in auction_task.m.
     Screen('DrawLines', window, [cx+scaleR*cos(a); cy+scaleR*sin(a)], 4, s.track);
@@ -622,10 +516,7 @@ while true
             cy+(outerR+38)*sin(ang), s.textDim);
     end
 
-    % Where the advertised figure sits on this scale. See the
-    % methodological note at the matching block in auction_task.m -- the
-    % anchoring concern is if anything sharper here, because the listed
-    % figure is also on the card a few centimetres away.
+    % Advertised-figure marker; anchoring note at the matching block in auction_task.m.
     if cfg.display.showValueMarker
         mFrac = (itemValue - scaleMin) / max(scaleMax - scaleMin, eps);
         if isfinite(mFrac) && mFrac >= 0 && mFrac <= 1
@@ -644,15 +535,13 @@ while true
     [mx, my, buttons] = utils.getMouse(window);
     ang = atan2(max(cy - my, 0), mx - cx);
     frac = min(max(1 - ang/pi, 0), 1);
-    if ~isfinite(frac), frac = 0.5; end   % defensive: never let a bad mouse
-                                           % read reach a Screen() coordinate
+    if ~isfinite(frac), frac = 0.5; end   % defensive: bad read must not reach Screen()
     curVal = scaleMin + frac*(scaleMax - scaleMin);
 
     px = cx + scaleR*cos(pi + frac*pi);
     py = cy + scaleR*sin(pi + frac*pi);
     Screen('DrawDots', window, [px; py], 18, s.interactive, [], 2);
 
-    % Snap to the displayed resolution -- see utils.snapValue.
     curVal = utils.snapValue(curVal, A.priceStyle);
 
     % Above the arc rather than inside its bowl, matching auction_task.
@@ -745,9 +634,6 @@ end
 %% ======================================================================
 function rev = scoreReversals(trials)
 %SCOREREVERSALS  Per pair: chose one option but priced the other higher.
-%
-%   The classic signature. Computed here so it appears in the saved file
-%   rather than being reconstructed later from raw trials.
 
 rev = struct('pairIdx', {}, 'level', {}, 'choseMoney', {}, ...
              'pricedMoneyHigher', {}, 'reversal', {});
@@ -836,8 +722,6 @@ end
 Screen('FillRect', window, s.bg);
 Screen('TextFont', window, s.fontContent);
 Screen('TextSize', window, s.sizeContent);
-% See the note in auction_task.m -- 'q' always worked, participants
-% were just never told.
 DrawFormattedText(window, [body quitNotice()], 'center', 'center', ...
     s.text, 60, 0, 0, 1.6);
 Screen('Flip', window);
@@ -877,7 +761,6 @@ end
 end
 
 
-%% ======================================================================
 %% ======================================================================
 function list = struct2texlist(tex)
 list = [];

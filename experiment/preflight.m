@@ -1,14 +1,8 @@
 function report = preflight(participant, sessionNum, varargin)
 %PREFLIGHT  Print the resolved battery plan and non-PTB readiness checks.
 %
-%   preflight(12, 1)
-%   preflight(12, 2, 'rig', 'lab', 'jobsArm', 'synthetic')
-%   report = preflight(..., 'runChecks', false)
-%
-%   This does not open a Psychtoolbox window. It resolves the same
-%   participant/session schedule run_battery.m will execute, estimates
-%   duration from the configured timeouts, and can run path, image, and AOI
-%   checks before the lab rig is handed to a participant.
+%   report = preflight(participant, sessionNum, 'rig', 'lab', 'runChecks', false)
+%   Resolves the run_battery.m schedule without opening a Psychtoolbox window.
 
 thisDir = fileparts(mfilename('fullpath'));
 addpath(thisDir);
@@ -139,8 +133,7 @@ for k = 1:numel(rows)
         domain = lower(r.domains{d});
         switch r.task
             case 'auction'
-                % Must mirror the same override the task applies, or the
-                % estimate quotes a full-study duration for a rehearsal.
+                % Must mirror the rehearsal override auction_task applies.
                 nTrials = cfg.auction.nTrials;
                 if ~isempty(cfg.rehearsal.trialsPerCell)
                     nTrials = cfg.rehearsal.trialsPerCell * 2;
@@ -149,8 +142,6 @@ for k = 1:numel(rows)
                 seconds = seconds + cfg.auction.feedbackSec * nTrials;
                 seconds = seconds + cfg.auction.trialTimeoutSec; % practice
                 seconds = seconds + 90; % instructions, checks, transitions
-                % One self-paced break between blocks. Not free: it is the
-                % screen the participant is most likely to actually rest on.
                 seconds = seconds + 30 * max(0, cfg.auction.nBlocks - 1);
             case 'contdc'
                 nPairs = cfg.contdc.nPairs.(domain);
@@ -163,10 +154,7 @@ for k = 1:numel(rows)
                 seconds = seconds + nLevels * nPairs * 3 * cfg.contdc.itiSec;
                 seconds = seconds + 120; % instructions and block intros
             case 'pref'
-                % Constants mirror preference_task.m: 80 ratings / 160
-                % pairwise for houses, 160 pairwise for jobs, ~1.1 s of
-                % ISI + fixation per trial, self-paced responses assumed
-                % ~4 s (rating) / ~3 s (photo pwc) / ~2.5 s (text pwc).
+                % Trial counts and pacing must mirror preference_task.m.
                 switch domain
                     case 'houses'
                         seconds = seconds + 80 * (4 + 1.1) + 160 * (3 + 1.1) + 60;
@@ -246,8 +234,7 @@ detail = utils.layoutDetailAOIs(winRect, cfg, sel);
 L.detailRects = detail.rects;
 L.detailNames = detail.names;
 
-% The bid screen shows the option card beside the scale as of 2026-09-16,
-% so it has attribute AOIs that have to be checked like any other.
+% Bid screen shows the card beside the scale, so its attribute AOIs need checking too.
 bidL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
 bid = utils.cardAOIs(cfg, bidL.cardRect, sel, 'bid');
 L.bidRects = bid.rects;
@@ -269,8 +256,7 @@ right = utils.cardAOIs(cfg, cards(:,2), sel, 'choice_right');
 L.choiceRects = [left.rects, right.rects];
 L.choiceNames = [left.names, right.names];
 
-% The price card is the same layout the auction's bid screen now uses, so
-% take it from the same function rather than restating its numbers.
+% Price card layout mirrors the auction bid screen (utils.layoutCardAndArc).
 priceL = utils.layoutCardAndArc(winRect, cfg, geom, numel(sel.shown));
 price = utils.cardAOIs(cfg, priceL.cardRect, sel, 'price');
 L.priceRects = price.rects;

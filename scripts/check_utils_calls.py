@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
 """check_utils_calls.py -- every utils.X(...) call has a +utils/X.m behind it.
-
-MATLAB resolves package functions at CALL time, so a typo or a rename leaves
-a file that looks fine and throws the first time that branch runs -- which,
-for a screen reached once per trial, means mid-session at the rig. This
-machine has no MATLAB, so nothing else catches it before then.
-
-Comments are stripped first: the docstrings in this codebase name utils
-functions constantly, including ones being described rather than called.
-"""
+MATLAB resolves package calls at call time and this machine has no MATLAB, so
+this is the only pre-rig check; comments are stripped since they name utils functions."""
 
 import glob
 import os

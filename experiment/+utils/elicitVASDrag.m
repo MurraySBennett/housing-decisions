@@ -4,36 +4,9 @@ function [ratings, rts, order, detail] = elicitVASDrag(window, cfg, items, promp
 %   [ratings, rts, order, detail] = utils.elicitVASDrag(window, cfg, items, ...
 %                                       prompt, anchors, rngStream)
 %
-%   Same contract as utils.elicitVAS -- ratings NORMALISED 0-1 in the order
-%   of `items` -- so the two are interchangeable behind
-%   utils.elicitRatings. What differs is the task the participant is doing.
-%
-%   WHY THIS EXISTS. In the sequential version items arrive one at a time in
-%   random order, so the first item is placed by someone who has not yet
-%   seen what it is being compared against. Importance is relative; a
-%   participant who meets "Commute" first has no way to know whether it
-%   deserves the middle or the far left until "Offered wage" turns up four
-%   items later. Here the whole set is visible from the first frame and
-%   nothing is committed until everything is placed.
-%
-%   WHAT IT COSTS, and it is not nothing. Free reordering makes this closer
-%   to a RANKING than to a rating: participants adjust placements against
-%   each other until the arrangement looks right, which is a different
-%   cognitive task from marking one item on a line. Per-item RT stops being
-%   a clean measure -- `rts` here is time to FIRST placement, and an item
-%   moved four times afterwards has an RT that describes only its first
-%   guess. `detail.nMoves` is returned so that can be checked rather than
-%   assumed. Do not pool these ratings with sequentially-collected ones
-%   without looking at both distributions first.
-%
-%   Set cfg.elicit.ratingMode = 'sequential' to go back.
-%
-%   detail fields
-%     .nMoves       1 x n  times each item was dropped on the line
-%     .firstPlaceAt 1 x n  seconds from onset to first placement
-%     .lastMoveAt   1 x n  seconds from onset to final placement
-%     .totalSec     wall-clock for the whole screen
-%     .mode         'drag'
+%   Same contract as utils.elicitVAS: ratings normalised 0-1 in item order.
+%   rts is time to FIRST placement; check detail.nMoves before pooling with
+%   sequential data.
 
 s = cfg.style;
 scr = Screen('Rect', window);
@@ -46,9 +19,7 @@ if nargin < 6 || isempty(rngStream)
     rngStream = RandStream.getGlobalStream;
 end
 
-% Bank order is randomised so the layout of the unplaced chips is not the
-% same for every participant -- a fixed bank order is itself an anchor on
-% what gets placed first.
+% Bank order randomised: a fixed order is itself an anchor.
 bankOrder = randperm(rngStream, n);
 
 lineY     = round(H * 0.68);
@@ -56,9 +27,7 @@ lineLeft  = W * 0.12;
 lineRight = W * 0.88;
 lineLen   = lineRight - lineLeft;
 
-% A drop counts as "on the line" anywhere in this band, not on the hairline
-% itself. Requiring pixel accuracy on a 3px line would make this a motor
-% task; the band is what keeps it a judgement.
+% Drops count anywhere in this band; the band keeps it a judgement, not a motor task.
 dropBand = max(90, cfg.geom.deg2px(2.5));
 
 % --- Chip geometry ----------------------------------------------------
@@ -147,11 +116,7 @@ while true
             lastAt(dragIdx)  = GetSecs - t0;
             nMoves(dragIdx)  = nMoves(dragIdx) + 1;
         else
-            % Dropped anywhere else: back to the bank. Deliberately
-            % reversible -- a participant who changes their mind about an
-            % item having any place on the line at all must be able to
-            % take it off, or the first drop is irreversible and the whole
-            % point of showing the set at once is lost.
+            % Dropped off the line: back to the bank -- placement must stay reversible.
             placedX(dragIdx) = NaN;
         end
         dragIdx = 0;
@@ -172,7 +137,6 @@ while true
     end
     DrawFormattedText(window, sub, 'center', H * 0.145, s.textDim);
 
-    % The line. s.track, not s.border -- this IS the response scale.
     Screen('DrawLine', window, s.track, lineLeft, lineY, lineRight, lineY, 3);
     Screen('DrawLine', window, s.track, lineLeft, lineY-16, lineLeft, lineY+16, 3);
     Screen('DrawLine', window, s.track, lineRight, lineY-16, lineRight, lineY+16, 3);
@@ -196,14 +160,12 @@ while true
     if dragIdx > 0
         drawChip(window, cfg, items{dragIdx}, dragPos(1), dragPos(2), ...
             chipW(dragIdx), chipH, false, true);
-        % Where it would land, shown while the mouse is still down.
         if abs(dragPos(2) + chipH/2 - lineY) <= dropBand
             gx = min(max(dragPos(1) + chipW(dragIdx)/2, lineLeft), lineRight);
             Screen('DrawLine', window, s.marker, gx, lineY-22, gx, lineY+22, 3);
         end
     end
 
-    % Done button, inert until everything is on the line.
     utils.roundRect(window, doneRect, s.radiusPanel, s.bgPanel, ...
         utils.ternary(allPlaced, s.interactive, s.border), s.borderWidthPx);
     Screen('TextSize', window, s.sizeContent);

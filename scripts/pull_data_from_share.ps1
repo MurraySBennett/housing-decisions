@@ -1,19 +1,7 @@
 <#
-    pull_data_from_share.ps1 -- copy lab data from the OSU share into this
-    WSL checkout's ignored local data tree, then run the R analysis.
-
-    Source data lives inside the experiment tree on the share:
-      \\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data
-
-    Local data lands under:
-      data\lab\Data
-
-    That directory is ignored by git. The script never deletes local files;
-    it overwrites files with the same relative path and writes a fresh
-    manifest so stale local files are visible rather than silently erased.
-
-    Run from WSL. Pipe the script text into PowerShell because the lab
-    machine policy can reject unsigned `-File` execution:
+    pull_data_from_share.ps1 -- copy lab data from the share's Experiment\Data into the git-ignored data\lab\Data, then run the R analysis.
+    Never deletes; overwrites same-path files and writes a fresh pull manifest.
+    Run from WSL; pipe the script text in because machine policy can reject unsigned -File execution:
       PS=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
       $PS -NoProfile -Command "Invoke-Expression (Get-Content -Raw -LiteralPath '\\wsl.localhost\Ubuntu\home\msb\projects\housing-decisions\scripts\pull_data_from_share.ps1')"
 #>
