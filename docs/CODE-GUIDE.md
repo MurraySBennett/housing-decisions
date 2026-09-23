@@ -76,8 +76,12 @@ Rscript analysis/R/run_all.R
 ```
 
 It prints a data-integrity report (read it — it flags malformed cells) and
-writes descriptive figures. `scripts/pull_data_from_share.ps1` copies data
-from the lab share to a local machine and runs the same pipeline.
+writes descriptive figures. The analysis runs on any OS with R — paths are
+resolved relative to the script, nothing is Windows-specific. The two
+`scripts/*.ps1` files are the exception: they are deliberately Windows-only
+(the lab share and rig are Windows); on a Mac or Linux machine you work from
+exported CSVs instead. Running the experiment itself requires the Windows
+rig (MATLAB, Psychtoolbox, the Tobii SDK, and the image set live there).
 
 ## Things that are deliberate (do not "fix" these)
 

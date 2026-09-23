@@ -131,10 +131,16 @@ pleasantly.**
   history now — the Lichtenstein & Slovic citation and design notes from
   buildPairs/elicitVASDrag may be wanted for the methods write-up. New
   `docs/CODE-GUIDE.md` is the grad-student orientation, linked from README.
-  Still pending Murray's call: scrub the 40 Co-Authored-By trailers from
-  history (rewrite + force-push), keep or fold AGENTS.md, then invite
-  `moontran044`. No-AI-attribution is now policy in the daisywheel working
-  agreement and ~/.claude/settings.json
+  History scrubbed 2026-09-23: all Co-Authored-By trailers rewritten out of
+  every commit, trees verified identical, force-pushed; pre-scrub bundle in
+  the session scratchpad and local `refs/original` kept as backups. AGENTS.md
+  stays. Cross-platform audit for the Mac collaborator: index is all-LF, no
+  case-clash filenames, no bashisms, R pipeline path-portable — sound on
+  Windows/Linux/macOS (experiment itself is rig-only, documented in
+  CODE-GUIDE). **Inviting `moontran044` (write) is ON HOLD until Murray says
+  go.** Portfolio-wide sweep playbook:
+  `~/.agents/handoffs/HANDOFF-code-sharing-sweep.md`. No-AI-attribution is
+  now policy in the daisywheel working agreement and ~/.claude/settings.json
 - [x] 2026-09-23 **the preference task is now a battery task** (`pref` rows in
   `utils.batteryPlan`), renamed `photo_preference_task.m` ->
   `preference_task.m` and converted to the `(sess, run)` function form.
