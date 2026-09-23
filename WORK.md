@@ -137,8 +137,8 @@ pleasantly.**
   stays. Cross-platform audit for the Mac collaborator: index is all-LF, no
   case-clash filenames, no bashisms, R pipeline path-portable — sound on
   Windows/Linux/macOS (experiment itself is rig-only, documented in
-  CODE-GUIDE). **Inviting `moontran044` (write) is ON HOLD until Murray says
-  go.** Portfolio-wide sweep playbook:
+  CODE-GUIDE). `moontran044` invited with write access 2026-09-23, pending
+  her acceptance. Portfolio-wide sweep playbook:
   `~/.agents/handoffs/HANDOFF-code-sharing-sweep.md`. No-AI-attribution is
   now policy in the daisywheel working agreement and ~/.claude/settings.json
 - [x] 2026-09-23 **the preference task is now a battery task** (`pref` rows in
