@@ -121,6 +121,16 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-23 photo task revisions from the first rig run: photos are
+  center-cropped to the box aspect so every photo fills the identical
+  on-screen rect (no more size variation between photos); pairwise responses
+  are now the Z (left) and M (right) keys with the cursor hidden for the
+  section; and pairwise trials only ever compare photos of the same area
+  (kitchen vs kitchen, ...), allocated across areas proportional to their
+  rating quotas in `buildPhotoPreferencePlan` — at the 80/160 defaults that
+  is 28 pairs each for exterior/kitchen and 26 for the rest, and the trial
+  prompt now names the area ("Which kitchen do you prefer?"). All pinned in
+  `verify_static.sh`; redeployed to the share
 - [x] 2026-09-23 fixed the photo task's rig crash at the `Screen('Preference')`
   line: `skipSyncTests` is a logical in `rigProfiles` and Screen rejects
   logicals, so it now casts to double like the battery tasks. The same display

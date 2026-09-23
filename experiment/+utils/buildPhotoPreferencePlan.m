@@ -4,7 +4,8 @@ function plan = buildPhotoPreferencePlan(stimTbl, nRating, nPwc, areaQuotas, rng
 %   plan = utils.buildPhotoPreferencePlan(stimTbl, 80, 160, quotas, rs)
 %
 %   The stimulus unit is an individual house photo, not a full listing.
-%   photoTable has one row per image cell in house_stimuli.csv.
+%   photoTable has one row per image cell in house_stimuli.csv. Pairwise
+%   trials always compare two photos of the same area.
 
 if nargin < 5 || isempty(rngStream), rngStream = RandStream.getGlobalStream; end
 if nargin < 4, areaQuotas = struct(); end
@@ -61,11 +62,13 @@ if numel(ratingPhotoRows) ~= nRating
 end
 ratingPhotoRows = ratingPhotoRows(randperm(rngStream, numel(ratingPhotoRows)));
 
-pwcPairs = makePairs(ratingPhotoRows, nPwc, rngStream);
+[pwcPairs, pwcPairsPerArea] = makeWithinAreaPairs(ratingPhotoRows, ...
+    photoTable, areaVars, nPwc, rngStream);
 
 plan.photoTable       = photoTable;
 plan.ratingPhotoRows  = ratingPhotoRows(:);
 plan.pwcPairs         = pwcPairs;
+plan.pwcPairsPerArea  = pwcPairsPerArea;
 plan.areaVars         = areaVars;
 plan.areaLabels       = areaLabels;
 plan.areaQuotas       = areaQuotas;
@@ -79,6 +82,44 @@ base = floor(n / numel(areaVars));
 remn = mod(n, numel(areaVars));
 for k = 1:numel(areaVars)
     q.(areaVars{k}) = base + double(k <= remn);
+end
+end
+
+
+function [pairs, perArea] = makeWithinAreaPairs(photoRows, photoTable, areaVars, nPwc, rngStream)
+% Every pairwise trial compares two photos of the SAME area (kitchen vs
+% kitchen, bathroom vs bathroom, ...). Trials are allocated across areas
+% proportional to how many rated photos each contributed (largest
+% remainder), built within each area, then shuffled together.
+counts = zeros(numel(areaVars), 1);
+rowsByArea = cell(numel(areaVars), 1);
+for a = 1:numel(areaVars)
+    rowsByArea{a} = photoRows(photoTable.areaVar(photoRows) == string(areaVars{a}));
+    counts(a) = numel(rowsByArea{a});
+end
+
+alloc = floor(nPwc * counts / sum(counts));
+remainder = nPwc * counts / sum(counts) - alloc;
+[~, ord] = sort(remainder, 'descend');
+short = nPwc - sum(alloc);
+alloc(ord(1:short)) = alloc(ord(1:short)) + 1;
+
+pairs = zeros(0, 2);
+for a = 1:numel(areaVars)
+    if alloc(a) == 0, continue; end
+    maxUnique = counts(a) * (counts(a) - 1) / 2;
+    if alloc(a) > maxUnique
+        error('hw:photoPref:areaPairsTooMany', ...
+            'Area %s needs %d pairs but its %d photos only make %d unique pairs.', ...
+            areaVars{a}, alloc(a), counts(a), maxUnique);
+    end
+    pairs = [pairs; makePairs(rowsByArea{a}, alloc(a), rngStream)]; %#ok<AGROW>
+end
+pairs = pairs(randperm(rngStream, size(pairs, 1)), :);
+
+perArea = struct();
+for a = 1:numel(areaVars)
+    perArea.(areaVars{a}) = alloc(a);
 end
 end
 

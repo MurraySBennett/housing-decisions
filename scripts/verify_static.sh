@@ -372,6 +372,10 @@ check_grep "cfg\.paths\.images[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.sti
 check_grep "SkipSyncTests', double\(cfg\.display\.skipSyncTests\)" experiment/photo_preference_task.m 'photo task casts SkipSyncTests to double'
 check_grep 'PsychDefaultSetup\(2\)' experiment/photo_preference_task.m 'photo task normalizes 0-1 color range'
 check_grep "BlendFunction" experiment/photo_preference_task.m 'photo task enables alpha blending'
+check_grep 'cropSrcRect' experiment/photo_preference_task.m 'photos center-cropped to identical on-screen size'
+check_grep "KbName\('z'\)" experiment/photo_preference_task.m 'pwc left response is the z key'
+check_grep "KbName\('m'\)" experiment/photo_preference_task.m 'pwc right response is the m key'
+check_grep 'makeWithinAreaPairs' experiment/+utils/buildPhotoPreferencePlan.m 'pwc pairs are within-area'
 
 if ! python3 scripts/check_utils_calls.py; then
   fail=1

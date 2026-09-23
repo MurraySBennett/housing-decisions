@@ -132,8 +132,9 @@ try
                 dataMat.rating.trials = runRatingTrials(window, cfg, plan, tex);
             case 'pwc'
                 showMessage(window, cfg, ['House photo choices\n\n' ...
-                    'You will see two house photos at a time.\n\n' ...
-                    'Click the photo with the house style you prefer.\n\n' ...
+                    'You will see two photos of the same room or area at a time\n' ...
+                    '(kitchen with kitchen, bathroom with bathroom, and so on).\n\n' ...
+                    'Press Z to choose the left photo, or M to choose the right photo.\n\n' ...
                     'Click to begin.']);
                 dataMat.pwc.trials = runPwcTrials(window, cfg, plan, tex);
             otherwise
@@ -295,36 +296,43 @@ scr = Screen('Rect', window);
 W = scr(3); H = scr(4);
 leftRect = [W*0.08, H*0.20, W*0.47, H*0.72];
 rightRect = [W*0.53, H*0.20, W*0.92, H*0.72];
+leftKey = KbName('z');
+rightKey = KbName('m');
+% Responses are keys, so a cursor parked over one photo would be the only
+% mouse trace on screen -- hide it for the section. showMessage re-shows.
+HideCursor(window);
 trials = repmat(pwcTrialTemplate(), size(plan.pwcPairs, 1), 1);
 
 for t = 1:size(plan.pwcPairs, 1)
     leftRow = plan.pwcPairs(t,1);
     rightRow = plan.pwcPairs(t,2);
+    % Within-area by construction; the prompt can therefore name the area.
+    area = char(plan.photoTable.areaLabel(leftRow));
     t0 = GetSecs;
     choice = '';
+    KbReleaseWait;
     while isempty(choice)
-        [mx, my, buttons] = utils.getMouse(window);
         Screen('FillRect', window, s.bg);
         Screen('TextFont', window, s.fontContent);
         Screen('TextSize', window, s.sizeHeading);
-        DrawFormattedText(window, 'Which house style do you prefer?', ...
+        DrawFormattedText(window, sprintf('Which %s do you prefer?', lower(area)), ...
             'center', H*0.08, s.text);
         drawPhoto(window, tex(leftRow), leftRect);
         drawPhoto(window, tex(rightRow), rightRect);
         Screen('TextSize', window, s.sizeLabel);
-        DrawFormattedText(window, 'LEFT', mean(leftRect([1 3])) - 30, H*0.75, s.textDim);
-        DrawFormattedText(window, 'RIGHT', mean(rightRect([1 3])) - 38, H*0.75, s.textDim);
+        DrawFormattedText(window, 'Z', mean(leftRect([1 3])) - 8, H*0.75, s.textDim);
+        DrawFormattedText(window, 'M', mean(rightRect([1 3])) - 10, H*0.75, s.textDim);
         drawProgress(window, cfg, t, size(plan.pwcPairs, 1));
         Screen('Flip', window);
         utils.checkForQuit;
 
-        if buttons(1)
-            if inRect(leftRect, mx, my)
+        [keyIsDown, ~, keyCode] = KbCheck;
+        if keyIsDown
+            if keyCode(leftKey)
                 choice = 'left';
-            elseif inRect(rightRect, mx, my)
+            elseif keyCode(rightKey)
                 choice = 'right';
             end
-            while any(buttons), [~,~,buttons] = utils.getMouse(window); end
         end
     end
 
@@ -352,29 +360,32 @@ for t = 1:size(plan.pwcPairs, 1)
     trials(t).leftImageFile = char(plan.photoTable.imageFile(leftRow));
     trials(t).rightImageFile = char(plan.photoTable.imageFile(rightRow));
 end
+ShowCursor('Arrow', window);
 end
 
 
 %% =====================================================================
 function drawPhoto(window, tex, box)
+% Center-crop the source to the box's aspect ratio so every photo fills
+% the identical on-screen rect -- displayed size never varies by photo.
 src = Screen('Rect', tex);
-dst = fitRect(src, box);
-Screen('DrawTexture', window, tex, [], dst);
+Screen('DrawTexture', window, tex, cropSrcRect(src, box), box);
 end
 
 
 %% =====================================================================
-function dst = fitRect(src, box)
+function srcRect = cropSrcRect(src, box)
 sw = src(3) - src(1);
 sh = src(4) - src(2);
-bw = box(3) - box(1);
-bh = box(4) - box(2);
-scale = min(bw / sw, bh / sh);
-w = sw * scale;
-h = sh * scale;
-cx = mean(box([1 3]));
-cy = mean(box([2 4]));
-dst = [cx-w/2, cy-h/2, cx+w/2, cy+h/2];
+boxAspect = (box(3) - box(1)) / (box(4) - box(2));
+if sw / sh > boxAspect
+    w = sh * boxAspect; h = sh;
+else
+    w = sw; h = sw / boxAspect;
+end
+cx = mean(src([1 3]));
+cy = mean(src([2 4]));
+srcRect = [cx-w/2, cy-h/2, cx+w/2, cy+h/2];
 end
 
 
@@ -385,12 +396,6 @@ scr = Screen('Rect', window);
 Screen('TextSize', window, s.sizeLabel);
 DrawFormattedText(window, sprintf('%d / %d', t, n), scr(3) - 130, scr(4) - 54, s.textDim);
 DrawFormattedText(window, 'Press Q to stop', 42, scr(4) - 54, s.textDim);
-end
-
-
-%% =====================================================================
-function tf = inRect(rect, x, y)
-tf = x >= rect(1) && x <= rect(3) && y >= rect(2) && y <= rect(4);
 end
 
 
