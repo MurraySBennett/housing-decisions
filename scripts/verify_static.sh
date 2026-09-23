@@ -365,6 +365,14 @@ check_grep "cfg\.paths\.local[[:space:]]*=[[:space:]]*cfg\.paths\.experiment" ex
 check_grep "cfg\.paths\.data[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.experiment,[[:space:]]*'Data'\)" experiment/+utils/config.m 'participant data stays inside Experiment'
 check_grep "cfg\.paths\.images[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.stimuli,[[:space:]]*'house_images'\)" experiment/+utils/config.m 'house images stay inside stimuli'
 
+# --- photo_preference_task display setup matches the battery tasks -------
+# Screen('Preference') rejects MATLAB logicals -- rigProfiles stores
+# skipSyncTests as one, so the cast is load-bearing. And style.m colors are
+# 0-1: without PsychDefaultSetup(2) every panel renders near-black.
+check_grep "SkipSyncTests', double\(cfg\.display\.skipSyncTests\)" experiment/photo_preference_task.m 'photo task casts SkipSyncTests to double'
+check_grep 'PsychDefaultSetup\(2\)' experiment/photo_preference_task.m 'photo task normalizes 0-1 color range'
+check_grep "BlendFunction" experiment/photo_preference_task.m 'photo task enables alpha blending'
+
 if ! python3 scripts/check_utils_calls.py; then
   fail=1
 fi

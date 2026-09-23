@@ -88,8 +88,11 @@ if ~exist(cfg.paths.images, 'dir')
 end
 
 %% ---- Display ----------------------------------------------------------
-AssertOpenGL;
-Screen('Preference', 'SkipSyncTests', cfg.display.skipSyncTests);
+% Defensive reset even on a clean start: a previous crashed run in this
+% MATLAB session can leave PsychImaging's configuration-phase state dirty.
+clear PsychImaging;
+PsychDefaultSetup(2);
+Screen('Preference', 'SkipSyncTests', double(cfg.display.skipSyncTests));
 screens = Screen('Screens');
 screenNumber = max(screens);
 if cfg.testing.windowed
@@ -97,6 +100,7 @@ if cfg.testing.windowed
 else
     [window, winRect] = PsychImaging('OpenWindow', screenNumber, cfg.style.bg);
 end
+Screen('BlendFunction', window, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');
 cfg.style = utils.resolveFonts(window, cfg.style);
 sess.cfg = cfg;
 s = cfg.style;

@@ -121,6 +121,13 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-23 fixed the photo task's rig crash at the `Screen('Preference')`
+  line: `skipSyncTests` is a logical in `rigProfiles` and Screen rejects
+  logicals, so it now casts to double like the battery tasks. The same display
+  block was also missing `PsychDefaultSetup(2)` (style colors are 0-1, so
+  every panel would have rendered near-black) and the alpha blend function;
+  both added, and all three are now pinned by `verify_static.sh`. Redeployed
+  to the share. Still needs its first full click-through at the rig
 - [x] 2026-09-21 standalone house-photo preference task added:
   `photo_preference_task.m` writes its own `photo_pref` run, samples
   individual photos from all six house areas with editable quotas, supports
