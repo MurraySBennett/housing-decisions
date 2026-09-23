@@ -162,6 +162,17 @@ for k = 1:numel(rows)
                 seconds = seconds + nLevels * nPairs * 2 * cfg.contdc.priceTimeoutSec;
                 seconds = seconds + nLevels * nPairs * 3 * cfg.contdc.itiSec;
                 seconds = seconds + 120; % instructions and block intros
+            case 'pref'
+                % Constants mirror preference_task.m: 80 ratings / 160
+                % pairwise for houses, 160 pairwise for jobs, ~1.1 s of
+                % ISI + fixation per trial, self-paced responses assumed
+                % ~4 s (rating) / ~3 s (photo pwc) / ~2.5 s (text pwc).
+                switch domain
+                    case 'houses'
+                        seconds = seconds + 80 * (4 + 1.1) + 160 * (3 + 1.1) + 60;
+                    case 'jobs'
+                        seconds = seconds + 160 * (2.5 + 1.1) + 30;
+                end
         end
     end
 end

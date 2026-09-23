@@ -39,7 +39,8 @@ KbName('UnifyKeyNames');
 DEMO_DOMAIN  = 'jobs';   % 'jobs' | 'houses'. Houses need the ~605MB image
                          % set (see STIMULI.md); if it isn't found this
                          % falls back to jobs rather than crashing.
-DEMO_TASKS   = {'auction', 'contdc'};  % drop one to shorten further
+DEMO_TASKS   = {'auction', 'contdc'};  % drop one to shorten further;
+                                       % add 'pref' to demo the preference task
 DEMO_FAST    = true;     % compress the auction market clock so a search
                          % episode resolves in ~20s instead of up to 90s.
                          % Set false to show real market pacing.
@@ -125,10 +126,12 @@ cfg.paths.data             = demoData;
 cfg.paths.sessions         = fullfile(demoData, 'sessions');
 cfg.paths.taskData.auction = fullfile(demoData, 'auction');
 cfg.paths.taskData.contdc  = fullfile(demoData, 'cont_dc');
+cfg.paths.taskData.pref    = fullfile(demoData, 'pref');
 cfg.paths.gaze             = fullfile(demoData, 'gaze');
 cfg.paths.crashed          = fullfile(demoData, 'Crashes');
 demoDirs = {cfg.paths.sessions, cfg.paths.taskData.auction, ...
-            cfg.paths.taskData.contdc, cfg.paths.gaze, cfg.paths.crashed};
+            cfg.paths.taskData.contdc, cfg.paths.taskData.pref, ...
+            cfg.paths.gaze, cfg.paths.crashed};
 for k = 1:numel(demoDirs)
     if ~isfolder(demoDirs{k}), mkdir(demoDirs{k}); end
 end
@@ -215,6 +218,8 @@ for k = 1:numel(DEMO_TASKS)
                 auction_task(sess, run);
             case 'contdc'
                 continuous_DC_task(sess, run);
+            case 'pref'
+                preference_task(sess, run);
             otherwise
                 error('demo_battery:unknownTask', 'Unknown task "%s".', task);
         end

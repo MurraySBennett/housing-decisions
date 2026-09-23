@@ -214,22 +214,25 @@ check_grep 'startFrac[[:space:]]*=[[:space:]]*NaN' experiment/auction_task.m 'au
 check_grep 'tr\.startFrac[[:space:]]*=[[:space:]]*NaN' experiment/continuous_DC_task.m 'contdc records no forced pricing cursor start'
 check_grep 'The practice round is over' experiment/auction_task.m 'clear practice-to-real boundary'
 
-# --- Standalone house photo preference task -----------------------------
-check_file experiment/photo_preference_task.m
+# --- Preference task (battery 'pref' rows, houses photos / jobs titles) --
+check_file experiment/preference_task.m
 check_file experiment/+utils/buildPhotoPreferencePlan.m
-check_grep 'taskData\.photo_pref' experiment/+utils/config.m 'photo preference data directory'
-check_grep "TASK_MODE[[:space:]]*=[[:space:]]*'both'" experiment/photo_preference_task.m 'photo preference can run both sections'
-check_grep "case 'rating'" experiment/photo_preference_task.m 'photo preference rating mode'
-check_grep "case 'pwc'" experiment/photo_preference_task.m 'photo preference pairwise mode'
-check_grep 'N_RATING[[:space:]]*=[[:space:]]*80' experiment/photo_preference_task.m 'default 80 photo ratings'
-check_grep 'N_PWC[[:space:]]*=[[:space:]]*160' experiment/photo_preference_task.m 'default 160 pairwise comparisons'
-check_grep 'AREA_QUOTAS' experiment/photo_preference_task.m 'editable area quotas'
-check_grep "utils\.readStimuli\(cfg,[[:space:]]*'houses'\)" experiment/photo_preference_task.m 'photo preference reads houses through shared loader'
+check_file experiment/+utils/buildJobPreferencePlan.m
+check_file experiment/+utils/samplePairs.m
+check_file experiment/+utils/timeline.m
+check_grep "TASK_MODE[[:space:]]*=[[:space:]]*'both'" experiment/preference_task.m 'houses preference can run both sections'
+check_grep "case 'rating'" experiment/preference_task.m 'houses preference rating mode'
+check_grep "case 'pwc'" experiment/preference_task.m 'houses preference pairwise mode'
+check_grep 'N_RATING[[:space:]]*=[[:space:]]*80' experiment/preference_task.m 'default 80 photo ratings'
+check_grep 'N_PWC_HOUSES[[:space:]]*=[[:space:]]*160' experiment/preference_task.m 'default 160 houses pairwise comparisons'
+check_grep 'N_PWC_JOBS[[:space:]]*=[[:space:]]*160' experiment/preference_task.m 'default 160 jobs pairwise comparisons'
+check_grep 'AREA_QUOTAS' experiment/preference_task.m 'editable area quotas'
+check_grep "utils\.readStimuli\(cfg,[[:space:]]*'houses'\)" experiment/preference_task.m 'houses preference reads through shared loader'
 for area in extPic kitPic bedPic bathPic livPic outPic; do
   check_grep "$area" experiment/+utils/buildPhotoPreferencePlan.m "photo preference planner includes $area"
 done
-check_grep 'chosenPhotoId' experiment/photo_preference_task.m 'pairwise CSV names chosen photo'
-check_grep 'unchosenPhotoId' experiment/photo_preference_task.m 'pairwise CSV names unchosen photo'
+check_grep 'chosenPhotoId' experiment/preference_task.m 'pairwise CSV names chosen photo'
+check_grep 'unchosenPhotoId' experiment/preference_task.m 'pairwise CSV names unchosen photo'
 
 # --- Head-position guide -------------------------------------------------
 check_file experiment/+utils/positionGuide.m
@@ -365,17 +368,31 @@ check_grep "cfg\.paths\.local[[:space:]]*=[[:space:]]*cfg\.paths\.experiment" ex
 check_grep "cfg\.paths\.data[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.experiment,[[:space:]]*'Data'\)" experiment/+utils/config.m 'participant data stays inside Experiment'
 check_grep "cfg\.paths\.images[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.stimuli,[[:space:]]*'house_images'\)" experiment/+utils/config.m 'house images stay inside stimuli'
 
-# --- photo_preference_task display setup matches the battery tasks -------
+# --- preference_task display setup matches the battery tasks -------------
 # Screen('Preference') rejects MATLAB logicals -- rigProfiles stores
 # skipSyncTests as one, so the cast is load-bearing. And style.m colors are
 # 0-1: without PsychDefaultSetup(2) every panel renders near-black.
-check_grep "SkipSyncTests', double\(cfg\.display\.skipSyncTests\)" experiment/photo_preference_task.m 'photo task casts SkipSyncTests to double'
-check_grep 'PsychDefaultSetup\(2\)' experiment/photo_preference_task.m 'photo task normalizes 0-1 color range'
-check_grep "BlendFunction" experiment/photo_preference_task.m 'photo task enables alpha blending'
-check_grep 'cropSrcRect' experiment/photo_preference_task.m 'photos center-cropped to identical on-screen size'
-check_grep "KbName\('z'\)" experiment/photo_preference_task.m 'pwc left response is the z key'
-check_grep "KbName\('m'\)" experiment/photo_preference_task.m 'pwc right response is the m key'
-check_grep 'makeWithinAreaPairs' experiment/+utils/buildPhotoPreferencePlan.m 'pwc pairs are within-area'
+check_grep "SkipSyncTests', double\(cfg\.display\.skipSyncTests\)" experiment/preference_task.m 'pref task casts SkipSyncTests to double'
+check_grep 'PsychDefaultSetup\(2\)' experiment/preference_task.m 'pref task normalizes 0-1 color range'
+check_grep "BlendFunction" experiment/preference_task.m 'pref task enables alpha blending'
+check_grep 'cropSrcRect' experiment/preference_task.m 'photos center-cropped to identical on-screen size'
+check_grep "KbName\('z'\)" experiment/preference_task.m 'pwc left response is the z key'
+check_grep "KbName\('m'\)" experiment/preference_task.m 'pwc right response is the m key'
+check_grep 'makeWithinAreaPairs' experiment/+utils/buildPhotoPreferencePlan.m 'houses pwc pairs are within-area'
+check_grep 'job_stimuli_ecological' experiment/preference_task.m 'jobs pref reads the ecological titles'
+check_grep "startsWith\(string\(stimTbl\.title\), 'title_'\)" experiment/+utils/buildJobPreferencePlan.m 'placeholder job titles are fatal'
+check_grep 'fixationAndIsi' experiment/preference_task.m 'pref trials have ISI and fixation cue'
+check_grep 'utils\.setupEyeTracker' experiment/preference_task.m 'pref task records gaze'
+check_grep "'pref',    'domains'" experiment/+utils/batteryPlan.m 'pref rows in the battery plan'
+check_grep 'sortrows\(perms\(1:3\)\)' experiment/+utils/batteryPlan.m 'three-task sessions use all 6 orders'
+check_grep "case 'pref'" experiment/run_battery.m 'battery dispatches the pref task'
+check_grep 'cfg\.paths\.taskData\.pref' experiment/+utils/config.m 'pref data directory configured'
+
+# --- component timing --------------------------------------------------
+check_grep 'dataMat\.timing = utils\.timeline' experiment/auction_task.m 'auction saves section timing'
+check_grep 'dataMat\.timing = utils\.timeline' experiment/continuous_DC_task.m 'contdc saves section timing'
+check_grep 'dataMat\.timing = utils\.timeline' experiment/preference_task.m 'pref saves section timing'
+check_grep '_timing\.csv' experiment/run_battery.m 'battery writes the session timing CSV'
 
 if ! python3 scripts/check_utils_calls.py; then
   fail=1

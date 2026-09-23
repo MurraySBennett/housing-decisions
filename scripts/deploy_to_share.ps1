@@ -94,7 +94,7 @@ $manifest = @()
 # -- experiment root. README-original.md is history, not a runnable file.
 foreach ($f in @('run_battery.m', 'demo_battery.m', 'preflight.m',
                  'auction_task.m', 'continuous_DC_task.m',
-                 'photo_preference_task.m', 'README.md')) {
+                 'preference_task.m', 'README.md')) {
     $manifest += [pscustomobject]@{ From = "experiment\$f"; ToDir = 'Experiment' }
 }
 

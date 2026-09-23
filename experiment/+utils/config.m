@@ -81,12 +81,12 @@ cfg.paths.data             = fullfile(cfg.paths.experiment, 'Data');
 cfg.paths.sessions         = fullfile(cfg.paths.data, 'sessions');
 cfg.paths.taskData.auction = fullfile(cfg.paths.data, 'auction');
 cfg.paths.taskData.contdc  = fullfile(cfg.paths.data, 'cont_dc');
-cfg.paths.taskData.photo_pref = fullfile(cfg.paths.data, 'photo_pref');
+cfg.paths.taskData.pref    = fullfile(cfg.paths.data, 'pref');
 cfg.paths.gaze             = fullfile(cfg.paths.data, 'gaze');
 cfg.paths.crashed          = fullfile(cfg.paths.data, 'Crashes');
 
 writeDirs = {cfg.paths.sessions, cfg.paths.taskData.auction, ...
-             cfg.paths.taskData.contdc, cfg.paths.taskData.photo_pref, ...
+             cfg.paths.taskData.contdc, cfg.paths.taskData.pref, ...
              cfg.paths.gaze, cfg.paths.crashed};
 for k = 1:numel(writeDirs)
     if ~exist(writeDirs{k}, 'dir'), mkdir(writeDirs{k}); end

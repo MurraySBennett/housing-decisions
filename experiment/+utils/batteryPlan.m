@@ -15,8 +15,10 @@ forceDomain = lower(char(forceDomain));
 PLAN = { ...
     struct('task', 'auction', 'domains', {{'jobs'}},   'session', 1), ...
     struct('task', 'contdc',  'domains', {{'jobs'}},   'session', 1), ...
+    struct('task', 'pref',    'domains', {{'jobs'}},   'session', 1), ...
     struct('task', 'auction', 'domains', {{'houses'}}, 'session', 2), ...
     struct('task', 'contdc',  'domains', {{'houses'}}, 'session', 2), ...
+    struct('task', 'pref',    'domains', {{'houses'}}, 'session', 2), ...
 };
 
 rows = PLAN(cellfun(@(r) r.session == sessionNum, PLAN));
@@ -35,7 +37,14 @@ if ~isempty(forceDomain)
     end
 end
 
-if numel(rows) > 1 && mod(participant, 2) == 1
+% Task-order counterbalancing. Three tasks per session get the full set
+% of 6 orders keyed to participant number; any other multi-row session
+% keeps the original parity flip. sortrows pins the permutation list to a
+% fixed order -- perms() row order is an implementation detail.
+if numel(rows) == 3
+    P = sortrows(perms(1:3));
+    rows = rows(P(mod(participant, 6) + 1, :));
+elseif numel(rows) > 1 && mod(participant, 2) == 1
     rows = fliplr(rows);
 end
 

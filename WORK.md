@@ -121,6 +121,29 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [x] 2026-09-23 **the preference task is now a battery task** (`pref` rows in
+  `utils.batteryPlan`), renamed `photo_preference_task.m` ->
+  `preference_task.m` and converted to the `(sess, run)` function form.
+  Both sessions have three tasks counterbalanced over all 6 orders by
+  `mod(participant, 6)`; jobs' version is pairwise-only over industry +
+  job title text cards, mixed across industries, and always reads the
+  ECOLOGICAL stimulus file (the synthetic arm's titles are `title_001`
+  placeholders -- `buildJobPreferencePlan` errors if one reaches it).
+  Every pref trial now has a jittered blank ISI (0.4-0.7 s) and a 0.5 s
+  centered fixation cue, and the task records gaze through the same
+  `setupEyeTracker`/`gazeBuffer`/`eventLog`/`clockSync` plumbing as the
+  other tasks, with screen geometry saved once per domain as
+  `dataMat.(domain).layout`. Data lands in `Data/pref` (the old
+  `Data/photo_pref` on the share is untouched history). NOTE the share
+  still carries the now-orphaned `photo_preference_task.m` -- the deploy
+  script never deletes; it dies when the share becomes a git checkout
+- [x] 2026-09-23 **component timing**: new `utils.timeline` gives every task
+  a per-section wall-clock breakdown saved as `dataMat.timing`
+  (elicitation / instructions / practice / trials / saving per domain),
+  and `run_battery` collects them plus a per-task total into
+  `Data/sessions/sub-XXXXX_ses-NN_timing.csv`, rewritten after every run
+  so a crash keeps completed rows, and prints the breakdown at session
+  end. `preflight`'s duration estimate covers the pref rows too
 - [x] 2026-09-23 photo task revisions from the first rig run: photos are
   center-cropped to the box aspect so every photo fills the identical
   on-screen rect (no more size variation between photos); pairwise responses

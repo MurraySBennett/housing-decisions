@@ -35,6 +35,7 @@ end
 
 cfg = sess.cfg;
 rs  = RandStream('twister', 'Seed', run.seed);
+tl  = utils.timeline('start');
 
 dataMat = struct();
 dataMat.domains = domainList;
@@ -119,6 +120,7 @@ try
         % break) is a deliberate cache miss: re-eliciting there gives a
         % fresh, consistent measurement rather than reusing a stated
         % preference that may not still hold.
+        tl = utils.timeline('section', tl, sprintf('%s:elicitation', domain));
         cached = utils.elicitationCache('load', sess, domain);
         if ~isempty(cached)
             anchor          = cached.anchor;
@@ -237,6 +239,7 @@ try
         tex = utils.loadStimulusTextures(window, cfg, inWindow, A, neededIdx, true);
 
         % ---- instructions -----------------------------------------
+        tl = utils.timeline('section', tl, sprintf('%s:instructions', domain));
         if ~(cfg.testing.enabled && cfg.testing.skipInstructions)
             showInstructions(window, cfg, domain);
             comprehension = runComprehensionChecks(window, cfg, domain);
@@ -284,6 +287,7 @@ try
         log = utils.eventLog('init', 20000);
         gazeStore = utils.gazeBuffer('init');
         clockSync = struct('start', utils.clockSync(et), 'end', []);
+        tl = utils.timeline('section', tl, sprintf('%s:practice', domain));
         if ~(cfg.testing.enabled && cfg.testing.skipInstructions)
             [practiceTrial, log, gazeStore] = runPracticeEpisode( ...
                 window, cfg, geom, L, et, log, gazeStore, ...
@@ -318,6 +322,7 @@ try
         % "the market has changed" halfway through an unchanged regime
         % would be false, and would break the expectation the blocking
         % exists to build.
+        tl = utils.timeline('section', tl, sprintf('%s:trials', domain));
         levelChange = [false, ~strcmp({plan(2:end).competition}, ...
                                       {plan(1:end-1).competition})];
         nRuns = 1 + sum(levelChange);
@@ -432,6 +437,7 @@ try
     end
 
     % =============================================== payout
+    tl = utils.timeline('section', tl, 'payout_save');
     payout = utils.incentives('compute', sess, dataMat, cfg.incentives);
     dataMat.payout = payout;
     if cfg.incentives.enabled
@@ -443,6 +449,8 @@ try
     % =============================================== save
     savingFact = utils.didYouKnow(run.seed);
     utils.savingScreen(window, cfg, 0.75, 'Writing trial data', savingFact);
+    tl = utils.timeline('stop', tl);
+    dataMat.timing = utils.timeline('table', tl);
     utils.saveRun(sess, run, dataMat, buildTrialTable(dataMat));
     utils.savingScreen(window, cfg, 1.00, 'Done - thank you', savingFact);
     WaitSecs(1.2);

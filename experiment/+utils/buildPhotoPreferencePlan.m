@@ -113,56 +113,12 @@ for a = 1:numel(areaVars)
             'Area %s needs %d pairs but its %d photos only make %d unique pairs.', ...
             areaVars{a}, alloc(a), counts(a), maxUnique);
     end
-    pairs = [pairs; makePairs(rowsByArea{a}, alloc(a), rngStream)]; %#ok<AGROW>
+    pairs = [pairs; utils.samplePairs(rowsByArea{a}, alloc(a), rngStream)]; %#ok<AGROW>
 end
 pairs = pairs(randperm(rngStream, size(pairs, 1)), :);
 
 perArea = struct();
 for a = 1:numel(areaVars)
     perArea.(areaVars{a}) = alloc(a);
-end
-end
-
-
-function pairs = makePairs(photoRows, nPairs, rngStream)
-n = numel(photoRows);
-if n < 2
-    error('hw:photoPref:tooFewPhotos', 'Need at least two photos for PWC.');
-end
-
-slots = repmat(photoRows(:), ceil(2*nPairs / n), 1);
-slots = slots(randperm(rngStream, numel(slots)));
-pairs = zeros(nPairs, 2);
-seen = containers.Map('KeyType','char', 'ValueType','logical');
-
-p = 1;
-guard = 0;
-while p <= nPairs
-    guard = guard + 1;
-    if guard > nPairs * 200
-        error('hw:photoPref:pairBuildFailed', ...
-            'Could not build %d non-repeated pairwise trials.', nPairs);
-    end
-
-    if numel(slots) < 2
-        extra = repmat(photoRows(:), ceil((2*nPairs - 2*p + 4) / n), 1);
-        slots = [slots; extra(randperm(rngStream, numel(extra)))]; %#ok<AGROW>
-    end
-    a = slots(1); b = slots(2); slots(1:2) = [];
-    if a == b, slots(end+1) = b; continue; end %#ok<AGROW>
-
-    key = sprintf('%d_%d', min(a,b), max(a,b));
-    if isKey(seen, key)
-        slots(end+1) = b; %#ok<AGROW>
-        continue
-    end
-    seen(key) = true;
-
-    if rand(rngStream) < 0.5
-        pairs(p,:) = [a b];
-    else
-        pairs(p,:) = [b a];
-    end
-    p = p + 1;
 end
 end

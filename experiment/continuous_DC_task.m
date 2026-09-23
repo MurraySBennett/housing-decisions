@@ -40,6 +40,7 @@ end
 
 cfg = sess.cfg;
 rs  = RandStream('twister', 'Seed', run.seed);
+tl  = utils.timeline('start');
 
 dataMat = struct();
 dataMat.domains = domainList;
@@ -122,6 +123,7 @@ try
         % break) is a deliberate cache miss: re-eliciting there gives a
         % fresh, consistent measurement rather than reusing a stated
         % preference that may not still hold.
+        tl = utils.timeline('section', tl, sprintf('%s:elicitation', domain));
         cached = utils.elicitationCache('load', sess, domain);
         if ~isempty(cached)
             anchor          = cached.anchor;
@@ -254,6 +256,7 @@ try
             utils.ternary(cfg.contdc.allowCrossLevelReuse, 'allowed', 'blocked'));
         aoiLayouts = buildAoiLayouts(winRect, cfg, geom, selByLevel, levels);
 
+        tl = utils.timeline('section', tl, sprintf('%s:instructions', domain));
         if ~(cfg.testing.enabled && cfg.testing.skipInstructions)
             showInstructions(window, cfg, domain);
         end
@@ -273,6 +276,7 @@ try
         clockSync = struct('start', utils.clockSync(et), 'end', []);
         trials = struct([]);
 
+        tl = utils.timeline('section', tl, sprintf('%s:trials', domain));
         for b = 1:numel(blocks)
             lvl  = blocks(b).attrLevel;
             task = blocks(b).taskType;
@@ -359,6 +363,7 @@ try
 
         % Blocking disk writes from here. See the matching note in
         % auction_task.m -- a frozen screen reads as a crash.
+        tl = utils.timeline('section', tl, sprintf('%s:saving', domain));
         savingFact = utils.didYouKnow(run.seed);
         utils.savingScreen(window, cfg, 0.10, 'Collecting eye-tracking samples', savingFact);
 
@@ -380,6 +385,8 @@ try
 
     savingFact = utils.didYouKnow(run.seed);
     utils.savingScreen(window, cfg, 0.75, 'Writing trial data', savingFact);
+    tl = utils.timeline('stop', tl);
+    dataMat.timing = utils.timeline('table', tl);
     utils.saveRun(sess, run, dataMat, buildTrialTable(dataMat));
     utils.savingScreen(window, cfg, 1.00, 'Done - thank you', savingFact);
     WaitSecs(1.2);

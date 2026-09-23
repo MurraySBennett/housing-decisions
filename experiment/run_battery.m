@@ -106,20 +106,33 @@ end
 fprintf('\n\n');
 
 %% ---- Run ------------------------------------------------------------
+% Session-level timing. Every run's per-section breakdown (dataMat.timing)
+% plus a 'total' row per task is accumulated here and rewritten to one CSV
+% after each run, so a crash mid-session still leaves the completed runs'
+% timing on disk.
+timingRows = {};
+timingFile = fullfile(sess.cfg.paths.sessions, ...
+    sprintf('sub-%05d_ses-%02d_timing.csv', sess.participant, sess.sessionNum));
+
 for k = 1:numel(thisSession)
     row = thisSession{k};
 
     run = utils.beginRun(sess, row.task, row.domains);
+    tRunStart = GetSecs;
     try
         switch row.task
             case 'auction'
-                auction_task(sess, run);
+                dataMat = auction_task(sess, run);
             case 'contdc'
-                continuous_DC_task(sess, run);
+                dataMat = continuous_DC_task(sess, run);
+            case 'pref'
+                dataMat = preference_task(sess, run);
             otherwise
                 error('run_battery:unknownTask', 'Unknown task "%s".', row.task);
         end
         utils.endRun(sess, run, 'complete');
+        timingRows = appendTiming(timingRows, sess, run, dataMat, ...
+            GetSecs - tRunStart, timingFile);
 
     catch ME
         utils.endRun(sess, run, 'crashed');
@@ -140,3 +153,42 @@ for k = 1:numel(thisSession)
 end
 
 fprintf('\nSession %d finished for participant %d.\n', sess.sessionNum, sess.participant);
+
+if ~isempty(timingRows)
+    fprintf('\nTiming breakdown (also in %s):\n', timingFile);
+    T = vertcat(timingRows{:});
+    disp(T);
+    fprintf('Session total: %.1f min\n', sum(T.seconds(T.section == "total")) / 60);
+end
+
+
+%% =====================================================================
+function rows = appendTiming(rows, sess, run, dataMat, totalSec, timingFile)
+%APPENDTIMING  Fold one run's section timing into the session CSV.
+%   Each task reports its own per-section breakdown as dataMat.timing (see
+%   utils.timeline); the battery adds a 'total' wall-clock row per run and
+%   rewrites the CSV after every run so it survives a later crash.
+new = {};
+if isstruct(dataMat) && isfield(dataMat, 'timing') && ~isempty(dataMat.timing)
+    tt = dataMat.timing;
+    for r = 1:height(tt)
+        new{end+1} = table(string(run.task), string(run.domainStr), ...
+            tt.section(r), tt.seconds(r), ...
+            'VariableNames', {'task','domains','section','seconds'}); %#ok<AGROW>
+    end
+end
+new{end+1} = table(string(run.task), string(run.domainStr), "total", totalSec, ...
+    'VariableNames', {'task','domains','section','seconds'});
+rows = [rows, new];
+
+T = vertcat(rows{:});
+T.participant = repmat(sess.participant, height(T), 1);
+T.session = repmat(sess.sessionNum, height(T), 1);
+try
+    writetable(T, timingFile);
+catch werr
+    warning('run_battery:timingWrite', ...
+        'Could not write timing CSV: %s', werr.message);
+end
+fprintf('  %s [%s] took %.1f min.\n', run.task, run.domainStr, totalSec / 60);
+end
