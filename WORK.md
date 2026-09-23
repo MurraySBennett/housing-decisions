@@ -459,6 +459,12 @@ pleasantly.**
 - [x] 2026-09-18 redeployed the balanced continuous-DC reuse policy: 92 files
   backed up to `Archive\Experiment_pre-2026-09-18_114559`, 92 replaced, 0
   added, no problems reported
+- [x] 2026-09-23 redeployed to the lab share: 93 files backed up to
+  `Archive\Experiment_pre-2026-09-23_140213`, 93 replaced, 1 added
+  (`photo_preference_task.m`, which was missing from the deploy manifest —
+  now added). The share's `+utils\config.m` was stale and still pointed at
+  `housing_wages_local` (confirmed in the backup), which is why the rig was
+  saving there; the deployed copy is verified clean
 - [ ] now (M) **put the lab machine on git** -- steps written up in
   `docs/lab-machine-git.md`, needs a keyboard at the rig. Plan is to make
   the share's `housing_wages/` itself the working tree: `utils.config`
