@@ -78,6 +78,20 @@ simulation by accident. `analysis/R/00_participant_qc.R` is the participant,
 practice, and demo data path; `analysis/R/90_simulate_data.R` is the explicit
 synthetic-data sandbox. The share pull script now calls participant QC.
 
+**Same session:** `analysis/R/10_photo_btl.R` now estimates area-local
+logistic Bradley-Terry-Luce house-photo worths from `pref` pairwise-choice
+rows and joins them to direct photo ratings. It writes per-run outputs
+(`photo_btl_estimates.csv`, `photo_btl_summary.csv`) and pooled within-area
+outputs across raters (`photo_rating_norms.csv`,
+`photo_btl_area_estimates.csv`, `photo_btl_area_summary.csv`) with graph
+`component_id`s for disconnected comparison networks. Explicit ratings are
+pooled as within-participant/session/run/area z scores while raw means/medians
+stay in the norms file for scale-use diagnostics. Pooled BTL output also has
+0-1 display-scale columns (`k_btl_01`, `rating_display_01`) and three figures
+under `analysis/output/figures/` for BTL/rating agreement, rank agreement, and
+pairwise coverage; the existing sample `analysis/output/pref_trials.csv`
+produces 80 image rows and six area summaries in both BTL modes.
+
 **Session update 2026-09-21.** The pricing scale baseline now sits at the
 inner end of the major ticks and is drawn as a solid arc rather than the old
 minor-tick comb. Auction bidding and contdc pricing were changed together;
@@ -635,6 +649,18 @@ pleasantly.**
 - [x] 2026-09-11 deleted the two orphaned docs from the house_jobs/housing_wages merge after verifying both byte-identical to tracked files (planner task 66)
 
 ### analysis
+- [x] 2026-09-25 added the house-photo BTL analysis entrypoint:
+  `analysis/R/10_photo_btl.R` reads `pref_trials.csv` or raw `pref/` run CSVs,
+  fits no-intercept logistic BTL models separately by participant/session/run
+  and `areaVar`, joins worths to direct ratings, and writes
+  `photo_btl_estimates.csv` plus `photo_btl_summary.csv`. It also writes
+  `photo_rating_norms.csv`, averaging explicit ratings after
+  participant/session/run/area z-scoring, and stacks trials across raters
+  within each area to write pooled `photo_btl_area_estimates.csv` and
+  `photo_btl_area_summary.csv`, with `component_id` marking disconnected
+  comparison graphs. Pooled output includes 0-1 display-scaled BTL/rating
+  columns and writes three diagnostic figures. Cross-area worth differences
+  remain unidentified by design because house PWC trials are within-area only
 - [x] 2026-09-15 R pipeline in `analysis/` — reads the run CSVs, recomputes
   preference reversals from the CSV alone as a cross-check on the MATLAB-side
   scoring, prints a data-integrity report, writes ten descriptive figures.

@@ -436,6 +436,23 @@ check_grep 'valueX' experiment/+utils/drawOptionCard.m 'attribute values are hor
 # --- RStudio-friendly analysis -----------------------------------------
 check_file analysis/R/00_participant_qc.R
 check_file analysis/R/90_simulate_data.R
+check_file analysis/R/10_photo_btl.R
+check_grep 'glm\(' analysis/R/10_photo_btl.R 'photo BTL uses logistic regression'
+check_grep 'leftPhotoId' analysis/R/10_photo_btl.R 'photo BTL uses left photo predictor side'
+check_grep 'rightPhotoId' analysis/R/10_photo_btl.R 'photo BTL uses right photo predictor side'
+check_grep 'chosenPhotoId' analysis/R/10_photo_btl.R 'photo BTL uses pairwise chosen photo'
+check_grep 'photo_btl_estimates\.csv' analysis/R/10_photo_btl.R 'photo BTL writes image-level estimates'
+check_grep 'photo_btl_summary\.csv' analysis/R/10_photo_btl.R 'photo BTL writes group summaries'
+check_grep 'photo_btl_area_estimates\.csv' analysis/R/10_photo_btl.R 'photo BTL writes pooled area estimates'
+check_grep 'photo_btl_area_summary\.csv' analysis/R/10_photo_btl.R 'photo BTL writes pooled area summaries'
+check_grep 'photo_rating_norms\.csv' analysis/R/10_photo_btl.R 'photo analysis writes pooled rating norms'
+check_grep '30_photo_btl_vs_rating\.png' analysis/R/10_photo_btl.R 'photo analysis plots BTL against ratings'
+check_grep '31_photo_rank_agreement\.png' analysis/R/10_photo_btl.R 'photo analysis plots rank agreement'
+check_grep '32_photo_pairwise_coverage\.png' analysis/R/10_photo_btl.R 'photo analysis plots pairwise coverage'
+check_grep 'rating_within_rater_area_z' analysis/R/10_photo_btl.R 'photo rating norms use rater-area z scores'
+check_grep 'k_btl_01' analysis/R/10_photo_btl.R 'photo BTL includes display-scaled BTL worth'
+check_grep 'rating_display_01' analysis/R/10_photo_btl.R 'photo BTL includes display-scaled ratings'
+check_grep 'component_id' analysis/R/10_photo_btl.R 'photo BTL reports comparison graph components'
 check_grep 'RUN_MODE' analysis/R/run_all.R 'analysis has source-friendly editable settings'
 check_grep 'run_analysis' analysis/R/run_all.R 'analysis can run from Source, not only command line'
 check_grep 'run_from_rstudio_source' analysis/R/run_all.R 'analysis detects RStudio/source execution'
