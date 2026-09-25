@@ -41,7 +41,7 @@ The pull lands in ignored `data/lab/Data`, writes a manifest under
 Use `-Practice` to pull `Experiment\Data_practice` into ignored
 `data/lab/Data_practice`; the script passes `--include-practice` to R.
 
-Needs `dplyr readr tidyr stringr purrr ggplot2 scales tibble`.
+Needs `here dplyr readr tidyr stringr purrr ggplot2 scales tibble`.
 
 ## What each file does
 
@@ -101,7 +101,7 @@ to *run* a session, only to analyse one.
 
 ```r
 install.packages(c("dplyr", "readr", "tidyr", "stringr", "purrr",
-                   "ggplot2", "scales", "tibble"))
+                   "ggplot2", "scales", "tibble", "here"))
 ```
 
 **Pointing at the share.** Use forward slashes; R accepts them on Windows and

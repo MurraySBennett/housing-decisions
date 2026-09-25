@@ -5,36 +5,42 @@
 # Rscript analysis/R/90_simulate_data.R [--out-data <dir>]
 
 # ---- RStudio/source settings ---------------------------------------------
-# Edit these, then click Source. Command-line flags override them.
-RUN_MODE <- "participant"       # "demo" | "participant" | "practice"
-DATA_DIR <- ""                  # Optional explicit data root
-OUTPUT_DIR <- ""                # Optional output directory
-INCLUDE_PRACTICE <- FALSE       # TRUE only when analyzing practice/staff runs
+# Entry scripts may define these before sourcing this helper.
+if (!exists("RUN_MODE")) RUN_MODE <- "participant"       # "demo" | "participant" | "practice"
+if (!exists("DATA_DIR")) DATA_DIR <- ""                  # Optional explicit data root
+if (!exists("OUTPUT_DIR")) OUTPUT_DIR <- ""              # Optional output directory
+if (!exists("INCLUDE_PRACTICE")) INCLUDE_PRACTICE <- FALSE
 
 suppressPackageStartupMessages({
   library(ggplot2)
   library(dplyr)
 })
 
-here <- function(...) {
-  a <- commandArgs(trailingOnly = FALSE)
-  f <- sub("^--file=", "", a[grep("^--file=", a)])
-  if (!length(f)) {
-    ofiles <- Filter(Negate(is.null), lapply(sys.frames(), `[[`, "ofile"))
-    f <- if (length(ofiles)) tail(unlist(ofiles), 1) else character()
-  }
-  root <- if (length(f)) normalizePath(file.path(dirname(f), "..", "..")) else getwd()
-  file.path(root, ...)
+if (!exists("repo_file", mode = "function")) {
+  bootstrap <- local({
+    args <- commandArgs(trailingOnly = FALSE)
+    file_args <- sub("^--file=", "", args[grep("^--file=", args)])
+    if (length(file_args)) normalizePath(file_args[[1]], mustWork = FALSE)
+    else {
+      ofiles <- Filter(Negate(is.null), lapply(sys.frames(), `[[`, "ofile"))
+      if (length(ofiles)) normalizePath(tail(unlist(ofiles), 1), mustWork = FALSE)
+      else normalizePath(file.path("analysis", "R", "run_all.R"), mustWork = FALSE)
+    }
+  })
+  source(file.path(dirname(bootstrap), "paths.R"))
+}
+if (is.null(getOption("housing.decisions.root"))) {
+  options(housing.decisions.root = project_root("analysis/R/run_all.R"))
 }
 
-source(here("analysis", "R", "io.R"))
-source(here("analysis", "R", "plots.R"))
+source(repo_file("analysis", "R", "io.R"))
+source(repo_file("analysis", "R", "plots.R"))
 
 default_data_dir <- function(mode) {
   switch(mode,
-    demo = here("experiment", "Data_demo"),
-    participant = here("data", "lab", "Data"),
-    practice = here("data", "lab", "Data_practice"),
+    demo = repo_file("experiment", "Data_demo"),
+    participant = repo_file("data", "lab", "Data"),
+    practice = repo_file("data", "lab", "Data_practice"),
     stop('Unknown RUN_MODE "', mode, '". Use demo, participant, or practice.')
   )
 }
@@ -52,7 +58,7 @@ cli_options <- function(default_mode = RUN_MODE) {
   list(
     mode = mode,
     data_dir = get_arg("--data", if (nzchar(DATA_DIR)) DATA_DIR else default_data_dir(mode)),
-    out_dir = get_arg("--out", if (nzchar(OUTPUT_DIR)) OUTPUT_DIR else here("analysis", "output")),
+    out_dir = get_arg("--out", if (nzchar(OUTPUT_DIR)) OUTPUT_DIR else repo_file("analysis", "output")),
     include_practice = INCLUDE_PRACTICE || "--include-practice" %in% args
   )
 }
@@ -61,7 +67,7 @@ run_analysis <- function(mode = RUN_MODE, data_dir = NULL, out_dir = NULL,
                          include_practice = INCLUDE_PRACTICE) {
   mode <- tolower(mode)
   if (is.null(data_dir) || !nzchar(data_dir)) data_dir <- default_data_dir(mode)
-  if (is.null(out_dir) || !nzchar(out_dir)) out_dir <- here("analysis", "output")
+  if (is.null(out_dir) || !nzchar(out_dir)) out_dir <- repo_file("analysis", "output")
   include_practice <- include_practice || mode == "practice"
   tag <- if (grepl("Data_simulated$", normalizePath(data_dir, mustWork = FALSE))) "SIMULATED_" else ""
 
@@ -70,7 +76,7 @@ run_analysis <- function(mode = RUN_MODE, data_dir = NULL, out_dir = NULL,
 
   if (!dir.exists(data_dir)) {
     stop("Data directory not found: ", data_dir,
-         "\nRun the demo, set DATA_DIR, or set RUN_MODE <- \"simulate\".")
+         "\nRun scripts/pull_data_from_share.ps1 first, or set DATA_DIR in 00_participant_qc.R.")
   }
 
   auction <- load_auction(data_dir)

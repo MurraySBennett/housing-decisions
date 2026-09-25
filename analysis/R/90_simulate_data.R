@@ -1,15 +1,22 @@
 #!/usr/bin/env Rscript
 # Explicit simulation entrypoint. This is separate from participant QC.
 
-script_path <- local({
-  a <- commandArgs(trailingOnly = FALSE)
-  f <- sub("^--file=", "", a[grep("^--file=", a)])
-  if (length(f)) f[[1]] else file.path("analysis", "R", "90_simulate_data.R")
+bootstrap <- local({
+  args <- commandArgs(trailingOnly = FALSE)
+  file_args <- sub("^--file=", "", args[grep("^--file=", args)])
+  if (length(file_args)) normalizePath(file_args[[1]], mustWork = FALSE)
+  else {
+    ofiles <- Filter(Negate(is.null), lapply(sys.frames(), `[[`, "ofile"))
+    if (length(ofiles)) normalizePath(tail(unlist(ofiles), 1), mustWork = FALSE)
+    else normalizePath(file.path("analysis", "R", "90_simulate_data.R"), mustWork = FALSE)
+  }
 })
 
-root <- normalizePath(file.path(dirname(script_path), "..", ".."), mustWork = FALSE)
-source(file.path(root, "analysis", "R", "simulate_demo_data.R"))
-source(file.path(root, "analysis", "R", "run_all.R"))
+source(file.path(dirname(bootstrap), "paths.R"))
+root <- project_root("analysis/R/90_simulate_data.R")
+options(housing.decisions.root = root)
+source(repo_file("analysis", "R", "simulate_demo_data.R"))
+source(repo_file("analysis", "R", "run_all.R"))
 
 args <- commandArgs(trailingOnly = TRUE)
 get_arg <- function(flag, default = NULL) {
