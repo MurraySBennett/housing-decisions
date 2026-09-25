@@ -92,26 +92,39 @@ if strcmp(cfg.runKind, 'practice')
 else
     cfg.paths.data = participantData;
 end
+cfg.paths.fallbackData = fullfile(cfg.paths.local, 'Data_fallback', cfg.runKind);
 cfg.paths.sessions         = fullfile(cfg.paths.data, 'sessions');
 cfg.paths.taskData.auction = fullfile(cfg.paths.data, 'auction');
 cfg.paths.taskData.contdc  = fullfile(cfg.paths.data, 'cont_dc');
 cfg.paths.taskData.pref    = fullfile(cfg.paths.data, 'pref');
 cfg.paths.gaze             = fullfile(cfg.paths.data, 'gaze');
 cfg.paths.crashed          = fullfile(cfg.paths.data, 'Crashes');
+cfg.paths = dataPathSet(cfg.paths, cfg.paths.fallbackData, 'fallback');
 
-writeDirs = {cfg.paths.sessions, cfg.paths.taskData.auction, ...
-             cfg.paths.taskData.contdc, cfg.paths.taskData.pref, ...
-             cfg.paths.gaze, cfg.paths.crashed};
-for k = 1:numel(writeDirs)
-    if ~exist(writeDirs{k}, 'dir')
-        [ok, msg] = mkdir(writeDirs{k});
-        if ~ok
-            error('hw:config:dataRootMissing', ...
-                ['Could not create data directory:\n    %s\n%s\n' ...
-                 'Set HW_DATA_ROOT or HW_PRACTICE_DATA_ROOT to a writable location.'], ...
-                writeDirs{k}, msg);
-        end
-    end
+primaryDirs = writeDirsFor(cfg.paths, '');
+fallbackDirs = writeDirsFor(cfg.paths, 'fallback');
+if ~ensureWriteDirs(primaryDirs)
+    warning('hw:config:dataRootFallback', ...
+        ['Could not create or write to the configured data root:\n    %s\n' ...
+         'Using local fallback data root:\n    %s'], ...
+        cfg.paths.data, cfg.paths.fallbackData);
+    cfg.paths.primaryData = cfg.paths.data;
+    cfg.paths.data = cfg.paths.fallbackData;
+    cfg.paths.sessions         = fullfile(cfg.paths.data, 'sessions');
+    cfg.paths.taskData.auction = fullfile(cfg.paths.data, 'auction');
+    cfg.paths.taskData.contdc  = fullfile(cfg.paths.data, 'cont_dc');
+    cfg.paths.taskData.pref    = fullfile(cfg.paths.data, 'pref');
+    cfg.paths.gaze             = fullfile(cfg.paths.data, 'gaze');
+    cfg.paths.crashed          = fullfile(cfg.paths.data, 'Crashes');
+    primaryDirs = writeDirsFor(cfg.paths, '');
+end
+
+if ~ensureWriteDirs(primaryDirs) || ~ensureWriteDirs(fallbackDirs)
+    error('hw:config:dataRootMissing', ...
+        ['Could not create writable data directories under either:\n' ...
+         '    %s\n    %s\n' ...
+         'Set HW_DATA_ROOT or HW_PRACTICE_DATA_ROOT to a writable location.'], ...
+        cfg.paths.data, cfg.paths.fallbackData);
 end
 
 % --- Stimulus files -----------------------------------------------------
@@ -276,5 +289,58 @@ if ~isempty(envValue)
     out = envValue;
 else
     out = defaultValue;
+end
+end
+
+function paths = dataPathSet(paths, dataRoot, prefix)
+if isempty(prefix)
+    paths.sessions         = fullfile(dataRoot, 'sessions');
+    paths.taskData.auction = fullfile(dataRoot, 'auction');
+    paths.taskData.contdc  = fullfile(dataRoot, 'cont_dc');
+    paths.taskData.pref    = fullfile(dataRoot, 'pref');
+    paths.gaze             = fullfile(dataRoot, 'gaze');
+    paths.crashed          = fullfile(dataRoot, 'Crashes');
+else
+    paths.([prefix 'Sessions']) = fullfile(dataRoot, 'sessions');
+    taskData.auction = fullfile(dataRoot, 'auction');
+    taskData.contdc  = fullfile(dataRoot, 'cont_dc');
+    taskData.pref    = fullfile(dataRoot, 'pref');
+    paths.([prefix 'TaskData']) = taskData;
+    paths.([prefix 'Gaze'])    = fullfile(dataRoot, 'gaze');
+    paths.([prefix 'Crashed']) = fullfile(dataRoot, 'Crashes');
+end
+end
+
+function dirs = writeDirsFor(paths, prefix)
+if isempty(prefix)
+    dirs = {paths.sessions, paths.taskData.auction, ...
+            paths.taskData.contdc, paths.taskData.pref, ...
+            paths.gaze, paths.crashed};
+else
+    taskData = paths.([prefix 'TaskData']);
+    dirs = {paths.([prefix 'Sessions']), taskData.auction, ...
+            taskData.contdc, taskData.pref, ...
+            paths.([prefix 'Gaze']), paths.([prefix 'Crashed'])};
+end
+end
+
+function ok = ensureWriteDirs(dirs)
+ok = true;
+for k = 1:numel(dirs)
+    if ~exist(dirs{k}, 'dir')
+        [made, ~] = mkdir(dirs{k});
+        if ~made
+            ok = false;
+            return
+        end
+    end
+    probe = fullfile(dirs{k}, '.write_test');
+    [fid, ~] = fopen(probe, 'w');
+    if fid < 0
+        ok = false;
+        return
+    end
+    fclose(fid);
+    delete(probe);
 end
 end

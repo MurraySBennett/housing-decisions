@@ -19,10 +19,34 @@ end
 dataMat.startedAt     = run.startedAt;
 dataMat.savedAt       = char(datetime('now','Format','yyyy-MM-dd HH:mm:ss'));
 
-save([run.fileStem '.mat'], 'dataMat', '-v7.3');
+if nargin < 4
+    trialTable = [];
+end
+
+try
+    writeRunFiles(run.fileStem, sess, run, dataMat, trialTable);
+catch primaryME
+    fallbackFileStem = fallbackStem(sess, run);
+    dataMat.primarySaveError = struct( ...
+        'identifier', primaryME.identifier, ...
+        'message', primaryME.message, ...
+        'primaryFileStem', run.fileStem, ...
+        'fallbackFileStem', fallbackFileStem, ...
+        'recordedAt', char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')));
+    writeRunFiles(fallbackFileStem, sess, run, dataMat, trialTable);
+    warning('hw:saveRun:fallback', ...
+        ['Primary data save failed:\n    %s\n' ...
+         'Emergency backup written locally:\n    %s'], ...
+        run.fileStem, fallbackFileStem);
+end
+
+end
+
+function writeRunFiles(fileStem, sess, run, dataMat, trialTable)
+save([fileStem '.mat'], 'dataMat', '-v7.3');
 
 % --- Long-format CSV --------------------------------------------------
-if nargin >= 4 && ~isempty(trialTable)
+if nargin >= 5 && ~isempty(trialTable)
     n = height(trialTable);
     keys = table( ...
         repmat(sess.participant, n, 1), ...
@@ -38,7 +62,19 @@ if nargin >= 4 && ~isempty(trialTable)
         trialTable = removevars(trialTable, dupes);
     end
 
-    writetable([keys trialTable], [run.fileStem '.csv']);
+    writetable([keys trialTable], [fileStem '.csv']);
+end
 end
 
+function fileStem = fallbackStem(sess, run)
+if isfield(sess.cfg.paths, 'fallbackTaskData') && ...
+        isfield(sess.cfg.paths.fallbackTaskData, run.task)
+    fallbackDir = sess.cfg.paths.fallbackTaskData.(run.task);
+else
+    fallbackDir = fullfile(sess.cfg.paths.fallbackData, run.task);
+end
+if ~exist(fallbackDir, 'dir')
+    mkdir(fallbackDir);
+end
+fileStem = fullfile(fallbackDir, run.runId);
 end

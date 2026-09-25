@@ -14,6 +14,12 @@ write to a separate data root via `RUN_KIND = 'practice'`. `verify_static.sh`
 and the simulated R analysis pass; MATLAB/Psychtoolbox verification still has
 to happen at the rig.
 
+**Same session:** data saving now has a local emergency fallback. If startup
+cannot create/write the configured data root, `config.m` switches the run to
+`experiment/Data_fallback/<runKind>/`; if a task's primary `.mat`/`.csv` write
+fails mid-run, `saveRun.m` writes the same files under that fallback task tree
+and stamps `dataMat.primarySaveError`.
+
 **Same session:** house numeric attributes no longer use scientific notation
 on option cards, and `analysis/R/run_all.R` now has a top editable block for
 RStudio Source runs. Its default mode is simulated data so students can source
@@ -616,6 +622,10 @@ pleasantly.**
   definitions, while runtime paths come from `HW_DATA_ROOT`,
   `HW_PRACTICE_DATA_ROOT`, `HW_ASSET_ROOT`, and `HW_TOBII_ROOT` with lab-share
   defaults
+- [x] 2026-09-25 added local emergency data fallback under
+  `experiment/Data_fallback/<runKind>/`: startup falls back there if the
+  configured data root is unwritable, and `saveRun.m` writes backup `.mat` and
+  `.csv` files there if a primary task save fails mid-run
 
 ### admin
 - [ ] now (M) set up REP for the study — the OSU participant system. Named by Murray as a prerequisite for collection this semester and not started
