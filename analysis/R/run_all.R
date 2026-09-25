@@ -39,10 +39,49 @@ source(repo_file("analysis", "R", "plots.R"))
 default_data_dir <- function(mode) {
   switch(mode,
     demo = repo_file("experiment", "Data_demo"),
-    participant = repo_file("data", "lab", "Data"),
-    practice = repo_file("data", "lab", "Data_practice"),
+    participant = first_existing_data_dir(participant_data_candidates()),
+    practice = first_existing_data_dir(practice_data_candidates()),
     stop('Unknown RUN_MODE "', mode, '". Use demo, participant, or practice.')
   )
+}
+
+participant_data_candidates <- function() {
+  c(
+    env_path("HW_DATA_ROOT"),
+    repo_file("data", "lab", "Data"),
+    repo_file("data"),
+    "//asc-files.asc.ohio-state.edu/projects/PSY-kvam.4/housing_wages/Experiment/Data",
+    "\\\\asc-files.asc.ohio-state.edu\\projects\\PSY-kvam.4\\housing_wages\\Experiment\\Data"
+  )
+}
+
+practice_data_candidates <- function() {
+  c(
+    env_path("HW_PRACTICE_DATA_ROOT"),
+    repo_file("data", "lab", "Data_practice"),
+    repo_file("data", "practice"),
+    "//asc-files.asc.ohio-state.edu/projects/PSY-kvam.4/housing_wages/Experiment/Data_practice",
+    "\\\\asc-files.asc.ohio-state.edu\\projects\\PSY-kvam.4\\housing_wages\\Experiment\\Data_practice"
+  )
+}
+
+env_path <- function(name) {
+  val <- Sys.getenv(name, unset = "")
+  if (nzchar(val)) val else character()
+}
+
+has_run_csvs <- function(path) {
+  if (!dir.exists(path)) return(FALSE)
+  any(file.exists(file.path(path, c("auction", "cont_dc", "pref")))) &&
+    length(list.files(path, pattern = "\\.csv$", recursive = TRUE)) > 0
+}
+
+first_existing_data_dir <- function(candidates) {
+  candidates <- candidates[nzchar(candidates)]
+  for (candidate in candidates) {
+    if (has_run_csvs(candidate)) return(candidate)
+  }
+  candidates[[1]]
 }
 
 cli_options <- function(default_mode = RUN_MODE) {
@@ -75,8 +114,7 @@ run_analysis <- function(mode = RUN_MODE, data_dir = NULL, out_dir = NULL,
   dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 
   if (!dir.exists(data_dir)) {
-    stop("Data directory not found: ", data_dir,
-         "\nRun scripts/pull_data_from_share.ps1 first, or set DATA_DIR in 00_participant_qc.R.")
+    stop(missing_data_message(mode, data_dir))
   }
 
   auction <- load_auction(data_dir)
@@ -149,6 +187,24 @@ run_analysis <- function(mode = RUN_MODE, data_dir = NULL, out_dir = NULL,
   cat("\nOutput: ", normalizePath(out_dir), "\n", sep = "")
   invisible(list(auction = auction, contdc = contdc, pref = pref, timing = timing,
                  reversals = rev, report = report))
+}
+
+missing_data_message <- function(mode, data_dir) {
+  candidates <- switch(mode,
+    participant = participant_data_candidates(),
+    practice = practice_data_candidates(),
+    character()
+  )
+  tried <- if (length(candidates)) {
+    paste0("\nTried:\n  - ", paste(candidates, collapse = "\n  - "))
+  } else {
+    ""
+  }
+  paste0(
+    "Data directory not found: ", data_dir,
+    tried,
+    "\nSet DATA_DIR in 00_participant_qc.R, set HW_DATA_ROOT, or run scripts/pull_data_from_share.ps1."
+  )
 }
 
 run_from_rstudio_source <- function() {
