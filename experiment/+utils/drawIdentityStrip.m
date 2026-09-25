@@ -24,9 +24,8 @@ g = cfg.style.identityGrid;
 gridW = g.nCols * g.cellW + (g.nCols - 1) * g.gap;
 gridH = g.nRows * g.cellH + (g.nRows - 1) * g.gap;
 
-% Scale down uniformly only when the caller's rect is genuinely too narrow.
 availW = rect(3) - rect(1);
-scale = min(1, availW / gridW);
+scale = min(g.maxScale, availW / gridW);
 cellW = g.cellW * scale; cellH = g.cellH * scale; gap = g.gap * scale;
 gridW = gridW * scale; gridH = gridH * scale;
 

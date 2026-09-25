@@ -143,18 +143,11 @@ mismatch is visible instead of a silent blank image.
 
 ## Task/domain independence
 
-`run_battery.m` dispatches from a `PLAN`: a list of `(task, domains,
-session)` rows. This is deliberately decoupled from the participant-level
-domain question, so any of the following is just a different `PLAN`, with
-no change to task code:
-
-- Jobs only, one task
-- Houses only, one task
-- Jobs, both tasks, one sitting
-- Houses, both tasks, one sitting
-- Everything, split across two sessions (call the script again on a
-  different day with the same participant ID; `utils.startSession` resumes
-  from that participant's manifest)
+`run_battery.m` dispatches from a `PLAN`: three task rows for one assigned
+domain. Real collection is between-subjects: odd participant IDs run jobs /
+wages, even participant IDs run houses. At startup, `utils.startSession`
+proposes the next participant ID, assigned domain, and task-order slot; the
+experimenter presses Enter to accept or `e` to edit for crash/data recovery.
 
 Every run's saved filename and manifest entry carries both its task AND its
 domain set (`sub-00012_ses-01_task-auction_dom-jobs_...`), so a participant
@@ -162,14 +155,10 @@ who does jobs-auction today and houses-contdc next week is fully
 reconstructable from the manifest alone, and two runs of the same task over
 different domains never collide.
 
-**`FORCE_DOMAIN`** in `run_battery.m` overrides every `PLAN` row's domain
-for quick manual testing (e.g. forcing `'houses'` without touching `PLAN`
-or waiting for whichever session number happens to be assigned to it).
-Leave it `''` for real sessions -- it silently overrides your carefully
-assigned `PLAN` if left on by accident. The interactive "Jobs/Houses/both"
-prompt some code paths still have is vestigial for anything run through
-`run_battery` -- `PLAN` (and `FORCE_DOMAIN`) are the actual control; the
-prompt only ever mattered for a task called completely standalone.
+**`FORCE_DOMAIN`** in `run_battery.m` overrides the parity-assigned domain
+for quick manual testing. Leave it `''` for real sessions; if recovery needs
+a real override, use the startup edit path so the manifest and saved `dataMat`
+record `assignmentOverride`.
 
 ## Elicitation is cached within a session, re-asked across sessions
 
@@ -301,10 +290,10 @@ estimated duration.
 
 | knob | current value | where to change | why it matters |
 |---|---:|---|---|
-| Schedule | Session 1 jobs auction+contdc; session 2 houses auction+contdc | `+utils/batteryPlan.m` | Defines which task/domain rows a participant sees. |
-| Task order counterbalance | Odd participants run session rows in reverse order | `+utils/batteryPlan.m` | Balances auction-first vs. contdc-first within a session. |
+| Schedule | Odd IDs jobs/wages; even IDs houses; one session with auction+contdc+pref | `+utils/batteryPlan.m`, startup confirmation in `+utils/startSession.m` | Defines which task/domain rows a participant sees. |
+| Task order counterbalance | Six task orders cycle within each domain via `ceil(participant/2)` | `+utils/batteryPlan.m` | Keeps jobs and houses separately balanced while IDs run sequentially. |
 | `JOBS_ARM` | `synthetic` | `run_battery.m` | Selects the prepared job-stimulus arm and provenance file. |
-| `FORCE_DOMAIN` | `''` | `run_battery.m` | Quick manual override; leave empty for real sessions. |
+| `FORCE_DOMAIN` | `''` | `run_battery.m` | Quick testing override; use startup edit for real recovery overrides. |
 | `cfg.auction.nTrials` | 24 | `+utils/config.m` | Twelve trials per competition level. Must divide evenly by `nBlocks`. |
 | `cfg.auction.nBlocks` | 4 | `+utils/config.m` | Competition is **blocked**, not re-rolled per trial: ABBA over 4 blocks, starting level counterbalanced by participant parity in `utils.trialPlan`. ABBA puts both levels at the same mean serial position, so competition is orthogonal to fatigue and practice within a participant. `2` is one long run per level -- more learnable, but confounded with session half. |
 | `cfg.auction.nOptionsPerTrial` | 12 | `+utils/config.m` | Search-set size per auction episode; repeats are planned/logged if needed. |
@@ -312,8 +301,8 @@ estimated duration.
 | `cfg.auction.trialTimeoutSec` | 90 | `+utils/config.m` | Main driver of auction duration. |
 | Auction practice | 1 saved practice episode before real trials | `auction_task.m` | Keeps practice analyzable/excludable via `practice=true`. |
 | `cfg.attrLevels` | `[2 4 6]` | `+utils/config.m` | Continuous/DC information-load manipulation. Counts include both the core attribute and, at the top level, the late-tier one, so a level of 6 renders exactly 6 cells. |
-| `cfg.contdc.nPairs.houses` | 6 | `+utils/config.m` | Six choice pairs per attribute level; pricing gives two rows per pair. |
-| `cfg.contdc.nPairs.jobs` | 10 | `+utils/config.m` | Uses the larger, less memorable jobs stimulus supply. |
+| `cfg.contdc.nPairs.houses` | 20 | `+utils/config.m` | Twenty choice pairs per attribute level; pricing gives two rows per pair. |
+| `cfg.contdc.nPairs.jobs` | 20 | `+utils/config.m` | Twenty choice pairs per attribute level; pricing gives two rows per pair. |
 | `cfg.contdc.allowCrossLevelReuse` | `true` | `+utils/config.m` | Allows the same item appearing at multiple attribute levels so 2/4/6-attribute cells stay balanced. |
 | `TRIALS_PER_CELL` | `2` | `run_battery.m` | Dress-rehearsal knob. `[]` = the full study; an integer = that many trials in every design cell and **nothing else changes** (full screen, real pacing, real elicitation, instructions and practice, real participant number). Auction cells are the two competition levels, so N per cell means 2N trials; contdc cells are attribute level x task type, so it maps straight onto `nPairs`. Not the same as `cfg.testing.nTrialsPerType`, which sets the auction's *total* and only applies in developer mode. Saved as `dataMat.trialsPerCell`. |
 | `cfg.display.showValueMarker` | `true` | `+utils/config.m` | Draws the advertised figure (listed price / offered wage) on the pricing scale. **Not cosmetic:** under BDM the optimal bid is the participant's own valuation, and a salient reference point on the response scale pulls stated values toward it. Expect reduced bid variance. Set `false` for an unanchored scale. |
@@ -428,19 +417,14 @@ becomes `nLevels x nPairs x 2` distinct stimuli per domain.
 | $600k | 39 |
 | $900k | 28 |
 
-At 3 levels, 10 pairs would need **60 distinct houses** if reuse were
-blocked -- more than any window holds. Even 6 pairs can fail at extreme
-anchors without reuse. Hence cross-level reuse is on by default, and any
-remaining shortfall is a fatal setup error rather than an imbalanced run.
+At 3 levels, 20 pairs would need **120 distinct items** if reuse were blocked.
+Houses only have 80 listings total, so cross-level reuse is on by default.
+Any remaining shortfall is a fatal setup error rather than an imbalanced run.
 
-Jobs are less constrained (~96 in a typical window) and far less
-episodically memorable -- a handful of numeric ratings rather than six
-photographs -- so `cfg.contdc.nPairs.jobs = 10`.
-
-**Known cost:** 6 pairs per level is thin for detecting reversals, and
-cross-level reuse may make repeated houses recognisable. Worth checking
-observed reversal rates and recognition complaints in pilot data before
-committing.
+`cfg.contdc.nPairs` is 20 per level for both domains. That is the minimum
+worth collecting for reversal estimates; the cost is duration and repeated
+house recognition, which should be judged in rig practice data rather than by
+silently shortening cells.
 
 ## Verify paths before you run anything
 
@@ -482,6 +466,5 @@ before you trust them.
 - Cross-task stimulus reuse (auction vs. contdc, same domain, same
   session) is unconstrained -- decide whether that matters, especially
   for houses.
-- `cfg.contdc.nPairs.houses = 6` is a first pass to fit the supply
-  constraint, not a power-analyzed number -- check reversal detection
-  rate in pilot data.
+- `cfg.contdc.nPairs = 20` per level is the current full-run setting for
+  both domains; re-time the task at the rig before participant collection.

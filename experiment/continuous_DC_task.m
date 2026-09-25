@@ -499,9 +499,8 @@ while true
 
     utils.drawOptionCard(window, cfg, L.cardRect, stimTbl, tex, sel, idx);
 
-    a = linspace(pi, 2*pi, 160);
     % s.track, not s.border -- see the matching note in auction_task.m.
-    Screen('DrawLines', window, [cx+scaleR*cos(a); cy+scaleR*sin(a)], 4, s.track);
+    utils.drawPriceArc(window, cx, cy, scaleR, s.track, 4);
 
     Screen('TextSize', window, s.priceScale.labelSizePx);
     for k = 1:nTicks

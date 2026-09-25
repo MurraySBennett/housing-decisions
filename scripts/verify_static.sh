@@ -11,6 +11,15 @@ check_file() {
   fi
 }
 
+check_absent_path() {
+  local path="$1"
+  local label="$2"
+  if [[ -e "$path" ]]; then
+    printf 'unexpected path (%s): %s\n' "$label" "$path" >&2
+    fail=1
+  fi
+}
+
 check_grep() {
   local pattern="$1"
   local path="$2"
@@ -74,11 +83,13 @@ check_grep 'actualSampleRateHz' experiment/+utils/setupEyeTracker.m 'actual samp
 check_grep 'get_gaze_output_frequency' experiment/+utils/setupEyeTracker.m 'query Tobii sample rate'
 check_file experiment/+utils/clockSync.m
 check_file scripts/pull_data_from_share.ps1
+check_absent_path scripts/deploy_to_share.ps1 'pre-git share deployment script retired'
 check_grep 'housing_wages\\Experiment\\Data' scripts/pull_data_from_share.ps1 'pulls data from share Experiment data tree'
+check_grep 'Data_practice' scripts/pull_data_from_share.ps1 'pull script can copy practice data'
 check_absent 'housing_wages_local' experiment/+utils/config.m 'config must not use housing_wages_local'
 check_absent 'housing_wages_local' scripts/pull_data_from_share.ps1 'pull script must not use housing_wages_local'
-check_grep 'data\\lab\\Data' scripts/pull_data_from_share.ps1 'copies data into ignored local analysis tree'
-check_grep 'analysis/R/run_all.R' scripts/pull_data_from_share.ps1 'pull script runs analysis pipeline'
+check_grep 'data\\lab' scripts/pull_data_from_share.ps1 'copies data into ignored local analysis tree'
+check_grep 'analysis/R/00_participant_qc.R' scripts/pull_data_from_share.ps1 'pull script runs participant QC pipeline'
 check_grep 'CELL IMBALANCE' analysis/R/io.R 'analysis reports imbalanced contdc cells'
 check_grep 'price_rows == 2 \* choice_rows' analysis/R/io.R 'analysis checks contdc price-choice row ratio'
 check_grep 'right-click' experiment/+utils/incentives.m 'instructions mention right click'
@@ -98,6 +109,9 @@ check_grep 'resolvedPlan' experiment/preflight.m 'preflight resolved plan'
 check_grep '## Design knobs' experiment/README.md 'design knob docs'
 check_grep 'cfg\.auction\.nTrials' experiment/README.md 'auction trial knob docs'
 check_grep 'cfg\.contdc\.nPairs\.houses' experiment/README.md 'house pair knob docs'
+check_grep 'cfg\.contdc\.nPairs\.houses[[:space:]]*=[[:space:]]*20' experiment/+utils/config.m 'houses contdc has 20 pairs per level'
+check_grep 'cfg\.contdc\.nPairs\.jobs[[:space:]]*=[[:space:]]*20' experiment/+utils/config.m 'jobs contdc has 20 pairs per level'
+check_grep 'n_pairs[[:space:]]*<-[[:space:]]*c\(jobs = 20, houses = 20\)' analysis/R/simulate_demo_data.R 'simulated data matches contdc pair counts'
 check_grep 'JOBS_ARM' experiment/README.md 'jobs arm knob docs'
 
 # --- Restyle and theme invariants ---------------------------------------
@@ -223,14 +237,21 @@ check_file experiment/+utils/timeline.m
 check_grep "TASK_MODE[[:space:]]*=[[:space:]]*'both'" experiment/preference_task.m 'houses preference can run both sections'
 check_grep "case 'rating'" experiment/preference_task.m 'houses preference rating mode'
 check_grep "case 'pwc'" experiment/preference_task.m 'houses preference pairwise mode'
-check_grep 'N_RATING[[:space:]]*=[[:space:]]*80' experiment/preference_task.m 'default 80 photo ratings'
+check_grep 'N_RATING[[:space:]]*=[[:space:]]*60' experiment/preference_task.m 'default 60 photo ratings'
 check_grep 'N_PWC_HOUSES[[:space:]]*=[[:space:]]*160' experiment/preference_task.m 'default 160 houses pairwise comparisons'
 check_grep 'N_PWC_JOBS[[:space:]]*=[[:space:]]*160' experiment/preference_task.m 'default 160 jobs pairwise comparisons'
 check_grep 'AREA_QUOTAS' experiment/preference_task.m 'editable area quotas'
+check_grep "'extPic',[[:space:]]*10" experiment/preference_task.m 'exterior rating quota is 10'
+check_grep "'kitPic',[[:space:]]*10" experiment/preference_task.m 'kitchen rating quota is 10'
+check_grep "'bedPic',[[:space:]]*10" experiment/preference_task.m 'bedroom rating quota is 10'
+check_grep "'bathPic',[[:space:]]*10" experiment/preference_task.m 'bathroom rating quota is 10'
+check_grep "'livPic',[[:space:]]*10" experiment/preference_task.m 'living room rating quota is 10'
+check_grep "'outPic',[[:space:]]*10" experiment/preference_task.m 'outdoor rating quota is 10'
 check_grep "utils\.readStimuli\(cfg,[[:space:]]*'houses'\)" experiment/preference_task.m 'houses preference reads through shared loader'
 for area in extPic kitPic bedPic bathPic livPic outPic; do
   check_grep "$area" experiment/+utils/buildPhotoPreferencePlan.m "photo preference planner includes $area"
 done
+check_grep 'makeWithinAreaPairs\(ratingPhotoRows' experiment/+utils/buildPhotoPreferencePlan.m 'houses pairwise uses rated photo sample'
 check_grep 'chosenPhotoId' experiment/preference_task.m 'pairwise CSV names chosen photo'
 check_grep 'unchosenPhotoId' experiment/preference_task.m 'pairwise CSV names unchosen photo'
 
@@ -351,6 +372,10 @@ check_grep 'utils\.layoutCardAndArc' experiment/continuous_DC_task.m 'contdc pri
 check_grep 'utils\.drawOptionCard' experiment/auction_task.m 'the bid screen actually draws the option'
 check_grep "utils\.cardAOIs\(cfg, bidL\.cardRect, sel, 'bid'\)" experiment/auction_task.m 'bid AOIs recorded'
 check_grep 'bidAoiRects' experiment/auction_task.m 'bid AOIs saved with the data'
+check_file experiment/+utils/drawPriceArc.m
+check_grep 'utils\.drawPriceArc' experiment/auction_task.m 'auction price arc is shared continuous stroke'
+check_grep 'utils\.drawPriceArc' experiment/continuous_DC_task.m 'contdc price arc is shared continuous stroke'
+check_grep 'linspace\(pi, 2\*pi, 720\)' experiment/+utils/drawPriceArc.m 'price arc uses dense continuous line'
 # preflight must check them too, or allAoiOK stops covering a whole screen.
 check_grep "utils\.cardAOIs\(cfg, bidL\.cardRect, sel, 'bid'\)" experiment/preflight.m 'preflight computes the bid AOIs'
 check_grep 'auctionBid' experiment/preflight.m 'preflight reports on the bid screen'
@@ -361,10 +386,19 @@ check_grep "isfield\(r, 'auctionBid'\)" experiment/preflight.m 'allAoiOK include
 # when the branch runs; this is the only pre-rig check for it.
 # --- Data and images stay in Experiment and are gitignored ---------------
 check_grep "experiment/Data/" .gitignore 'participant data is ignored'
+check_grep "experiment/Data_practice/" .gitignore 'practice data is ignored'
 check_grep "\*\*/stimuli/house_images/" .gitignore 'house images are ignored'
-check_grep "cfg\.paths\.local[[:space:]]*=[[:space:]]*cfg\.paths\.experiment" experiment/+utils/config.m 'local root is Experiment'
-check_grep "cfg\.paths\.data[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.experiment,[[:space:]]*'Data'\)" experiment/+utils/config.m 'participant data stays inside Experiment'
-check_grep "cfg\.paths\.images[[:space:]]*=[[:space:]]*fullfile\(cfg\.paths\.stimuli,[[:space:]]*'house_images'\)" experiment/+utils/config.m 'house images stay inside stimuli'
+check_grep 'HW_DATA_ROOT' experiment/+utils/config.m 'participant data root comes from environment'
+check_grep 'HW_PRACTICE_DATA_ROOT' experiment/+utils/config.m 'practice data root comes from environment'
+check_grep 'HW_ASSET_ROOT' experiment/+utils/config.m 'house image root comes from environment'
+check_grep 'HW_TOBII_ROOT' experiment/+utils/config.m 'Tobii SDK root comes from environment'
+check_grep 'runKind' experiment/+utils/config.m 'config carries participant/practice run kind'
+check_grep 'run_kind' experiment/+utils/saveRun.m 'CSV output carries run kind'
+check_grep "RUN_KIND[[:space:]]*=[[:space:]]*'participant'" experiment/run_battery.m 'battery defaults to participant data root'
+check_grep "'runKind',[[:space:]]*RUN_KIND" experiment/run_battery.m 'battery passes run kind to session config'
+check_grep 'confirmAssignment' experiment/+utils/startSession.m 'participant assignment confirmation gate'
+check_grep 'nextParticipant' experiment/+utils/startSession.m 'participant auto-increment assignment'
+check_grep 'assignmentOverride' experiment/+utils/startSession.m 'manual assignment override is recorded'
 
 # --- preference_task display setup matches the battery tasks -------------
 # Screen('Preference') rejects logicals; style colors are 0-1 and need
@@ -382,8 +416,27 @@ check_grep 'fixationAndIsi' experiment/preference_task.m 'pref trials have ISI a
 check_grep 'utils\.setupEyeTracker' experiment/preference_task.m 'pref task records gaze'
 check_grep "'pref',    'domains'" experiment/+utils/batteryPlan.m 'pref rows in the battery plan'
 check_grep 'sortrows\(perms\(1:3\)\)' experiment/+utils/batteryPlan.m 'three-task sessions use all 6 orders'
+check_grep 'assignedDomain' experiment/+utils/batteryPlan.m 'battery plan uses between-subject domain assignment'
+check_grep 'domainIndex' experiment/+utils/batteryPlan.m 'task order is balanced within assigned domain'
 check_grep "case 'pref'" experiment/run_battery.m 'battery dispatches the pref task'
 check_grep 'cfg\.paths\.taskData\.pref' experiment/+utils/config.m 'pref data directory configured'
+
+# --- display formatting -------------------------------------------------
+check_absent "sprintf\\('%\\.4g'" experiment/+utils/valueString.m 'attribute values must not use scientific notation'
+check_grep 'plainNumber' experiment/+utils/valueString.m 'numeric attributes use plain decimal formatting'
+check_grep 'maxScale' experiment/+utils/style.m 'house image grid can fill card width'
+check_grep 'g\.maxScale' experiment/+utils/drawIdentityStrip.m 'identity strip scales up to available width'
+check_grep 'labelX' experiment/+utils/drawOptionCard.m 'attribute labels are horizontally centered in slots'
+check_grep 'valueX' experiment/+utils/drawOptionCard.m 'attribute values are horizontally centered in slots'
+
+# --- RStudio-friendly analysis -----------------------------------------
+check_file analysis/R/00_participant_qc.R
+check_file analysis/R/90_simulate_data.R
+check_grep 'RUN_MODE' analysis/R/run_all.R 'analysis has source-friendly editable settings'
+check_grep 'run_analysis' analysis/R/run_all.R 'analysis can run from Source, not only command line'
+check_grep 'run_from_rstudio_source' analysis/R/run_all.R 'analysis detects RStudio/source execution'
+check_absent '"simulate"' analysis/R/run_all.R 'participant QC entrypoint must not default to simulation'
+check_grep 'Simulation has its own script' analysis/R/run_all.R 'run_all rejects old --simulate path'
 
 # --- component timing --------------------------------------------------
 check_grep 'dataMat\.timing = utils\.timeline' experiment/auction_task.m 'auction saves section timing'

@@ -23,7 +23,9 @@ as_lgl_flex <- function(x) {
 }
 
 # Columns the tasks write that must be read as text, not guessed.
-CHR_COLS <- c("run_id", "task", "domain", "competition", "endReason", "taskType")
+CHR_COLS <- c("run_id", "task", "run_kind", "domain", "competition", "endReason",
+              "taskType", "section", "photoId", "areaVar", "leftAreaVar",
+              "rightAreaVar", "responseSide")
 
 read_run_csv <- function(path) {
   df <- suppressWarnings(readr::read_csv(
@@ -40,8 +42,8 @@ read_run_csv <- function(path) {
 #' Discover every run CSV under a data root.
 find_run_files <- function(data_dir) {
   spec <- tibble::tibble(
-    task = c("auction", "contdc"),
-    dir  = file.path(data_dir, c("auction", "cont_dc"))
+    task = c("auction", "contdc", "pref"),
+    dir  = file.path(data_dir, c("auction", "cont_dc", "pref"))
   )
   spec %>%
     mutate(path = map(dir, ~ list.files(.x, pattern = "\\.csv$", full.names = TRUE))) %>%
@@ -91,6 +93,29 @@ load_contdc <- function(data_dir) {
     arrange(participant, session, run_id, block, pairIdx)
 }
 
+#' Load and tidy the preference-task runs.
+load_pref <- function(data_dir) {
+  files <- find_run_files(data_dir) %>% filter(task == "pref")
+  if (nrow(files) == 0) return(NULL)
+
+  bind_rows(lapply(files$path, read_run_csv)) %>%
+    mutate(
+      section = factor(section, levels = c("rating", "pwc")),
+      domain  = factor(domain, levels = c("jobs", "houses"))
+    ) %>%
+    arrange(participant, session, run_id, section, trial)
+}
+
+#' Load per-section timing rows written by run_battery.
+load_timing <- function(data_dir) {
+  timing_dir <- file.path(data_dir, "sessions")
+  if (!dir.exists(timing_dir)) return(NULL)
+  files <- list.files(timing_dir, pattern = "_timing\\.csv$", full.names = TRUE)
+  if (!length(files)) return(NULL)
+  bind_rows(lapply(files, read_run_csv)) %>%
+    arrange(participant, session, task, section)
+}
+
 #' Reversal score recomputed from the CSV alone; disagrees loudly if it drifts from the MATLAB-side computation.
 score_reversals <- function(contdc) {
   if (is.null(contdc) || nrow(contdc) == 0) return(NULL)
@@ -119,15 +144,23 @@ score_reversals <- function(contdc) {
 }
 
 #' Data-integrity report, printed before any plot.
-integrity_report <- function(auction, contdc, data_dir) {
+integrity_report <- function(auction, contdc, pref = NULL, timing = NULL,
+                             data_dir, include_sidecars = TRUE) {
   lines <- c(sprintf("Data root: %s", normalizePath(data_dir, mustWork = FALSE)), "")
 
   if (is.null(auction)) {
     lines <- c(lines, "AUCTION: no CSVs found.")
   } else {
     real <- auction %>% filter(!practice)
-    cells <- real %>% count(domain, competition, .drop = FALSE)
-    empty <- cells %>% filter(n == 0)
+    cells <- real %>%
+      mutate(domain = droplevels(domain), competition = droplevels(competition)) %>%
+      count(domain, competition, .drop = FALSE)
+    expected <- real %>%
+      group_by(run_id, domain) %>%
+      summarise(real_trials = dplyr::n(),
+                practice_trials = sum(auction$practice[auction$run_id == first(run_id)], na.rm = TRUE),
+                .groups = "drop") %>%
+      mutate(status = ifelse(real_trials == 24, "OK", "CHECK"))
     lines <- c(lines,
       "AUCTION",
       sprintf("  runs            : %d", dplyr::n_distinct(auction$run_id)),
@@ -143,10 +176,15 @@ integrity_report <- function(auction, contdc, data_dir) {
               sum(!is.na(real$bid)), nrow(real),
               100 * mean(!is.na(real$bid))),
       sprintf("  missing bid RTs : %d", sum(is.na(real$bidRT) & !is.na(real$bid))),
-      if (nrow(empty) > 0)
-        sprintf("  EMPTY CELLS     : %s",
-                paste(sprintf("%s/%s", empty$domain, empty$competition), collapse = ", "))
-      else "  design cells    : all populated",
+      sprintf("  current expected: 24 real trials per domain/run"),
+      sprintf("  observed runs   : %s",
+              paste(sprintf("%s/%s real=%d practice=%d %s",
+                            expected$run_id, expected$domain, expected$real_trials,
+                            expected$practice_trials, expected$status),
+                    collapse = "; ")),
+      "  competition cells:",
+      paste(sprintf("    %s/%s = %d", cells$domain, cells$competition, cells$n),
+            collapse = "\n"),
       ""
     )
   }
@@ -154,7 +192,10 @@ integrity_report <- function(auction, contdc, data_dir) {
   if (is.null(contdc)) {
     lines <- c(lines, "CONTDC: no CSVs found.")
   } else {
-    cells <- contdc %>% count(domain, attrLevel, taskType, .drop = FALSE)
+    cells <- contdc %>%
+      mutate(domain = droplevels(domain), attrLevel = droplevels(attrLevel),
+             taskType = droplevels(taskType)) %>%
+      count(domain, attrLevel, taskType, .drop = FALSE)
     empty <- cells %>% filter(n == 0)
     balance <- cells %>%
       tidyr::pivot_wider(names_from = taskType, values_from = n, values_fill = 0) %>%
@@ -189,9 +230,101 @@ integrity_report <- function(auction, contdc, data_dir) {
                               imbalanced$choice_rows, imbalanced$price_rows),
                       collapse = ", "))
       else "  cell balance    : price rows are exactly 2x choice rows",
+      sprintf("  current expected: per domain, L2/L4/L6 each has 20 choice + 40 price rows"),
       ""
     )
   }
 
+  if (is.null(pref)) {
+    lines <- c(lines, "PREF: no CSVs found.")
+  } else {
+    sec <- pref %>%
+      mutate(domain = droplevels(domain), section = droplevels(section)) %>%
+      count(run_id, domain, section, name = "rows")
+    rating <- pref %>% filter(section == "rating")
+    pwc <- pref %>% filter(section == "pwc")
+    area_counts <- if (nrow(rating) > 0) {
+      rating %>% count(run_id, areaVar, name = "n") %>%
+        mutate(label = sprintf("%s=%d", areaVar, n)) %>%
+        group_by(run_id) %>%
+        summarise(area_summary = paste(label, collapse = " "), .groups = "drop")
+    } else NULL
+    cross_area <- if (nrow(pwc) > 0 && all(c("leftAreaVar", "rightAreaVar") %in% names(pwc))) {
+      sum(!is.na(pwc$leftAreaVar) & !is.na(pwc$rightAreaVar) &
+            pwc$leftAreaVar != pwc$rightAreaVar)
+    } else NA_integer_
+    reused_outside_rating <- if (nrow(rating) > 0 && nrow(pwc) > 0 &&
+                                all(c("leftPhotoId", "rightPhotoId") %in% names(pwc))) {
+      rated <- unique(rating$photoId)
+      sum(!(pwc$leftPhotoId %in% rated) | !(pwc$rightPhotoId %in% rated), na.rm = TRUE)
+    } else NA_integer_
+    lines <- c(lines,
+      "PREF",
+      sprintf("  runs            : %d", dplyr::n_distinct(pref$run_id)),
+      sprintf("  participants    : %d", dplyr::n_distinct(pref$participant)),
+      sprintf("  rows by section : %s",
+              paste(sprintf("%s/%s/%s=%d", sec$run_id, sec$domain,
+                            sec$section, sec$rows), collapse = "; ")),
+      if (!is.null(area_counts))
+        sprintf("  rating areas    : %s",
+                paste(sprintf("%s: %s", area_counts$run_id,
+                              area_counts$area_summary), collapse = "; "))
+      else "  rating areas    : not present",
+      if (!is.na(cross_area))
+        sprintf("  cross-area pairs: %d", cross_area)
+      else "  cross-area pairs: not applicable",
+      if (!is.na(reused_outside_rating))
+        sprintf("  pair photos not in rated set: %d", reused_outside_rating)
+      else "  pair photos not in rated set: not applicable",
+      "  current expected: houses rating=60 (10/area), houses pwc=160, jobs pwc=160",
+      ""
+    )
+  }
+
+  if (is.null(timing)) {
+    lines <- c(lines, "TIMING: no session timing CSVs found.")
+  } else {
+    totals <- timing %>%
+      group_by(participant, session, task, domains) %>%
+      summarise(seconds = sum(seconds, na.rm = TRUE), .groups = "drop") %>%
+      mutate(label = sprintf("sub-%05d ses-%02d %s/%s %.1f min",
+                             participant, session, task, domains, seconds / 60))
+    lines <- c(lines,
+      "TIMING",
+      sprintf("  files/rows      : %d rows", nrow(timing)),
+      sprintf("  task totals     : %s", paste(totals$label, collapse = "; ")),
+      ""
+    )
+  }
+
+  if (include_sidecars) {
+    lines <- c(lines, sidecar_report(data_dir, auction, contdc, pref), "")
+  }
+
   paste(lines, collapse = "\n")
+}
+
+sidecar_report <- function(data_dir, auction, contdc, pref) {
+  csvs <- find_run_files(data_dir)
+  if (nrow(csvs) == 0) return("SIDECARS: no run CSVs found.")
+  missing_mat <- csvs$path[!file.exists(sub("\\.csv$", ".mat", csvs$path))]
+  all_runs <- bind_rows(
+    if (!is.null(auction)) auction %>% distinct(run_id, domain) else NULL,
+    if (!is.null(contdc)) contdc %>% distinct(run_id, domain) else NULL,
+    if (!is.null(pref)) pref %>% distinct(run_id, domain) else NULL
+  )
+  gaze_dir <- file.path(data_dir, "gaze")
+  missing_gaze <- character()
+  if (nrow(all_runs) > 0) {
+    expected <- file.path(gaze_dir, sprintf("%s_%s_gaze.mat", all_runs$run_id, all_runs$domain))
+    missing_gaze <- expected[!file.exists(expected)]
+  }
+  c(
+    "SIDECARS",
+    sprintf("  run CSVs        : %d", nrow(csvs)),
+    sprintf("  missing .mat    : %d%s", length(missing_mat),
+            if (length(missing_mat)) paste0(" (", paste(basename(missing_mat), collapse = ", "), ")") else ""),
+    sprintf("  missing gaze    : %d%s", length(missing_gaze),
+            if (length(missing_gaze)) paste0(" (", paste(basename(missing_gaze), collapse = ", "), ")") else "")
+  )
 }

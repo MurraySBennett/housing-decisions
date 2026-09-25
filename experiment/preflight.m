@@ -18,6 +18,8 @@ p.addParameter('trialsPerCell', [], @(x) isempty(x) || ...
 p.addParameter('jobsArm', 'synthetic', @(x) ismember(lower(char(x)), ...
     {'synthetic','ecological','attenuated'}));
 p.addParameter('forceDomain', '', @(x) ischar(x) || isstring(x));
+p.addParameter('taskOrder', [], @(x) isempty(x) || ...
+    (isnumeric(x) && isscalar(x) && x >= 1 && x <= 6 && x == round(x)));
 p.addParameter('runChecks', true, @islogical);
 p.addParameter('windowRect', [], @(x) isempty(x) || (isnumeric(x) && numel(x) == 4));
 p.parse(participant, sessionNum, varargin{:});
@@ -26,7 +28,7 @@ opt = p.Results;
 cfg = utils.config('projRoot', opt.projRoot, 'rig', opt.rig, ...
     'testing', opt.testing, 'jobsArm', opt.jobsArm, ...
     'trialsPerCell', opt.trialsPerCell);
-rows = utils.batteryPlan(participant, sessionNum, opt.forceDomain);
+rows = utils.batteryPlan(participant, sessionNum, opt.forceDomain, opt.taskOrder);
 
 winRect = opt.windowRect;
 if isempty(winRect)
@@ -157,7 +159,7 @@ for k = 1:numel(rows)
                 % Trial counts and pacing must mirror preference_task.m.
                 switch domain
                     case 'houses'
-                        seconds = seconds + 80 * (4 + 1.1) + 160 * (3 + 1.1) + 60;
+                        seconds = seconds + 60 * (4 + 1.1) + 160 * (3 + 1.1) + 60;
                     case 'jobs'
                         seconds = seconds + 160 * (2.5 + 1.1) + 30;
                 end

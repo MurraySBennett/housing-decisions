@@ -819,9 +819,7 @@ while true
     utils.drawOptionCard(window, cfg, BL.cardRect, stimTbl, tex, sel, idx);
 
     % Arc and ticks.
-    a = linspace(pi, 2*pi, 180);
-    ax = cx + scaleR*cos(a);  ay = cy + scaleR*sin(a);
-    Screen('DrawLines', window, [ax; ay], 4, s.track);
+    utils.drawPriceArc(window, cx, cy, scaleR, s.track, 4);
 
     % Ticks and labels
     Screen('TextSize', window, s.priceScale.labelSizePx);

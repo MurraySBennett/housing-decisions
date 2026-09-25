@@ -6,6 +6,72 @@ project: housing-decisions
 
 ## Now
 
+**Session update 2026-09-25.** The repo is being moved to a clean-clone lab
+workflow: Git/GitHub Desktop is now the deployment path, not a copy-to-share
+script. Runtime roots are externalised through `HW_DATA_ROOT`,
+`HW_PRACTICE_DATA_ROOT`, `HW_ASSET_ROOT`, and `HW_TOBII_ROOT`; practice runs
+write to a separate data root via `RUN_KIND = 'practice'`. `verify_static.sh`
+and the simulated R analysis pass; MATLAB/Psychtoolbox verification still has
+to happen at the rig.
+
+**Same session:** house numeric attributes no longer use scientific notation
+on option cards, and `analysis/R/run_all.R` now has a top editable block for
+RStudio Source runs. Its default mode is simulated data so students can source
+the script before lab data are mounted or pulled.
+
+**Same session:** `docs/lab-machine-git.md` now starts with the RA-facing
+workflow: GitHub Desktop Fetch/Pull, stop if changed files appear, run MATLAB
+from the local clone. Shared drive paths are one-time setup detail, not a
+student decision.
+
+**Same session, share cleanup corrected:** the OSU share at
+`\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages` now reads
+as a data/assets store. Retired pre-git task code/display files were moved to
+`Archive\retired_code_after_git_2026-09-25_123425` with `move_manifest.csv`;
+`Experiment\Data`, `Experiment\Data_practice`, and
+`Experiment\stimuli\house_images` remain in place. Correction after the first
+pass: stimulus definition files are runtime assets too, so
+`Experiment\stimuli\house_stimuli.csv`, `house_stimuli_list.csv`,
+`job_stimuli.csv`, `prepared\`, and `stimgen\` were restored from the archive
+and verified present on the share.
+
+**Same session:** contdc/auction option cards now let the house photo identity
+grid scale up to fill more of the card width, center attribute labels and
+values inside their fixed slots, and draw the pricing arc through
+`utils.drawPriceArc` as a dense continuous stroke. Static verification passes;
+MATLAB/PTB visual verification still needs the rig.
+
+**Same session:** continuous/DC full-run counts are now 20 pairs per
+attribute level for both houses and jobs (`cfg.contdc.nPairs.* = 20`).
+The old 6-house/10-job setting was a stale supply-constrained first pass from
+before house prices were fitted onto each participant's window. The R
+simulator and docs now match the 20-pair setting; static verification and
+simulated analysis pass.
+
+**Same session:** house-photo preference now samples exactly 10 photos from
+each of the six areas, 60 total, using the participant-seeded plan. The same
+photo sample feeds both direct ratings and within-area pairwise choices.
+
+**Same session:** participant assignment is now between-subjects and gated at
+startup. Odd participant IDs run jobs/wages, even IDs run houses, and the six
+task orders cycle within each domain by `ceil(participant/2)`. `startSession`
+proposes the next ID from existing data/manifests, prefers incomplete
+participants for recovery, and lets the RA press Enter to accept or `e` to edit
+participant/domain/task-order. Overrides are stamped in the manifest and
+`dataMat.assignment`.
+
+**Same session, data QC caution:** an attempted analysis run used
+`RUN_MODE = "simulate"` with `--data data`, which rewrote the local ignored
+`data/` directory. No mounted share/local backup of the 2026-09-25 `sub-09999`
+files was found in `/home/msb`; re-pull from the rig/share before real-data QC.
+`run_all.R` now refuses `--simulate` on an explicit data path and treats
+`--data` without `--simulate` as participant mode.
+
+**Same session:** analysis entrypoints are split so real-data QC cannot run
+simulation by accident. `analysis/R/00_participant_qc.R` is the participant,
+practice, and demo data path; `analysis/R/90_simulate_data.R` is the explicit
+synthetic-data sandbox. The share pull script now calls participant QC.
+
 **Session update 2026-09-21.** The pricing scale baseline now sits at the
 inner end of the major ticks and is drawn as a solid arc rather than the old
 minor-tick comb. Auction bidding and contdc pricing were changed together;
@@ -13,8 +79,8 @@ minor-tick comb. Auction bidding and contdc pricing were changed together;
 has to happen at the rig.
 
 **Same session:** added a standalone house-photo style preference task,
-`experiment/photo_preference_task.m`. It can run direct ratings, pairwise
-choices, or both over individual house photos, sampling 80 photos by editable
+`experiment/preference_task.m`. It can run direct ratings, pairwise choices,
+or both over individual house photos, sampling 10 photos per area by editable
 area quotas and defaulting to 160 BTL-ready pairwise comparisons. Statically
 verified only; the first image-load and click-through check needs MATLAB/PTB.
 
@@ -27,11 +93,10 @@ after the rig showed no live feedback; the 998/999 QA (20) waits on the
 `dataMat` exporter; the mid-task drift flag (15) is deliberately
 down-prioritised.
 
-**In flight, on the lab machine, not here.** Murray is at the rig
-converting the share into a git checkout --
-`docs/lab-machine-git.md` is the runbook. Step 0 (`utils.verifyPaths`) passed
-on 2026-09-18; continue with the remaining runbook steps when ready. Handoff packet:
-`~/.agents/handoffs/HANDOFF-housing-pilot.md`.
+**Lab git direction changed 2026-09-25.** Do not convert the shared-drive
+`housing_wages/` folder into a repo checkout. Lab machines and collaborators
+should clone the GitHub repo normally; the share holds data/assets/SDK roots,
+not a second code copy.
 
 **Blocked on one call:** a name for a GitHub organisation. OSU has no
 Enterprise instance, the repo is private on a personal account, and many
@@ -105,8 +170,8 @@ it is at the rig. Run `scripts/verify_matlab.m` there *first*: it asserts
 `TRIALS_PER_CELL = []`, for the staff practice run. All five switches are
 at real-participant settings: `RIG = 'lab'`, `TESTING = false`,
 `FORCE_DOMAIN = ''`, `EYETRACKING = true`, `JOBS_ARM = 'synthetic'`. That
-means session 1 is jobs (12 auction trials + 90 contdc) and session 2 is
-houses (12 + 54), on separate sittings, exactly as PLAN has them.
+now means startup proposes the next participant assignment: odd IDs run
+jobs/wages, even IDs run houses, and task order is balanced within domain.
 
 **These practice runs are indistinguishable from real ones in the data
 tree.** `dataMat.trialsPerCell` was what made a short rehearsal filterable;
@@ -144,8 +209,8 @@ pleasantly.**
 - [x] 2026-09-23 **the preference task is now a battery task** (`pref` rows in
   `utils.batteryPlan`), renamed `photo_preference_task.m` ->
   `preference_task.m` and converted to the `(sess, run)` function form.
-  Both sessions have three tasks counterbalanced over all 6 orders by
-  `mod(participant, 6)`; jobs' version is pairwise-only over industry +
+  Both domains have three tasks counterbalanced over all 6 orders within
+  domain; jobs' version is pairwise-only over industry +
   job title text cards, mixed across industries, and always reads the
   ECOLOGICAL stimulus file (the synthetic arm's titles are `title_001`
   placeholders -- `buildJobPreferencePlan` errors if one reaches it).
@@ -170,10 +235,11 @@ pleasantly.**
   are now the Z (left) and M (right) keys with the cursor hidden for the
   section; and pairwise trials only ever compare photos of the same area
   (kitchen vs kitchen, ...), allocated across areas proportional to their
-  rating quotas in `buildPhotoPreferencePlan` — at the 80/160 defaults that
-  is 28 pairs each for exterior/kitchen and 26 for the rest, and the trial
-  prompt now names the area ("Which kitchen do you prefer?"). All pinned in
-  `verify_static.sh`; redeployed to the share
+  rating quotas in `buildPhotoPreferencePlan`. With the 60/160 default, the
+  task rates 10 photos per area, then samples pairwise trials from those same
+  participant-specific photos. The trial prompt names the area ("Which
+  kitchen do you prefer?"). All pinned in `verify_static.sh`; redeployed to
+  the share
 - [x] 2026-09-23 fixed the photo task's rig crash at the `Screen('Preference')`
   line: `skipSyncTests` is a logical in `rigProfiles` and Screen rejects
   logicals, so it now casts to double like the battery tasks. The same display
@@ -182,8 +248,8 @@ pleasantly.**
   both added, and all three are now pinned by `verify_static.sh`. Redeployed
   to the share. Still needs its first full click-through at the rig
 - [x] 2026-09-21 standalone house-photo preference task added:
-  `photo_preference_task.m` writes its own `photo_pref` run, samples
-  individual photos from all six house areas with editable quotas, supports
+  `preference_task.m` writes its own `pref` run, samples individual photos
+  from all six house areas with editable quotas, supports
   `rating`, `pwc`, or `both`, and emits BTL-ready chosen/unchosen columns.
   Needs first MATLAB/PTB execution at the rig or a machine with the house
   images present
@@ -380,8 +446,8 @@ pleasantly.**
 - [x] 2026-09-16 set `TRIALS_PER_CELL = []` in `run_battery.m` for the
   staff practice run -- full trial counts, everything else already real.
   Note this locks in the *current* config as the baseline while the
-  conditions task below is still open: `nTrials = 12`, `nPairs` 6 houses /
-  10 jobs, `attrLevels = [2 4 6]`, `JOBS_ARM = 'synthetic'`. If any of
+  conditions task below is still open: `nTrials = 24`, `nPairs` 20 per
+  domain/level, `attrLevels = [2 4 6]`, `JOBS_ARM = 'synthetic'`. If any of
   those move afterwards, the practice run does not describe the real one
 - [x] 2026-09-16 fixed the invisible cursor on the auction's comprehension
   check. `utils.elicitVAS` ended with `HideCursor`, elicitation runs before
@@ -525,14 +591,14 @@ pleasantly.**
   now added). The share's `+utils\config.m` was stale and still pointed at
   `housing_wages_local` (confirmed in the backup), which is why the rig was
   saving there; the deployed copy is verified clean
-- [ ] now (M) **put the lab machine on git** -- steps written up in
-  `docs/lab-machine-git.md`, needs a keyboard at the rig. Plan is to make
-  the share's `housing_wages/` itself the working tree: `utils.config`
-  defaults `projRoot` to the share root, and Windows does not distinguish
-  the repo's `experiment/` from the share's `Experiment/`, so it lines up
-  with no config changes. Read-only deploy key so a shared machine never
-  holds a credential that can push. Delete `deploy_to_share.ps1` in the
-  same commit that finishes it -- two live mechanisms is worse than either
+- [x] 2026-09-25 **retired the pre-git share deployment path.** Lab machines
+  should use normal GitHub Desktop clones, not the shared-drive
+  `housing_wages/` folder as a checkout. `scripts/deploy_to_share.ps1` is
+  deleted; `docs/lab-machine-git.md` now documents named-account GitHub
+  Desktop use plus external runtime roots. Participant data, practice data,
+  house images, and the Tobii SDK stay off-git and are resolved via
+  `HW_DATA_ROOT`, `HW_PRACTICE_DATA_ROOT`, `HW_ASSET_ROOT`, and
+  `HW_TOBII_ROOT`
 - [ ] next (S) **decide how collaborators get access.** The repo is private
   on a personal account. Check whether OSU runs GitHub Enterprise first: an
   org-owned repo outlives an individual account, which matters for
@@ -545,10 +611,11 @@ pleasantly.**
   `Experiment\stimuli\house_images`; `.gitignore` is the protection. The
   task config and pull script point back at the in-tree ignored locations,
   and the old mover script is removed so it cannot be run again
-- [ ] next (S) `config.m` hardcodes the OSU UNC as `projRoot`, which is why
-  `demo_battery.m` has to re-point every path by hand on WSL. `STIMULI.md`
-  already documents a `$DATA_ROOT` env-var convention that nothing reads.
-  Make `projRoot` read an env var with the current UNC as fallback
+- [x] 2026-09-25 `config.m` no longer treats the OSU UNC as the code root.
+  Clean clones use their own `experiment/` tree for code and stimulus
+  definitions, while runtime paths come from `HW_DATA_ROOT`,
+  `HW_PRACTICE_DATA_ROOT`, `HW_ASSET_ROOT`, and `HW_TOBII_ROOT` with lab-share
+  defaults
 
 ### admin
 - [ ] now (M) set up REP for the study — the OSU participant system. Named by Murray as a prerequisite for collection this semester and not started

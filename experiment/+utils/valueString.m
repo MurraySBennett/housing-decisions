@@ -11,14 +11,25 @@ switch attr.kind
     case 'rating'
         str = sprintf('%.1f / 5', v);
     case 'count'
-        str = sprintf('%g', v);
+        str = plainNumber(v, 1);
     case 'year'
         str = sprintf('%d', round(v));
     case 'number'
-        str = sprintf('%.4g', v);
+        str = plainNumber(v, 2);
     case 'category'
         str = char(string(v));
     otherwise
         str = char(string(v));
 end
+end
+
+function str = plainNumber(v, maxDecimals)
+if isnan(v)
+    str = 'NA';
+    return
+end
+fmt = sprintf('%%.%df', maxDecimals);
+str = sprintf(fmt, v);
+str = regexprep(str, '(\.\d*?)0+$', '$1');
+str = regexprep(str, '\.$', '');
 end

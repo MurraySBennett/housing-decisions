@@ -10,8 +10,12 @@ dataMat.sessionNum    = sess.sessionNum;
 dataMat.runId         = run.runId;
 dataMat.task          = run.task;
 dataMat.domainOrder   = sess.domains;
+dataMat.runKind       = sess.runKind;
 dataMat.seed          = run.seed;
 dataMat.codeVersion   = sess.codeVersion;
+if isfield(sess, 'assignment')
+    dataMat.assignment = sess.assignment;
+end
 dataMat.startedAt     = run.startedAt;
 dataMat.savedAt       = char(datetime('now','Format','yyyy-MM-dd HH:mm:ss'));
 
@@ -25,7 +29,8 @@ if nargin >= 4 && ~isempty(trialTable)
         repmat(sess.sessionNum,  n, 1), ...
         repmat(string(run.runId), n, 1), ...
         repmat(string(run.task),  n, 1), ...
-        'VariableNames', {'participant','session','run_id','task'});
+        repmat(string(sess.runKind), n, 1), ...
+        'VariableNames', {'participant','session','run_id','task','run_kind'});
 
     dupes = intersect(keys.Properties.VariableNames, ...
                       trialTable.Properties.VariableNames);

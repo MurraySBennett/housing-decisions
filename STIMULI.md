@@ -1,27 +1,28 @@
 # Stimuli
 
-`experiment/stimuli/` is roughly **605MB** — 501 files of house images plus the
-stimulus lists. Required to run the experiment, deliberately not in git.
+The house images are roughly **605MB**. They are required to run the houses
+tasks and deliberately not in git.
 
 ## What is there
 
 | | |
 |---|---|
-| `stimuli/house_images/` | Room images: `bath*`, `bed*`, `kit*`, `liv*`, `out*`, `ext*` |
+| `house_images/` | Room images: `bath*`, `bed*`, `kit*`, `liv*`, `out*`, `ext*` |
 | `stimuli/house_stimuli.csv` | The stimulus list. **Pruned in March 2026** — 19KB down to 16KB. The current version is authoritative. |
 | `stimuli/job_stimuli.csv` | Wage/job stimulus list, updated April 2026 |
 
-The two CSVs are small and *are* tracked, since they define the design. Only the
-images are excluded.
+The CSVs are small and *are* tracked under `experiment/stimuli/`, since they
+define the design. Only the images are excluded.
 
 ## Where it lives
 
-Referenced through `$DATA_ROOT` so no path here names a machine:
+The default lab path is:
 
-```matlab
-data_root = getenv('DATA_ROOT');
-stim_dir  = fullfile(data_root, 'housing-decisions', 'stimuli');
+```text
+\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\stimuli\house_images
 ```
+
+Override it with `HW_ASSET_ROOT` when a machine has a local copy.
 
 ## Note
 

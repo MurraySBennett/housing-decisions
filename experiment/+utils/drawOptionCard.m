@@ -41,7 +41,10 @@ for k = 1:n
 
     attr = sel.shown(k);
     Screen('TextSize', window, s.sizeLabel);
-    DrawFormattedText(window, attr.label, cx0 + 6, cy0 + 20, s.textDim, ...
+    label = char(string(attr.label));
+    bnd = Screen('TextBounds', window, label);
+    labelX = cx0 + max(6, (cellW - bnd(3)) / 2);
+    DrawFormattedText(window, label, labelX, cy0 + 20, s.textDim, ...
         floor(cellW/8), 0, 0, 1.1);
 
     % Fixed offset keeps the label-value gap constant across attribute counts.
@@ -55,8 +58,10 @@ for k = 1:n
     else
         Screen('TextSize', window, s.sizeContent);
         % Core value not emphasised; s.money is reserved for numbers being set.
-        DrawFormattedText(window, utils.valueString(stimTbl, attr, idx), ...
-            cx0 + 6, valueY, s.text);
+        valueText = utils.valueString(stimTbl, attr, idx);
+        bnd = Screen('TextBounds', window, valueText);
+        valueX = cx0 + max(6, (cellW - bnd(3)) / 2);
+        DrawFormattedText(window, valueText, valueX, valueY, s.text);
     end
 end
 end

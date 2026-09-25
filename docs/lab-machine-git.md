@@ -1,185 +1,120 @@
-# Putting the lab machine on git
+# Lab machine Git workflow
 
-Retires `scripts/deploy_to_share.ps1`. Written 2026-09-16, after the staff
-pilot, because a one-way manual copy is what let the two copies diverge
-before (`docs/shared-drive-parity-2026-09-10.md`).
+GitHub is the code update path. The shared drive is still where the study saves data and finds the
+house images.
 
-**Do this at the rig.** Steps 1–4 need a keyboard on the lab machine.
+## Student workflow
 
-**Step 3 blocks the rest** — participant data currently sits inside the
-tree that is about to become a git checkout.
+This is all an RA should need during a session:
 
-## First, what git can and cannot replace
+1. Open GitHub Desktop.
+2. Click **Fetch origin**. If it changes to **Pull origin**, click that too.
+3. If GitHub Desktop shows changed files, stop and ask Murray before running.
+4. Open MATLAB from the local clone's `experiment/` folder.
+5. In `run_battery.m`, leave `RUN_KIND = 'participant'` for real participants.
+6. Click Run.
 
-The share holds four different kinds of thing and git is the right tool for
-exactly one of them:
+For RA/practice runs only:
 
-| on the share | size | git? |
-|---|---|---|
-| Code — `Experiment/*.m`, `+utils/`, stimulus CSVs, `analysis/R/` | ~2 MB | **yes**, this is the repo |
-| `Experiment/stimuli/house_images/` | 605 MB | no — gitignored, share only |
-| `Experiment/Data/` — participant data | grows | **never.** Human-subjects data does not go in a git history, and a history is not deletable in the way a directory is |
-| `PSY-kvam.4/TobiiPro.SDK.Matlab_1.9.0.59/` | vendor SDK | no — lives *above* `housing_wages/`, outside the project entirely |
-
-So git does not make the share redundant. It replaces the copy step, and
-turns `git status` on the lab machine into the parity check that nothing
-currently provides.
-
-## The layout, and why `housing_wages/` is the working tree
-
-`utils.config` defaults `projRoot` to
-`\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4`, and everything hangs
-off it — `cfg.paths.experiment` is `<projRoot>\housing_wages\Experiment`.
-
-The repo's `experiment/` and the share's `Experiment/` differ only in case,
-and Windows does not distinguish them. So cloning the repo *as*
-`housing_wages/` lines the two up with no path changes, no config edits,
-and no second root:
-
-```
-PSY-kvam.4\
-  TobiiPro.SDK.Matlab_1.9.0.59\     <- outside the repo, leave alone
-  housing_wages\                    <- the working tree
-    experiment\   (= Experiment\)   <- tracked
-      stimuli\house_images\         <- gitignored, stays put
-      Data\                         <- gitignored, stays put
-    analysis\                       <- tracked
-    docs\  scripts\  WORK.md        <- tracked, new to the share
-    Archive\  screen_recordings\    <- gitignored, stays put
+```matlab
+RUN_KIND = 'practice';
 ```
 
-The alternative — clone to the lab machine's `C:` and point `projRoot`
-there — is faster (git over SMB is slow) but needs the code root and the
-data/image root to become two different settings, which they currently are
-not. Not worth it for one machine.
+Do not clone into or edit code under:
 
-## 1. Install git
+```text
+\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages
+```
 
-[git-scm.com/download/win](https://git-scm.com/download/win). Defaults are
-fine; the one setting that matters is line endings, and
-[`.gitattributes`](../.gitattributes) already pins the policy (`* text=auto`,
-LF in the repo, CRLF in the Windows working tree), so whatever the installer
-chooses is overridden by the repo.
+That shared-drive folder is for data, images, and older share-side history, not the working code
+checkout.
+
+## One-time setup
+
+Do this once per lab computer, not before every session:
+
+1. Install Git and GitHub Desktop.
+2. Sign into GitHub Desktop with a named GitHub account that has repo access.
+3. Clone the repo to a local folder, for example:
+
+```text
+C:\Users\<lab-user>\Documents\GitHub\housing-decisions
+```
+
+4. In MATLAB, add the clone's `experiment/` directory to the path.
+5. Run:
+
+```matlab
+utils.verifyPaths(utils.config('rig','lab'))
+```
+
+The code and stimulus CSVs should resolve inside the clone. Data, images, and the Tobii SDK should
+resolve to the shared-drive roots below.
+
+## System shape
+
+Every machine gets a normal clone of the GitHub repo. The clone should look like the repo:
+
+```
+housing-decisions/
+  experiment/
+  analysis/
+  docs/
+  scripts/
+  WORK.md
+```
+
+Large/runtime material lives outside the checkout:
+
+| material            | default OSU share location                                                                         | git?  |
+| ------------------- | -------------------------------------------------------------------------------------------------- | ----- |
+| House images        | `\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\stimuli\house_images` | no    |
+| Participant data    | `\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data`                 | never |
+| Practice/staff data | `\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data_practice`        | never |
+| Tobii SDK           | `\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\TobiiPro.SDK.Matlab_1.9.0.59`                  | no    |
+
+Those defaults are already built into `utils.config`. Override them only if a
+machine has a nonstandard local copy:
 
 ```powershell
-git --version
-git config --global user.name  "..."
-git config --global user.email "..."
+setx HW_ASSET_ROOT "\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\stimuli\house_images"
+setx HW_DATA_ROOT "\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data"
+setx HW_PRACTICE_DATA_ROOT "\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data_practice"
+setx HW_TOBII_ROOT "\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\TobiiPro.SDK.Matlab_1.9.0.59"
 ```
 
-## 2. Give the machine read-only access
+Restart MATLAB after changing environment variables.
 
-The repo is **private**. A shared lab machine should not hold credentials
-that can push, and should not be signed in as a person.
+## Pushing changes
 
-Use a **deploy key** — an SSH key tied to this one repository, read-only:
+Push only code, docs, configs, and tracked stimulus-definition files. Never commit participant data, practice data, gaze files, house images, generated analysis output, or MATLAB `.mat` run files.
+
+If GitHub Desktop shows data or generated files as changes, stop and fix the path/ignore issue
+before committing. A clean clone should stay clean after a session except for deliberate code/doc
+edits.
+
+## Analysis data snapshots
+
+`scripts/pull_data_from_share.ps1` is still useful, but only for pulling data from the share into
+ignored local `data/lab/...` analysis snapshots. It is not a deployment script.
+
+Participant data:
 
 ```powershell
-ssh-keygen -t ed25519 -C "kvam-lab-rig" -f $env:USERPROFILE\.ssh\housing_deploy
-type $env:USERPROFILE\.ssh\housing_deploy.pub
+$PS = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+& $PS -NoProfile -Command '$script = [scriptblock]::Create((Get-Content -Raw -LiteralPath "\\wsl.localhost\Ubuntu\home\msb\projects\housing-decisions\scripts\pull_data_from_share.ps1")); & $script'
 ```
 
-Paste the public key at
-`github.com/MurraySBennett/housing-decisions/settings/keys/new`, title it
-`kvam lab rig`, and **leave "Allow write access" unchecked**.
-
-Point git at the key with a repo-local setting rather than a global ssh
-config — one line, scoped to this checkout, nothing else on the machine
-affected. It is set in step 4, after `git init`:
+Practice data:
 
 ```powershell
-git config core.sshCommand "ssh -i $env:USERPROFILE\.ssh\housing_deploy"
+$PS = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+& $PS -NoProfile -Command '$script = [scriptblock]::Create((Get-Content -Raw -LiteralPath "\\wsl.localhost\Ubuntu\home\msb\projects\housing-decisions\scripts\pull_data_from_share.ps1")); & $script -Practice'
 ```
-
-The lab machine now pulls and never pushes. Edits happen on the dev machine
-and arrive by `git pull`. If you ever *do* need to commit from the rig,
-commit locally and pull it the other way rather than giving the rig a
-writable key.
-
-## 3. Data and images stay in Experiment and are gitignored
-
-Participant data stays in `housing_wages\Experiment\Data`, and house images
-stay in `housing_wages\Experiment\stimuli\house_images`. The boundary is
-`.gitignore`, not a second sibling share directory.
-
-Before converting the share into a checkout, confirm those two directories
-exist and `git status --ignored` shows them as ignored rather than tracked.
-
-## 4. Convert the share into the working tree
-
-`git clone` refuses a non-empty directory, and `housing_wages/` is not
-empty. Attach a repo to what is already there instead:
-
-```powershell
-cd \\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages
-git init
-git config core.sshCommand "ssh -i $env:USERPROFILE\.ssh\housing_deploy"
-git remote add origin git@github.com:MurraySBennett/housing-decisions.git
-git fetch origin
-git checkout -b main --track origin/main -f
-git status
-```
-
-`-f` overwrites the share's working files with the repo's. That is the
-intent — they were deployed from this repo and should already match. There
-is a fresh `Archive\Experiment_pre-*` backup from the last deploy either
-way; if in doubt run `deploy_to_share.ps1` again first, purely for its
-Phase 1 backup.
-
-Expect `git status` to come back clean apart from untracked directories.
-`Archive/`, `screen_recordings/`, `Experiment/Data/` and
-`Experiment/stimuli/house_images/` are all gitignored, so they should not
-appear. **Anything else that does appear is real divergence** — a file
-edited on the lab machine that never made it back. Read it before you
-discard it; that is precisely the thing this whole exercise exists to
-surface.
-
-One collision to expect: the share has `housing_wages\readme.md` and the
-repo has `README.md`. Windows treats those as the same name, so the
-checkout replaces it. No loss — the share copy is a stale, mojibake'd
-duplicate of `experiment/stimuli/README.md` sitting at the wrong level.
-
-## 5. From then on
-
-At the rig, before a session:
-
-```powershell
-cd \\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages
-git pull
-git status      # must be clean. If it is not, something was edited here.
-```
-
-On the dev machine, after committing: `git push`. That is the whole loop.
-
-**Then delete `scripts/deploy_to_share.ps1`** and the `now (M)` item in
-`WORK.md` that points at it. Leaving both mechanisms alive is worse than
-either alone — it is how you get a share that is half-clone, half-copy and
-nobody knows which files came from where.
-
-## Giving other people access
-
-The repo is private, so collaborators need to be added by GitHub username:
-
-```bash
-gh api -X PUT repos/MurraySBennett/housing-decisions/collaborators/<username> \
-  -f permission=push      # or 'pull' for read-only
-```
-
-Worth checking whether OSU runs a GitHub Enterprise instance before
-standing this on personal accounts — if it does, an org-owned repo outlives
-any individual's account, which matters for a project that will be cited.
-
-What a collaborator gets from a clone: all the code, the stimulus
-definitions, `WORK.md`, and `docs/`. What they do not get: the 605 MB image
-set, the Tobii SDK, and participant data. So a clone is enough to **read**
-the project and to run the analysis on exported CSVs, but not enough to run
-a session. That is the correct boundary.
 
 ## Known rough edges
 
-- **Git over SMB is slow.** `git status` on this tree takes seconds, not
-  milliseconds. Tolerable for pull-and-check; do not try to develop on it.
-- **`index.lock`.** If two people have the share open in git at once, one
-  gets a lock error. One machine, one person at a time.
-- **Do not `git gc` over the share.** Repacking across SMB is slow and is
-  the operation most likely to leave a half-written object.
+- GitHub Desktop credentials are per named account. Sign out on shared machines when appropriate.
+- Git over the network share can be slow; clone to the lab computer when possible.
+- `Experiment\Data` and `Experiment\Data_practice` on the share are storage locations, not a second
+  code copy to edit.

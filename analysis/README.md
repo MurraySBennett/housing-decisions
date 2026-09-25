@@ -5,20 +5,28 @@ have to be runnable and checkable on a machine with no MATLAB.
 
 ## Run it
 
-```bash
-# On simulated data -- works anywhere, needs nothing from the lab
-Rscript analysis/R/run_all.R --simulate
+For participant data QC, use `analysis/R/00_participant_qc.R`. Simulation is
+kept in `analysis/R/90_simulate_data.R` so the real-data path cannot rewrite
+or fabricate inputs by accident.
 
+```bash
 # On a demo run produced by experiment/demo_battery.m
-Rscript analysis/R/run_all.R --data experiment/Data_demo
+Rscript analysis/R/00_participant_qc.R --data experiment/Data_demo
 
 # On real data
-Rscript analysis/R/run_all.R --data '/path/to/PSY-kvam.4/housing_wages/Experiment/Data'
+Rscript analysis/R/00_participant_qc.R --data '/path/to/PSY-kvam.4/housing_wages/Experiment/Data'
+
+# On practice/staff data
+Rscript analysis/R/00_participant_qc.R --data '/path/to/PSY-kvam.4/housing_wages/Experiment/Data_practice' --include-practice
+
+# Synthetic data sandbox only
+Rscript analysis/R/90_simulate_data.R
 ```
 
-Output lands in `analysis/output/`: an integrity report, one combined CSV per
-task, a reversals table, and figures under `figures/`. Files derived from
-simulated data are prefixed `SIMULATED_`.
+Output lands in `analysis/output/`: an integrity report, combined CSVs for
+auction, contdc, preference, and timing rows when present, a reversals table,
+and figures under `figures/`. Files derived from simulated data are prefixed
+`SIMULATED_`.
 
 To pull the current lab data from the OSU share into this WSL checkout and
 run the same analysis in one step:
@@ -30,6 +38,8 @@ $PS -NoProfile -Command '$script = [scriptblock]::Create((Get-Content -Raw -Lite
 
 The pull lands in ignored `data/lab/Data`, writes a manifest under
 `data/lab/manifests/`, and writes analysis output to `analysis/output/lab/`.
+Use `-Practice` to pull `Experiment\Data_practice` into ignored
+`data/lab/Data_practice`; the script passes `--include-practice` to R.
 
 Needs `dplyr readr tidyr stringr purrr ggplot2 scales tibble`.
 
@@ -39,15 +49,19 @@ Needs `dplyr readr tidyr stringr purrr ggplot2 scales tibble`.
 |---|---|
 | `R/io.R` | find the run CSVs, tidy them, recompute reversals, print an integrity report |
 | `R/plots.R` | the descriptive figures; theme and palette live here |
-| `R/run_all.R` | the entry point — load, report, export, plot |
+| `R/00_participant_qc.R` | participant/demo/practice QC entry point |
+| `R/run_all.R` | shared load/report/export/plot functions |
 | `R/simulate_demo_data.R` | fabricate CSVs in the saved schema, for testing the pipeline |
+| `R/90_simulate_data.R` | explicit synthetic-data sandbox entry point |
 
 ## What it reads, and what it does not
 
 It reads the **CSVs** `utils.saveRun` writes: one file per run under
-`<data>/auction/` and `<data>/cont_dc/`, long format, one row per trial, with
-`participant`, `session`, `run_id` and `task` on every row. That is enough for
-every descriptive here.
+`<data>/auction/`, `<data>/cont_dc/`, and `<data>/pref/`, long format, one row
+per trial, with `participant`, `session`, `run_id`, `task`, and `run_kind` on
+every row. It also reads `<data>/sessions/*_timing.csv` when present.
+`run_kind == "practice"` is excluded by default unless `--include-practice` is
+passed.
 
 It does **not** read the `.mat`. The `.mat` holds the rest of `dataMat`:
 the elicited anchor and attribute ratings, the sampled stimulus window, AOI
@@ -94,7 +108,7 @@ install.packages(c("dplyr", "readr", "tidyr", "stringr", "purrr",
 they avoid the escaping problem backslashes create in R strings.
 
 ```bash
-Rscript analysis/R/run_all.R --data "//asc-files.asc.ohio-state.edu/projects/PSY-kvam.4/housing_wages/Experiment/Data"
+Rscript analysis/R/00_participant_qc.R --data "//asc-files.asc.ohio-state.edu/projects/PSY-kvam.4/housing_wages/Experiment/Data"
 ```
 
 Reading several hundred small CSVs over SMB is slow. Copy the `Data` tree

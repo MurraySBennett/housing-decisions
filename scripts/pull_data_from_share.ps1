@@ -1,5 +1,5 @@
 <#
-    pull_data_from_share.ps1 -- copy lab data from the share's Experiment\Data into the git-ignored data\lab\Data, then run the R analysis.
+    pull_data_from_share.ps1 -- copy lab data from the share into git-ignored data\lab\..., then run the R analysis.
     Never deletes; overwrites same-path files and writes a fresh pull manifest.
     Run from WSL; pipe the script text in because machine policy can reject unsigned -File execution:
       PS=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
@@ -7,18 +7,30 @@
 #>
 
 param(
-    [string]$SourceData = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data',
+    [string]$SourceData = '',
     [string]$RepoWin = '\\wsl.localhost\Ubuntu\home\msb\projects\housing-decisions',
     [string]$RepoLinux = '/home/msb/projects/housing-decisions',
     [string]$RscriptLinux = '/home/msb/.nix-profile/bin/Rscript',
+    [switch]$Practice,
+    [switch]$IncludePractice,
     [switch]$AnalysisOnly,
     [switch]$SkipAnalysis
 )
 
 $ErrorActionPreference = 'Stop'
 
+$runKind = if ($Practice) { 'practice' } else { 'participant' }
+if ([string]::IsNullOrWhiteSpace($SourceData)) {
+    if ($Practice) {
+        $SourceData = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data_practice'
+    } else {
+        $SourceData = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages\Experiment\Data'
+    }
+}
+
 $localRoot = Join-Path $RepoWin 'data\lab'
-$targetData = Join-Path $localRoot 'Data'
+$targetName = if ($Practice) { 'Data_practice' } else { 'Data' }
+$targetData = Join-Path $localRoot $targetName
 $manifestDir = Join-Path $localRoot 'manifests'
 $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
 $manifest = Join-Path $manifestDir "pull_$stamp.csv"
@@ -42,6 +54,7 @@ if ($AnalysisOnly) {
 
     Write-Host ''
     Write-Host '=== PHASE 1: copy lab data locally ===' -ForegroundColor Cyan
+    Write-Host "  kind:   $runKind"
     Write-Host "  source: $SourceData"
     Write-Host "  target: $targetData"
 
@@ -69,6 +82,7 @@ if ($AnalysisOnly) {
         $bytes += $srcLen
         $records.Add([pscustomobject]@{
             relative_path = $rel
+            run_kind = $runKind
             bytes = $srcLen
             source_last_write_utc = $_.LastWriteTimeUtc.ToString('s')
             pulled_at = (Get-Date).ToString('s')
@@ -97,10 +111,13 @@ $analysisArgs = @(
     '-d', 'Ubuntu',
     '--cd', $RepoLinux,
     '--',
-    $RscriptLinux, 'analysis/R/run_all.R',
-    '--data', 'data/lab/Data',
+    $RscriptLinux, 'analysis/R/00_participant_qc.R',
+    '--data', "data/lab/$targetName",
     '--out', 'analysis/output/lab'
 )
+if ($IncludePractice -or $Practice) {
+    $analysisArgs += '--include-practice'
+}
 
 & wsl.exe @analysisArgs
 if ($LASTEXITCODE -ne 0) {
@@ -109,6 +126,6 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ''
 Write-Host '=== RESULT ===' -ForegroundColor Cyan
-Write-Host '  data ready:      data/lab/Data'
+Write-Host "  data ready:      data/lab/$targetName"
 Write-Host '  analysis output: analysis/output/lab'
 Write-Host '  no problems' -ForegroundColor Green

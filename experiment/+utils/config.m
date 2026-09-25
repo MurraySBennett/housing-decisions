@@ -4,7 +4,9 @@ function cfg = config(varargin)
 %   cfg = utils.config()
 %   cfg = utils.config('rig', 'dev', 'testing', true, 'jobsArm', 'synthetic')
 %
-%   Options: projRoot, rig ('lab'|'dev'), testing, trialsPerCell, jobsArm.
+%   Options: projRoot, rig ('lab'|'dev'), testing, trialsPerCell, jobsArm,
+%   runKind ('participant'|'practice'), dataRoot, practiceDataRoot,
+%   assetRoot, tobiiRoot.
 
 p = inputParser;
 p.addParameter('projRoot', '', @(x) ischar(x) || isstring(x));
@@ -14,18 +16,38 @@ p.addParameter('trialsPerCell', [], @(x) isempty(x) || ...
     (isnumeric(x) && isscalar(x) && x >= 1 && x == round(x)));
 p.addParameter('jobsArm',  'synthetic', @(x) ismember(lower(char(x)), ...
     {'synthetic','ecological','attenuated'}));
+p.addParameter('runKind',  'participant', @(x) ismember(lower(char(x)), ...
+    {'participant','practice'}));
+p.addParameter('dataRoot', '', @(x) ischar(x) || isstring(x));
+p.addParameter('practiceDataRoot', '', @(x) ischar(x) || isstring(x));
+p.addParameter('assetRoot', '', @(x) ischar(x) || isstring(x));
+p.addParameter('tobiiRoot', '', @(x) ischar(x) || isstring(x));
 p.parse(varargin{:});
 opt = p.Results;
 
+shareRoot = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4';
+shareExperiment = fullfile(shareRoot, 'housing_wages', 'Experiment');
+
+[repoRoot, checkoutExperiment] = checkoutRoots();
 if isempty(opt.projRoot)
-    projRoot = '\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4';
+    projRoot = repoRoot;
+    experimentRoot = checkoutExperiment;
+    externalDefaults = true;
 else
     projRoot = char(opt.projRoot);
+    if isfolder(fullfile(projRoot, 'stimuli')) && isfolder(fullfile(projRoot, '+utils'))
+        experimentRoot = projRoot;
+        projRoot = fileparts(experimentRoot);
+    else
+        experimentRoot = fullfile(projRoot, 'housing_wages', 'Experiment');
+    end
+    externalDefaults = false;
 end
 
 rp = utils.rigProfiles(opt.rig);
 cfg.rig = rp.name;
 cfg.aoiEnforcement = rp.aoiEnforcement;
+cfg.runKind = lower(char(opt.runKind));
 
 % --- Display / PTB preferences -----------------------------------------
 % Machine property, not a testing flag: Windows DWM often fails PTB's sync check
@@ -33,19 +55,43 @@ cfg.aoiEnforcement = rp.aoiEnforcement;
 cfg.display.skipSyncTests = rp.skipSyncTests;
 
 cfg.paths.root       = projRoot;
-cfg.paths.tobii      = fullfile(projRoot, 'TobiiPro.SDK.Matlab_1.9.0.59');
-cfg.paths.experiment = fullfile(projRoot, 'housing_wages', 'Experiment');
+cfg.paths.experiment = experimentRoot;
+if externalDefaults
+    defaultTobii = fullfile(shareRoot, 'TobiiPro.SDK.Matlab_1.9.0.59');
+else
+    defaultTobii = fullfile(projRoot, 'TobiiPro.SDK.Matlab_1.9.0.59');
+end
+cfg.paths.tobii = optOrEnv(opt.tobiiRoot, 'HW_TOBII_ROOT', defaultTobii);
 
 % Anchor stimuli paths to cfg.paths.experiment, not cfg.paths.root.
 cfg.paths.stimuli    = fullfile(cfg.paths.experiment, 'stimuli');
 cfg.paths.prepared   = fullfile(cfg.paths.stimuli, 'prepared');
 
 % --- Runtime data and images --------------------------------------------
-% Data and images live on the share, gitignored; share layout is the source of truth.
+% Runtime data/assets live outside the checkout. Git carries code and stimulus
+% definitions; the OSU share or environment variables carry large/runtime paths.
 cfg.paths.local      = cfg.paths.experiment;
-cfg.paths.images     = fullfile(cfg.paths.stimuli, 'house_images');
+if externalDefaults
+    defaultImages = fullfile(shareExperiment, 'stimuli', 'house_images');
+else
+    defaultImages = fullfile(cfg.paths.stimuli, 'house_images');
+end
+cfg.paths.images = optOrEnv(opt.assetRoot, 'HW_ASSET_ROOT', defaultImages);
 
-cfg.paths.data             = fullfile(cfg.paths.experiment, 'Data');
+if externalDefaults
+    defaultData = fullfile(shareExperiment, 'Data');
+    defaultPracticeData = fullfile(shareExperiment, 'Data_practice');
+else
+    defaultData = fullfile(cfg.paths.experiment, 'Data');
+    defaultPracticeData = fullfile(cfg.paths.experiment, 'Data_practice');
+end
+participantData = optOrEnv(opt.dataRoot, 'HW_DATA_ROOT', defaultData);
+practiceData = optOrEnv(opt.practiceDataRoot, 'HW_PRACTICE_DATA_ROOT', defaultPracticeData);
+if strcmp(cfg.runKind, 'practice')
+    cfg.paths.data = practiceData;
+else
+    cfg.paths.data = participantData;
+end
 cfg.paths.sessions         = fullfile(cfg.paths.data, 'sessions');
 cfg.paths.taskData.auction = fullfile(cfg.paths.data, 'auction');
 cfg.paths.taskData.contdc  = fullfile(cfg.paths.data, 'cont_dc');
@@ -57,7 +103,15 @@ writeDirs = {cfg.paths.sessions, cfg.paths.taskData.auction, ...
              cfg.paths.taskData.contdc, cfg.paths.taskData.pref, ...
              cfg.paths.gaze, cfg.paths.crashed};
 for k = 1:numel(writeDirs)
-    if ~exist(writeDirs{k}, 'dir'), mkdir(writeDirs{k}); end
+    if ~exist(writeDirs{k}, 'dir')
+        [ok, msg] = mkdir(writeDirs{k});
+        if ~ok
+            error('hw:config:dataRootMissing', ...
+                ['Could not create data directory:\n    %s\n%s\n' ...
+                 'Set HW_DATA_ROOT or HW_PRACTICE_DATA_ROOT to a writable location.'], ...
+                writeDirs{k}, msg);
+        end
+    end
 end
 
 % --- Stimulus files -----------------------------------------------------
@@ -130,9 +184,10 @@ cfg.auction.compLow        = 0.90;
 cfg.auction.thresholdNoise = 0.12;   % without this, high comp guarantees a loss
 
 % --- Continuous / discrete-choice task ---------------------------------
-% nPairs is per domain; each attribute level needs nPairs x 2 stimuli.
-cfg.contdc.nPairs.houses     = 6;
-cfg.contdc.nPairs.jobs       = 10;
+% nPairs is per domain and per attribute level; each pair gives one choice
+% trial and two pricing trials.
+cfg.contdc.nPairs.houses     = 20;
+cfg.contdc.nPairs.jobs       = 20;
 
 % Across-level reuse only; within-level reuse (same pair chosen and priced) is
 % required by the preference-reversal paradigm. False is a diagnostic switch.
@@ -202,4 +257,24 @@ cfg.style = utils.style();
 
 cfg.codeVersion = 'hw-2026.09';
 
+end
+
+function [repoRoot, experimentRoot] = checkoutRoots()
+thisFile = mfilename('fullpath');
+utilsDir = fileparts(thisFile);
+experimentRoot = fileparts(utilsDir);
+repoRoot = fileparts(experimentRoot);
+end
+
+function out = optOrEnv(optValue, envName, defaultValue)
+if ~isempty(optValue)
+    out = char(optValue);
+    return
+end
+envValue = getenv(envName);
+if ~isempty(envValue)
+    out = envValue;
+else
+    out = defaultValue;
+end
 end

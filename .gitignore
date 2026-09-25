@@ -3,9 +3,10 @@
 experiment/stimuli/*
 **/stimuli/house_images/
 
-# Participant data. On the lab share this remains inside Experiment/Data;
-# .gitignore is the boundary that keeps it out of git.
+# Participant and practice data. These should normally live outside a clean
+# clone, but stay ignored if a rig-local checkout creates them.
 experiment/Data/
+experiment/Data_practice/
 !experiment/Data/README.md
 
 # MATLAB
@@ -66,9 +67,6 @@ experiment/Data_demo/
 analysis/Data_simulated/
 analysis/output/
 
-# --- Only relevant once the share IS the working tree -------------------
-# See docs/lab-machine-git.md. These live in housing_wages/ on the lab
-# share and must stay untracked, or `git status` there stops being a
-# usable parity check. Harmless on any other machine.
+# Share-only folders from the retired pre-git layout. Harmless elsewhere.
 Archive/
 screen_recordings/

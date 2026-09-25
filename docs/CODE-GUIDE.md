@@ -107,5 +107,5 @@ tasks.
 `bash scripts/verify_static.sh` must pass before anything is deployed — it
 pins dozens of easy-to-break invariants. The first run of any change happens
 at the rig via `scripts/verify_matlab.m`, because the development machines
-have no MATLAB. Deployment to the lab share is `scripts/deploy_to_share.ps1`
-(it backs up before replacing and never touches data or images).
+have no MATLAB. Git/GitHub Desktop is the deployment path now; the old
+copy-to-share script is retired.

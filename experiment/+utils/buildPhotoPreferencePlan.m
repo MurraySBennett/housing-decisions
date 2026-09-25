@@ -1,6 +1,6 @@
 function plan = buildPhotoPreferencePlan(stimTbl, nRating, nPwc, areaQuotas, rngStream)
 %UTILS.BUILDPHOTOPREFERENCEPLAN  Sample house photos and pairwise trials.
-%   plan = utils.buildPhotoPreferencePlan(stimTbl, 80, 160, quotas, rs)
+%   plan = utils.buildPhotoPreferencePlan(stimTbl, 60, 160, quotas, rs)
 %   Pairwise trials always compare two photos of the same area.
 
 if nargin < 5 || isempty(rngStream), rngStream = RandStream.getGlobalStream; end

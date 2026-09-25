@@ -177,6 +177,7 @@ s.identityGrid.nRows = 2;
 s.identityGrid.cellW = 180;
 s.identityGrid.cellH = 135;   % 4:3, close to a real-estate photo's shape
 s.identityGrid.gap   = 10;
+s.identityGrid.maxScale = 1.08;  % fills choice cards without crowding attributes
 
 % Card identity-header advance; read by drawCard and cardAOIs, and a
 % disagreement misplaces the recorded attribute AOIs.

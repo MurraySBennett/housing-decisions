@@ -1,7 +1,8 @@
 %RUN_BATTERY  Single entry point for the housing/wages experiments.
 %
-% The only file the RA touches: participant identity, counterbalancing, crash
-% recovery. Each PLAN row becomes one run and one tagged data file.
+% The only file the RA touches: runtime switches and crash recovery. Participant
+% identity, domain assignment, and task order are proposed at startup and can be
+% edited there when recovery requires it.
 
 clear; clc;
 KbName('UnifyKeyNames');
@@ -9,6 +10,7 @@ KbName('UnifyKeyNames');
 %% ---- Experimenter settings -------------------------------------------
 RIG      = 'lab';     % 'lab' or 'dev' -- see utils.rigProfiles
 TESTING  = false;      % true = windowed, no prompts, participant 9999
+RUN_KIND = 'participant'; % 'participant' = HW_DATA_ROOT | 'practice' = HW_PRACTICE_DATA_ROOT
 
 % Rehearsal knob. [] = the full study. An integer = that many trials in EVERY
 % design cell, and nothing else changes (full screen, real pacing, elicitation,
@@ -19,12 +21,11 @@ TRIALS_PER_CELL = [];   % <-- [] IS the full participant run; an integer shorten
 JOBS_ARM = 'synthetic'; % 'synthetic' | 'ecological' | 'attenuated'
 TRACE    = false;       % true = print a timestamped line at every major
                         % checkpoint. Console-only; off for real sessions.
-FORCE_DOMAIN = '';      % '' = use PLAN as written | 'jobs' | 'houses'
-                        % Forces every run onto one domain, silently
-                        % overriding PLAN; leave '' for real sessions.
+FORCE_DOMAIN = '';      % '' = use participant parity | 'jobs' | 'houses'
+                        % Quick testing/recovery only; leave '' for real sessions.
 
 % PLAN lives in utils.batteryPlan so preflight.m and the live run resolve the
-% same rows; same session number = one sitting, different = separate days.
+% same rows. Real between-subject sessions are session 1 only.
 EYETRACKING = true;
 SHOW_EYEPOS = false; % gaze dot overlay -- demo only, off for testing
 
@@ -36,19 +37,25 @@ sess = utils.startSession( ...
     'testing',     TESTING, ...
     'trialsPerCell', TRIALS_PER_CELL, ...
     'jobsArm',     JOBS_ARM, ...
+    'runKind',     RUN_KIND, ...
     'eyeTracking', EYETRACKING, ...
-    'showEyePos',  SHOW_EYEPOS, ...
-    'domain',      3);   % value is irrelevant here -- PLAN decides domain
+    'showEyePos',  SHOW_EYEPOS);
 
 if ~isempty(TRIALS_PER_CELL)
     fprintf(2, ['\n*** REHEARSAL RUN: %d trial(s) per design cell. ***\n' ...
                 '    Everything else is the real thing -- full screen, real pacing,\n' ...
-                '    real elicitation and practice, saving into the real Data tree.\n' ...
+                '    real elicitation and practice, saving into the selected data root.\n' ...
                 '    ONLY the trial counts are short. Set TRIALS_PER_CELL = [] for a\n' ...
                 '    full participant run.\n\n'], TRIALS_PER_CELL);
 end
+if strcmpi(RUN_KIND, 'practice')
+    fprintf(2, ['\n*** PRACTICE DATA ROOT ACTIVE. ***\n' ...
+                '    This run writes to HW_PRACTICE_DATA_ROOT, not the participant\n' ...
+                '    data root. Set RUN_KIND = ''participant'' for collection.\n\n']);
+end
 
-thisSession = utils.batteryPlan(sess.participant, sess.sessionNum, FORCE_DOMAIN);
+thisSession = utils.batteryPlan(sess.participant, sess.sessionNum, ...
+    FORCE_DOMAIN, sess.assignment.taskOrder);
 if ~isempty(FORCE_DOMAIN)
     fprintf('*** FORCE_DOMAIN active: every run this session uses "%s" regardless of PLAN. ***\n', ...
         FORCE_DOMAIN);

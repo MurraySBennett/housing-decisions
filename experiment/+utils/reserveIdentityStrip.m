@@ -20,6 +20,6 @@ end
 g = cfg.style.identityGrid;
 gridW = g.nCols * g.cellW + (g.nCols - 1) * g.gap;
 gridH = g.nRows * g.cellH + (g.nRows - 1) * g.gap;
-scale = min(1, (rect(3) - rect(1)) / gridW);
+scale = min(g.maxScale, (rect(3) - rect(1)) / gridW);
 contentRect = [rect(1), rect(2) + gridH * scale, rect(3), rect(4)];
 end

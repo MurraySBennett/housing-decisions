@@ -340,7 +340,7 @@
       <div class="meta">
         <span>MATLAB + Psychtoolbox</span>
         <span>Tobii eye tracking</span>
-        <span>Two tasks · two domains</span>
+        <span>Three tasks · one assigned domain</span>
         <span>~45 min per session</span>
       </div>
       <div class="takeaway">Use <strong>&larr;</strong> and <strong>&rarr;</strong> to move. Dense slides build up one point at a time.</div>
@@ -376,7 +376,7 @@
 
     <section class="slide" data-section="The study">
       <span class="eyebrow">The study</span>
-      <h2>Design<span class="sep">·</span><span class="sub">Two tasks, two domains</span></h2>
+      <h2>Design<span class="sep">·</span><span class="sub">Between-subject domains</span></h2>
 
       <div class="cols">
         <div>
@@ -394,16 +394,16 @@
           <div class="spec" style="margin-top:0.6rem">
             <span class="chip hi">attributes: 2 · 4 · 6</span><span class="pipe">|</span>
             <span class="chip">choice block + pricing block</span><span class="pipe">|</span>
-            <span class="chip">10 pairs (jobs) · 6 (houses)</span><span class="pipe">|</span>
+            <span class="chip">20 pairs per level</span><span class="pipe">|</span>
             <span class="chip">15 s / 25 s timeouts</span>
           </div>
         </div>
       </div>
 
       <div class="spec step" style="margin-top:0.4rem">
-        <span class="chip">Session 1 &rarr; jobs</span><span class="pipe">|</span>
-        <span class="chip">Session 2 &rarr; houses</span><span class="pipe">|</span>
-        <span class="chip">odd participant IDs run the two tasks in reverse order</span>
+        <span class="chip">odd IDs &rarr; jobs/wages</span><span class="pipe">|</span>
+        <span class="chip">even IDs &rarr; houses</span><span class="pipe">|</span>
+        <span class="chip">six task orders cycle within each domain</span>
       </div>
 
       <div class="takeaway step">The attribute-load manipulation lives in the second task only. The auction's trials are too long to afford three levels of it.</div>
@@ -530,7 +530,7 @@ utils.checkImages(utils.config(<span class="k">'rig'</span>, <span class="k">'la
             <tr><td class="mono">TESTING</td><td class="mono" style="color:var(--go)">false</td><td><code>true</code> shortens every block and skips instructions. Useful for a smoke test, never for a participant.</td></tr>
             <tr><td class="mono">JOBS_ARM</td><td class="mono" style="color:var(--go)">'synthetic'</td><td>Which prepared job-stimulus set to load. Leave it unless told otherwise.</td></tr>
             <tr><td class="mono">TRACE</td><td class="mono" style="color:var(--go)">false</td><td><code>true</code> prints a console line at every checkpoint. Turn it on when chasing a crash.</td></tr>
-            <tr><td class="mono">FORCE_DOMAIN</td><td class="mono" style="color:var(--go)">''</td><td>Overrides the schedule and forces every run onto one domain. Quick testing only.</td></tr>
+            <tr><td class="mono">FORCE_DOMAIN</td><td class="mono" style="color:var(--go)">''</td><td>Overrides the parity-assigned domain. Quick testing only; use the startup edit prompt for real recovery.</td></tr>
           </tbody>
         </table>
       </div>
@@ -538,7 +538,7 @@ utils.checkImages(utils.config(<span class="k">'rig'</span>, <span class="k">'la
         <span class="label">The two that silently ruin a session</span>
         <code>TESTING = true</code> and a non-empty <code>FORCE_DOMAIN</code> both look like a normal run from the outside. Check them before every participant.
       </div>
-      <div class="takeaway step">Then run the file, type the participant number and the session number at the prompts, and hand over the mouse.</div>
+      <div class="takeaway step">Then run the file, confirm the proposed participant ID, domain, and task order, or press <code>e</code> to edit for recovery.</div>
     </section>
 
     <section class="slide" data-section="Running it">

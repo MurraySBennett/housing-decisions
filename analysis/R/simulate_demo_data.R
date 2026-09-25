@@ -14,22 +14,19 @@ simulate_battery <- function(outdir, n_participants = 6, seed = 20260915) {
   dir.create(file.path(outdir, "auction"), recursive = TRUE, showWarnings = FALSE)
   dir.create(file.path(outdir, "cont_dc"), recursive = TRUE, showWarnings = FALSE)
 
-  domains <- c("jobs", "houses")
-  # Matches utils.config: nTrials = 12, attrLevels = [2 4 6], nPairs = 10 jobs / 6 houses.
-  n_trials  <- 12
+  # Matches utils.config: nTrials = 24, attrLevels = [2 4 6], nPairs = 20 per domain.
+  n_trials  <- 24
   levels_   <- c(2, 4, 6)
-  n_pairs   <- c(jobs = 10, houses = 6)
+  n_pairs   <- c(jobs = 20, houses = 20)
 
   for (p in seq_len(n_participants)) {
     pid <- 90000L + p
-
-    for (di in seq_along(domains)) {
-      dom  <- domains[di]
-      sess <- di                     # session 1 = jobs, session 2 = houses
+    dom <- if (p %% 2 == 1) "jobs" else "houses"
+    sess <- 1L
       # Anchor: reservation wage ($/hr) for jobs, budget for houses.
       anchor <- if (dom == "jobs") round(rnorm(1, 25, 4), 2) else
                   round(rnorm(1, 400000, 90000), -3)
-      stamp <- format(as.POSIXct("2026-09-15 09:00:00", tz = "UTC") + p * 3600 + di * 600,
+      stamp <- format(as.POSIXct("2026-09-15 09:00:00", tz = "UTC") + p * 3600,
                       "%Y%m%d_%H%M%S")
 
       # ---- auction ----------------------------------------------------
@@ -141,9 +138,7 @@ simulate_battery <- function(outdir, n_participants = 6, seed = 20260915) {
       contdc <- bind_rows(rows) %>%
         mutate(participant = pid, session = sess, run_id = run_id,
                task = "contdc", domain = dom, .before = 1)
-
-      write_csv(contdc, file.path(outdir, "cont_dc", paste0(run_id, ".csv")), na = "NaN")
-    }
+    write_csv(contdc, file.path(outdir, "cont_dc", paste0(run_id, ".csv")), na = "NaN")
   }
 
   invisible(outdir)
