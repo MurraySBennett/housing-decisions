@@ -246,6 +246,16 @@ cfg.display.showValueMarker = false;
 % Revert switch: 'drag' and 'sequential' are not the same measurement (see utils.elicitRatings).
 cfg.elicit.ratingMode = 'drag';   % 'drag' | 'sequential'
 
+% --- Intake survey ----------------------------------------------------
+% Qualtrics, opened before the PTB window and gated at the console (see
+% utils.launchSurvey). baseUrl is the anonymous link; the participant number
+% and assignment are appended as query parameters, which Qualtrics keeps ONLY
+% if matching Embedded Data fields (pid, ses, domain, order, runkind, version)
+% are declared and left blank in Survey Flow. Turn enabled off to run the
+% battery alone.
+cfg.survey.enabled = false;
+cfg.survey.baseUrl = '';
+
 % --- Testing mode -----------------------------------------------------
 cfg.testing.enabled          = opt.testing;
 cfg.testing.windowed         = rp.windowedDefault || opt.testing;

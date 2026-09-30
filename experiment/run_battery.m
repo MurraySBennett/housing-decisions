@@ -67,6 +67,11 @@ for k = 1:numel(thisSession)
 end
 fprintf('\n\n');
 
+%% ---- Intake survey ---------------------------------------------------
+% Before any PTB window exists, so the browser is not competing with a
+% fullscreen window for focus. No-op unless cfg.survey.enabled.
+surveyInfo = utils.launchSurvey(sess); %#ok<NASGU>
+
 %% ---- Run ------------------------------------------------------------
 % Session timing CSV is rewritten after every run, so a crash mid-session
 % still leaves the completed runs' timing on disk.

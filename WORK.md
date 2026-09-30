@@ -206,6 +206,27 @@ pleasantly.**
 ## Streams
 
 ### experiments
+- [ ] now (S) **paste the Qualtrics link into `cfg.survey.baseUrl` and switch
+  `cfg.survey.enabled` on** (`+utils/config.m`). Both ship off, so the step is
+  inert until this is done
+- [ ] now (S) **declare `pid`, `ses`, `domain`, `order`, `runkind`, `version`
+  as Embedded Data in the Qualtrics Survey Flow, left blank.** Qualtrics drops
+  query parameters that have no matching field, so without this every response
+  comes back with no participant number and cannot be joined to the run CSVs.
+  Check by submitting one test response and confirming the columns are in the
+  export
+- [ ] now (S) **`nextParticipant` is resume-first, and that is a walkout
+  hazard.** If any manifest holds a run not marked `complete` it returns the
+  *lowest* such ID, so the participant after a withdrawal is offered the
+  abandoned number. The second prompt does say "Resuming participant N", but
+  the RA has to answer `n`, then `e`, then retype an ID. This is the most
+  likely route to two people's data under one pid. Rehearse it and put it in
+  the RA deck
+- [ ] now (S) **first execution of `utils.launchSurvey` at the rig.** Added
+  2026-09-30, statically verified only. Runs from `run_battery` after the
+  assignment is confirmed and before any PTB window exists. Watch that the
+  browser comes to the front, that the URL carries the right pid, and that
+  returning focus to MATLAB to press Enter is not awkward for the RA
 - [x] 2026-09-23 **pre-sharing sweep before adding a collaborator.** Privacy
   audit came back clean: one git identity across all history, no personal
   content in any current or historical file, no AI mentions in any file.
@@ -645,6 +666,16 @@ pleasantly.**
 - [ ] now (M) set up REP for the study — the OSU participant system. Named by Murray as a prerequisite for collection this semester and not started
 - [ ] now (S) book lab rig time. Everything code-side is done; rig access is the physical gate on the rehearsal
 - [ ] next (S) confirm IRB approval covers the design as finalised, not as originally proposed — if the conditions move, check the approval moved with them
+- [ ] now (S) **no debrief script and no compensation scheme exist anywhere in
+  the project.** The proposal names payment plus an incentive-compatible bonus
+  but no amount or mechanism, and `docs/ra-setup-deck.html`'s "After" section
+  covers crashes and file outputs only. REP normally requires a debrief
+- [ ] next (S) **decide whether domain-background covariates move to a
+  post-battery survey.** The pre-task survey deliberately asks nothing
+  numeric: `utils.elicitAnchor` measures budget/reservation wage minutes
+  later, and asking for either up front primes the anchor under the primary
+  DV. The grant proposal's intake list (p.14, Florida IFAS field sample) does
+  ask both and must not be ported across as written
 - [x] 2026-09-11 committed the recovered stimulus pipeline and the full review fix pass — 1,205 insertions that had been sitting uncommitted since 2026-09-10
 - [x] 2026-09-11 deleted the two orphaned docs from the house_jobs/housing_wages merge after verifying both byte-identical to tracked files (planner task 66)
 
