@@ -6,6 +6,26 @@ project: housing-decisions
 
 ## Now
 
+**2026-09-30 — consent is a checkbox in the survey, and it gates the battery**
+(`4b86419`, pushed). One Qualtrics visit runs *before* the first task: the
+participant reads the approved IRB document and checks the box there. No verbal
+consent anywhere — `docs/ra-setup-deck.html` step 02 had told the RA to take it
+verbally and has been rewritten. `utils.launchSurvey` errors on non-confirmation,
+the RA's console answer is written to disk, and new `releaseParticipantNumber`
+deletes the zero-run manifest so a refusal no longer burns a participant number.
+Verified statically only (`scripts/verify_static.sh`, `scripts/check_utils_calls.py`);
+no MATLAB/Psychtoolbox run has happened.
+
+**Blocked on two things, in order.** (1) The Qualtrics survey does not exist yet —
+build it with the IRB document and the consent checkbox, then set
+`cfg.survey.baseUrl` in `experiment/+utils/config.m` (currently `''`, and
+`cfg.survey.enabled` is `false`; an empty URL with the survey enabled now raises).
+Declare `pid`, `ses`, `domain`, `order`, `runkind`, `version` as blank Embedded
+Data in Survey Flow or Qualtrics silently drops them and every response comes back
+unjoinable. (2) Rehearse once at the rig, deliberately answering `n` at the console
+gate, and confirm the session stops with no data written and the participant number
+is offered again. Rig time is still unbooked and REP is still not set up.
+
 **Session update 2026-09-25.** The repo is being moved to a clean-clone lab
 workflow: Git/GitHub Desktop is now the deployment path, not a copy-to-share
 script. Runtime roots are externalised through `HW_DATA_ROOT`,
@@ -701,15 +721,18 @@ pleasantly.**
   2026-09-30: none** -- student participants, so the proposal's payment plus
   incentive-compatible bonus (which named no amount or mechanism anyway) does
   not apply to this sample. `cfg.incentives.enabled` is already false
-- [ ] next (S) **decide whether domain-background covariates move to a
-  post-battery survey.** Settled 2026-09-30: the survey runs after the
-  battery, so this is resolved in favour of asking them there. Retained
-  because the reasoning still governs anything added to it. The survey asks
-  nothing
-  numeric: `utils.elicitAnchor` measures budget/reservation wage minutes
-  later, and asking for either up front primes the anchor under the primary
-  DV. The grant proposal's intake list (p.14, Florida IFAS field sample) does
-  ask both and must not be ported across as written
+- [x] 2026-09-30 **where domain-background covariates get asked.** Settled: in
+  the single Qualtrics survey, which runs **before** the battery, not after —
+  consent has to precede participation, so the survey became a pre-battery gate
+  the same session. Retained because the reasoning still governs anything added
+  to it. **The survey asks nothing numeric:** `utils.elicitAnchor` measures
+  budget/reservation wage a few minutes later, and a money question in front of
+  it primes the anchor under the primary DV. That constraint got sharper, not
+  looser, when the survey moved ahead of the battery. The rule as the code now
+  states it (`experiment/+utils/launchSurvey.m:14-18`): anything that would
+  otherwise go in a post-task survey belongs here too **unless it is numeric**.
+  The grant proposal's intake list (p.14, Florida IFAS field sample) does ask
+  both and must not be ported across as written
 - [x] 2026-09-11 committed the recovered stimulus pipeline and the full review fix pass — 1,205 insertions that had been sitting uncommitted since 2026-09-10
 - [x] 2026-09-11 deleted the two orphaned docs from the house_jobs/housing_wages merge after verifying both byte-identical to tracked files (planner task 66)
 
