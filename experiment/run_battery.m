@@ -67,10 +67,11 @@ for k = 1:numel(thisSession)
 end
 fprintf('\n\n');
 
-%% ---- Intake survey ---------------------------------------------------
-% Before any PTB window exists, so the browser is not competing with a
-% fullscreen window for focus. No-op unless cfg.survey.enabled.
-surveyInfo = utils.launchSurvey(sess); %#ok<NASGU>
+%% ---- Consent and intake ----------------------------------------------
+% BLOCKING. Consent must precede participation, so this runs before any task
+% and aborts the session if consent was not obtained. One browser visit,
+% before any PTB window exists -- close the browser when it returns.
+utils.launchSurvey(sess);
 
 %% ---- Run ------------------------------------------------------------
 % Session timing CSV is rewritten after every run, so a crash mid-session
@@ -125,6 +126,7 @@ if ~isempty(timingRows)
     disp(T);
     fprintf('Session total: %.1f min\n', sum(T.seconds(T.section == "total")) / 60);
 end
+
 
 
 %% =====================================================================

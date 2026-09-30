@@ -223,10 +223,39 @@ pleasantly.**
   likely route to two people's data under one pid. Rehearse it and put it in
   the RA deck
 - [ ] now (S) **first execution of `utils.launchSurvey` at the rig.** Added
-  2026-09-30, statically verified only. Runs from `run_battery` after the
-  assignment is confirmed and before any PTB window exists. Watch that the
-  browser comes to the front, that the URL carries the right pid, and that
-  returning focus to MATLAB to press Enter is not awkward for the RA
+  2026-09-30, statically verified only, and it is now a blocking consent gate
+  rather than a convenience. Runs before the first task. Watch that the
+  browser comes to the front over a bare desktop, that the URL carries the
+  right pid, that the RA can get focus back to MATLAB, and specifically test
+  answering `n`: the session must stop with no data and the participant
+  number must be offered again
+- [x] 2026-09-30 **consent is a checkbox in the Qualtrics survey, read by the
+  participant, never taken verbally.** Corrected 2026-09-30 after the RA deck
+  was found to say the opposite. The survey therefore runs BEFORE the battery
+  -- consent precedes participation -- and `utils.launchSurvey` errors out
+  rather than returning if the RA does not confirm it. One browser visit, not
+  two: everything non-numeric that would have gone in a post-task survey goes
+  here instead, so nothing is minimised mid-session
+- [x] 2026-09-30 **`docs/ra-setup-deck.html` step 02 told the RA to take
+  consent out loud.** It described saying the eye-tracking points aloud, which
+  is not the approved procedure. Rewritten to: the participant reads the IRB
+  document in the survey and checks the box themselves, the RA does not
+  summarise it, and MATLAB will not start a task until consent is confirmed
+- [x] 2026-09-30 **a refusal no longer burns the participant number.**
+  `startSession` writes the manifest before the consent gate is reached, so a
+  declined session used to leave an empty manifest and push `nextParticipant`
+  on by one. `releaseParticipantNumber` deletes it -- guarded to manifests
+  with zero runs, so a part-way participant who stops keeps everything they
+  did, and task data is never touched
+- [ ] later (M) **a consent or questionnaire surface in PTB is not viable
+  without building it from scratch**, checked 2026-09-30. There is no
+  scrolling, no pagination and no multi-page text driver anywhere, and
+  instruction screens are a single fixed screenful that overflows *silently* --
+  an IRB document would be quietly truncated. `askComprehension` is a private
+  function in `auction_task.m:1002` hardcoded to exactly two mouse-clickable
+  options, `utils.elicitAnchor` is the only free-entry surface and takes
+  digits only, and there is no checkbox or likert grid. Three new widgets,
+  against Qualtrics doing it for nothing
 - [x] 2026-09-23 **pre-sharing sweep before adding a collaborator.** Privacy
   audit came back clean: one git identity across all history, no personal
   content in any current or historical file, no AI mentions in any file.
@@ -666,12 +695,17 @@ pleasantly.**
 - [ ] now (M) set up REP for the study — the OSU participant system. Named by Murray as a prerequisite for collection this semester and not started
 - [ ] now (S) book lab rig time. Everything code-side is done; rig access is the physical gate on the rehearsal
 - [ ] next (S) confirm IRB approval covers the design as finalised, not as originally proposed — if the conditions move, check the approval moved with them
-- [ ] now (S) **no debrief script and no compensation scheme exist anywhere in
-  the project.** The proposal names payment plus an incentive-compatible bonus
-  but no amount or mechanism, and `docs/ra-setup-deck.html`'s "After" section
-  covers crashes and file outputs only. REP normally requires a debrief
+- [ ] now (S) **no debrief script exists anywhere in the project.**
+  `docs/ra-setup-deck.html`'s "After" section covers crashes and file outputs
+  only. REP normally requires a debrief. **Compensation is settled
+  2026-09-30: none** -- student participants, so the proposal's payment plus
+  incentive-compatible bonus (which named no amount or mechanism anyway) does
+  not apply to this sample. `cfg.incentives.enabled` is already false
 - [ ] next (S) **decide whether domain-background covariates move to a
-  post-battery survey.** The pre-task survey deliberately asks nothing
+  post-battery survey.** Settled 2026-09-30: the survey runs after the
+  battery, so this is resolved in favour of asking them there. Retained
+  because the reasoning still governs anything added to it. The survey asks
+  nothing
   numeric: `utils.elicitAnchor` measures budget/reservation wage minutes
   later, and asking for either up front primes the anchor under the primary
   DV. The grant proposal's intake list (p.14, Florida IFAS field sample) does

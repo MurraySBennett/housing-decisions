@@ -246,9 +246,11 @@ cfg.display.showValueMarker = false;
 % Revert switch: 'drag' and 'sequential' are not the same measurement (see utils.elicitRatings).
 cfg.elicit.ratingMode = 'drag';   % 'drag' | 'sequential'
 
-% --- Intake survey ----------------------------------------------------
-% Qualtrics, opened before the PTB window and gated at the console (see
-% utils.launchSurvey). baseUrl is the anonymous link; the participant number
+% --- Consent and intake survey ----------------------------------------
+% Qualtrics, opened BEFORE the first task and gated at the console (see
+% utils.launchSurvey). The approved IRB document and its consent checkbox
+% live inside this survey, so turning it off on a participant run means no
+% consent record exists. baseUrl is the anonymous link; the participant number
 % and assignment are appended as query parameters, which Qualtrics keeps ONLY
 % if matching Embedded Data fields (pid, ses, domain, order, runkind, version)
 % are declared and left blank in Survey Flow. Turn enabled off to run the

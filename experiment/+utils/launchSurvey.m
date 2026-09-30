@@ -1,41 +1,74 @@
 function info = launchSurvey(sess)
-%UTILS.LAUNCHSURVEY  Open the intake survey for this participant, then wait.
+%UTILS.LAUNCHSURVEY  Consent and intake, in the browser, before the battery.
 %
 %   info = utils.launchSurvey(sess)
 %
-%   Called once from run_battery after the assignment is confirmed and BEFORE
-%   any Psychtoolbox window exists. That ordering is deliberate: the browser
-%   comes up over the desktop, not over a fullscreen PTB window it would have
-%   to fight for focus with.
+%   Called once from run_battery BEFORE any task runs. The participant reads
+%   the approved IRB document and checks the consent box inside this survey,
+%   so it has to precede participation and it has to be able to stop the
+%   session. It is the only thing standing between "an RA clicked Run" and
+%   data being collected from someone who did not consent.
 %
-%   The participant number is passed on the query string so the survey response
-%   can be joined to the run CSVs later. Qualtrics only keeps a query parameter
-%   if a matching Embedded Data field is declared (and left blank) in Survey
-%   Flow -- declaring pid/ses/domain/order there is what turns them into export
-%   columns. Without that the values are silently dropped and every response
-%   comes back unjoinable.
+%   One browser visit, not two. No PTB window exists yet (each task opens and
+%   closes its own), so the browser opens onto a bare desktop and is closed
+%   again before the first task -- nothing is minimised mid-session. Anything
+%   that would otherwise go in a post-task survey belongs here too unless it
+%   is numeric: utils.elicitAnchor measures budget/reservation wage a few
+%   minutes later, and a money question in front of it primes the anchor that
+%   sits under the primary DV.
 %
-%   MATLAB cannot tell when the survey is submitted -- web() returns as soon as
-%   the browser is handed the URL -- so the experimenter gates the battery at
-%   the console.
+%   The participant number is passed on the query string so the response can
+%   be joined to the run CSVs, and so the consent record is per-participant
+%   rather than an anonymous pile. Qualtrics keeps a query parameter only if a
+%   matching Embedded Data field is declared (and left blank) in Survey Flow;
+%   without that the values are dropped silently and every response comes back
+%   unjoinable.
+%
+%   MATLAB cannot see into Qualtrics -- web() returns as soon as the browser
+%   has the URL -- so the RA confirming at the console IS the gate. That is
+%   why the prompt names consent explicitly rather than asking whether the
+%   survey is "done", and why the answer is written to disk.
 
-info = struct('enabled', false, 'url', '', 'opened', false, 'skipped', false, ...
+info = runSurvey(sess);
+recordSurvey(info, sess);
+
+end
+
+
+function info = runSurvey(sess)
+info = struct('enabled', false, 'url', '', 'opened', false, 'consented', false, ...
               'startedAt', char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')));
 
 cfg = sess.cfg;
 
-if ~isfield(cfg, 'survey') || ~cfg.survey.enabled
-    return
-end
 if cfg.testing.enabled
+    % Participant 9999 is not a person. Nothing to consent.
     fprintf('Survey skipped: testing mode.\n');
     return
 end
-if isempty(strtrim(cfg.survey.baseUrl))
-    fprintf(2, ['\n*** Survey is enabled but cfg.survey.baseUrl is empty. ***\n' ...
-                '    Paste the Qualtrics anonymous link into utils.config, or set\n' ...
-                '    cfg.survey.enabled = false. Continuing without the survey.\n\n']);
+
+if ~isfield(cfg, 'survey') || ~cfg.survey.enabled
+    % Not blocked: the flag exists so the battery can be rehearsed without
+    % Qualtrics. But a real participant run with the survey off means no
+    % consent record will exist for them, and that must not pass quietly.
+    if strcmpi(sess.runKind, 'participant')
+        fprintf(2, ['\n*** cfg.survey.enabled is FALSE on a participant run. ***\n' ...
+                    '    No consent record will exist for participant %d.\n' ...
+                    '    Consent must have been obtained some other way.\n\n'], ...
+                sess.participant);
+    end
     return
+end
+
+if isempty(strtrim(cfg.survey.baseUrl))
+    % Misconfiguration, not a choice. Carrying on would run the battery with
+    % the consent step silently absent, which is the failure this whole
+    % function exists to prevent.
+    error('hw:launchSurvey:noUrl', ...
+        ['cfg.survey.enabled is true but cfg.survey.baseUrl is empty, so the ' ...
+         'consent survey cannot be shown. Paste the Qualtrics anonymous link ' ...
+         'into utils.config, or set cfg.survey.enabled = false if consent is ' ...
+         'being collected another way.']);
 end
 
 info.enabled = true;
@@ -47,7 +80,7 @@ info.url = buildUrl(cfg.survey.baseUrl, { ...
     'runkind', sess.runKind, ...
     'version', sess.codeVersion});
 
-fprintf('\n=== Intake survey ===\n');
+fprintf('\n=== Consent and intake survey ===\n');
 fprintf('Participant: %d (%s)\n', sess.participant, sess.assignment.domain);
 fprintf('%s\n', info.url);
 
@@ -61,24 +94,82 @@ catch ME
                 'Copy the link above into the browser by hand.\n'], ME.message);
 end
 
+% Consent gate. There is deliberately no skip: the consent box is inside this
+% survey, so "carry on without it" is not a thing an RA should be able to do
+% with one keystroke at the end of a long day. y proceeds, anything else stops
+% the session before a single trial is collected. The default is to stop --
+% an RA who taps Enter without reading gets the safe outcome, not the
+% convenient one.
 fprintf('\n');
-while true
-    answ = lower(strtrim(input( ...
-        'Press Enter when the survey is submitted, s to skip, q to abort: ', 's')));
-    if isempty(answ)
-        return
-    elseif strcmp(answ, 's')
-        % Recorded rather than silent: a run with no survey response is a data
-        % gap someone has to explain later, so make it visible now.
-        info.skipped = true;
-        fprintf(2, 'Survey SKIPPED for participant %d -- note this in the session log.\n', ...
-            sess.participant);
-        return
-    elseif strcmp(answ, 'q')
-        error('hw:launchSurvey:aborted', 'Aborted by experimenter at the survey step.');
+answ = lower(strtrim(input( ...
+    'Did the participant complete the survey AND check the consent box? (y/n): ', 's')));
+
+if ~strcmp(answ, 'y')
+    % startSession has already written the manifest by this point, so without
+    % this the declined number would be counted as used and an empty manifest
+    % would sit in the session tree describing someone who did not consent.
+    released = releaseParticipantNumber(sess);
+    if released
+        tail = sprintf(['The empty manifest for %d has been removed, so that ' ...
+                        'number will be offered again.'], sess.participant);
+    else
+        tail = sprintf(['Participant %d already has completed runs, so their ' ...
+                        'manifest was left alone.'], sess.participant);
     end
+    error('hw:launchSurvey:noConsent', ...
+        ['Consent not confirmed for participant %d. Session stopped before any ' ...
+         'task ran. %s'], sess.participant, tail);
 end
 
+info.consented = true;
+
+end
+
+
+function released = releaseParticipantNumber(sess)
+%RELEASEPARTICIPANTNUMBER  Remove the not-yet-used manifest after a refusal.
+%   Deletes ONLY a manifest with zero runs on it. A participant partway
+%   through who declines to continue keeps everything they already did -- this
+%   never touches a manifest that has runs, and never touches task data.
+released = false;
+if ~isfield(sess, 'manifest') || ~isfield(sess.manifest, 'runs') ...
+        || ~isempty(sess.manifest.runs)
+    return
+end
+if ~exist(sess.manifestFile, 'file')
+    return
+end
+try
+    delete(sess.manifestFile);
+    released = true;
+catch werr
+    warning('hw:launchSurvey:manifestNotRemoved', ...
+        ['Could not remove the empty manifest %s: %s\n' ...
+         'Participant %d will be treated as used. Delete it by hand to ' ...
+         'free the number.'], sess.manifestFile, werr.message, sess.participant);
+end
+end
+
+
+function recordSurvey(info, sess)
+%RECORDSURVEY  Persist the consent confirmation beside the session files.
+%   Only reached when consent was given -- a refusal throws, so nothing is
+%   written about someone who declined, and their participant number is left
+%   unused for the next person.
+if ~info.enabled
+    return
+end
+info.finishedAt = char(datetime('now','Format','yyyy-MM-dd HH:mm:ss'));
+f = fullfile(sess.cfg.paths.sessions, ...
+    sprintf('sub-%05d_ses-%02d_survey.mat', sess.participant, sess.sessionNum));
+try
+    save(f, 'info');
+catch werr
+    % The session is already complete and saved; a missing audit file is not
+    % worth an error here, but it should not pass quietly either.
+    warning('hw:launchSurvey:recordFailed', ...
+        'Could not write the survey record to %s: %s', f, werr.message);
+end
 end
 
 
