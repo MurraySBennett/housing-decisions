@@ -48,6 +48,23 @@ record and a junk partial in the real dataset is worse than leaving that
 unchecked. Whether the survey is *published* and opens on the consent page is a
 by-hand check at the rig.
 
+**Private window, for cookies not privacy.** `utils.launchSurvey` no longer uses
+`web(url,'-browser')` (no flags, OS default handler). New local `openSurvey`
+finds a browser on disk and launches it with `--inprivate` / `--incognito` /
+`-private-window`, falling back to `web()` and saying loudly that it did. The
+reason is contamination: a shared browser profile keeps Qualtrics cookies
+between participants, so a normal window can resume the *previous* participant's
+partial response, or be refused if "prevent multiple responses" is on. Knobs:
+`cfg.survey.privateWindow` (true) and `cfg.survey.browserExe` ('' = search;
+Windows order is Edge, Chrome, Firefox).
+
+The tradeoff accepted: an incognito window that gets *closed* is unrecoverable,
+where a normal profile might have resumed by cookie. Closing is a loud failure
+and cross-participant contamination is a silent one, so this is the right side
+to err on. Windows `IncognitoModeAvailability` policy can also disable private
+mode, in which case the flag is accepted and ignored — undetectable from MATLAB,
+so both code and deck tell the RA to look at the window.
+
 **Still blocked.** Rehearse once at the rig, deliberately answering `n` at the
 console gate, and confirm the session stops with no data written and the
 participant number is offered again. No MATLAB/Psychtoolbox run has happened on

@@ -20,6 +20,11 @@ function info = launchSurvey(sess)
 %   starts a NEW response, which strands the consent record and the intake
 %   answers in two rows with nothing linking them.
 %
+%   The window is a private/InPrivate/Incognito one where one can be found (see
+%   openSurvey): a shared browser profile carries Qualtrics cookies between
+%   participants, so a normal window can resume the previous participant's
+%   partial response instead of starting a clean one.
+%
 %   Numeric money questions still do not belong in either sitting:
 %   utils.elicitAnchor measures budget/reservation wage inside the battery, and
 %   a money question in front of it primes the anchor under the primary DV.
@@ -40,7 +45,8 @@ end
 
 
 function info = runSurvey(sess)
-info = struct('enabled', false, 'url', '', 'opened', false, 'consented', false, ...
+info = struct('enabled', false, 'url', '', 'opened', false, 'browser', '', ...
+              'consented', false, ...
               'startedAt', char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')));
 
 cfg = sess.cfg;
@@ -99,15 +105,7 @@ fprintf('PARTICIPANT NUMBER TO TYPE INTO THE SURVEY:  %d\n', sess.participant);
 fprintf('Session %d, domain %s\n', sess.sessionNum, sess.assignment.domain);
 fprintf('%s\n', info.url);
 
-try
-    web(info.url, '-browser');
-    info.opened = true;
-catch ME
-    % Not fatal. The URL is already on screen and can be pasted by hand; losing
-    % the session over a browser that would not launch is the worse outcome.
-    fprintf(2, ['Could not open a browser automatically (%s).\n' ...
-                'Copy the link above into the browser by hand.\n'], ME.message);
-end
+[info.opened, info.browser] = openSurvey(info.url, cfg);
 
 % Consent gate. There is deliberately no skip: the consent box is inside this
 % survey, so "carry on without it" is not a thing an RA should be able to do
@@ -143,6 +141,152 @@ end
 
 info.consented = true;
 
+end
+
+
+function [opened, how] = openSurvey(url, cfg)
+%OPENSURVEY  Open the survey, in a private window where that is possible.
+%
+%   Private browsing is not a courtesy here, it is data hygiene. A normal
+%   browser profile keeps Qualtrics cookies between participants, so the next
+%   session can silently resume the PREVIOUS participant's partial response, or
+%   be refused outright if the survey has "prevent multiple responses" on. Each
+%   participant getting a clean cookie jar is what stops that. It also keeps one
+%   participant's typed answers out of the next one's autofill.
+%
+%   web(url,'-browser') cannot do this -- it hands the URL to whatever the OS
+%   has registered and takes no flags -- so this shells out to a browser it
+%   located itself, and falls back to web() when it cannot find one.
+%
+%   Two failure modes that are silent by nature, so they are reported:
+%   a browser found but launched without private mode, and Windows policy
+%   (IncognitoModeAvailability) disabling private mode so the flag is accepted
+%   and ignored. Neither can be detected from here -- hence the printed
+%   reminder to glance at the window.
+opened = false;
+how    = '';
+
+if ~isfield(cfg.survey, 'privateWindow') || cfg.survey.privateWindow
+    [exe, flag, name] = findPrivateBrowser(cfg);
+    if ~isempty(exe)
+        if ispc
+            % cmd's start takes a window title first; "" keeps it from eating
+            % the quoted exe path as the title. start returns immediately.
+            cmd = sprintf('start "" "%s" %s "%s"', exe, flag, url);
+        elseif ismac
+            cmd = sprintf('open -na "%s" --args %s "%s"', exe, flag, url);
+        else
+            cmd = sprintf('"%s" %s "%s" &', exe, flag, url);
+        end
+        % Two outputs so the browser's own stdout/stderr does not land in the
+        % middle of the RA's console at the moment they need to read it.
+        [status, msg] = system(cmd);
+        if status == 0
+            opened = true;
+            how = sprintf('%s (%s)', name, flag);
+            fprintf('Opened in %s.\n', how);
+            fprintf(['CHECK: the window must say Private/InPrivate/Incognito. If it does\n' ...
+                     'not, close it, open a private window by hand, and paste the link --\n' ...
+                     'a shared cookie jar can resume the previous participant''s response.\n']);
+            return
+        end
+        fprintf(2, 'Could not launch %s (status %d): %s\nFalling back.\n', ...
+                name, status, strtrim(msg));
+    end
+end
+
+% Fallback: the default handler, no private mode. Still better than no browser,
+% but say so plainly rather than letting the RA assume a clean session.
+try
+    web(url, '-browser');
+    opened = true;
+    how = 'default browser';
+    fprintf(2, ['Opened in the DEFAULT browser -- NOT a private window.\n' ...
+                'If this machine has run a participant before, open a private\n' ...
+                'window by hand and paste the link above instead.\n']);
+catch ME
+    % Not fatal. The URL is already on screen and can be pasted by hand; losing
+    % the session over a browser that would not launch is the worse outcome.
+    fprintf(2, ['Could not open a browser automatically (%s).\n' ...
+                'Copy the link above into a private browser window by hand.\n'], ME.message);
+end
+end
+
+
+function [exe, flag, name] = findPrivateBrowser(cfg)
+%FINDPRIVATEBROWSER  First browser on disk that takes a private-window flag.
+%   Preference order is deliberate, not alphabetical: Edge ships on the Windows
+%   lab image, so it is the one most likely to exist and least likely to be a
+%   participant's personal profile.
+exe = ''; flag = ''; name = '';
+
+if isfield(cfg.survey, 'browserExe') && ~isempty(strtrim(char(cfg.survey.browserExe)))
+    exe  = strtrim(char(cfg.survey.browserExe));
+    flag = privateFlagFor(exe);
+    [~, name] = fileparts(exe);
+    if ~ispc && ~ismac
+        return  % a bare command name on Linux is fine; exist() would not see it
+    end
+    if ~exist(exe, 'file') && ~(ismac && exist(exe, 'dir'))
+        fprintf(2, 'cfg.survey.browserExe not found: %s\n', exe);
+        exe = ''; flag = ''; name = '';
+    else
+        return
+    end
+end
+
+if ispc
+    candidates = { ...
+        'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe', '--inprivate',      'Edge'; ...
+        'C:\Program Files\Microsoft\Edge\Application\msedge.exe',       '--inprivate',      'Edge'; ...
+        'C:\Program Files\Google\Chrome\Application\chrome.exe',        '--incognito',      'Chrome'; ...
+        'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',  '--incognito',      'Chrome'; ...
+        'C:\Program Files\Mozilla Firefox\firefox.exe',                 '-private-window',  'Firefox'};
+elseif ismac
+    candidates = { ...
+        'Google Chrome', '--incognito',     'Chrome'; ...
+        'Microsoft Edge', '--inprivate',    'Edge'; ...
+        'Firefox',       '-private-window', 'Firefox'};
+else
+    candidates = { ...
+        'google-chrome', '--incognito',     'Chrome'; ...
+        'chromium',      '--incognito',     'Chromium'; ...
+        'microsoft-edge','--inprivate',     'Edge'; ...
+        'firefox',       '-private-window', 'Firefox'};
+end
+
+for k = 1:size(candidates, 1)
+    cand = candidates{k, 1};
+    if ispc
+        found = exist(cand, 'file') == 2;
+    elseif ismac
+        found = exist(fullfile('/Applications', [cand '.app']), 'dir') == 7;
+    else
+        [st, ~] = system(sprintf('command -v %s >/dev/null 2>&1', cand));
+        found = (st == 0);
+    end
+    if found
+        exe  = cand;
+        flag = candidates{k, 2};
+        name = candidates{k, 3};
+        return
+    end
+end
+end
+
+
+function flag = privateFlagFor(exe)
+%PRIVATEFLAGFOR  Private-window flag inferred from the executable name.
+%   Firefox spells it differently from every Chromium browser, and a wrong flag
+%   is passed through as a URL or ignored rather than erroring.
+[~, base] = fileparts(lower(char(exe)));
+if contains(base, 'firefox')
+    flag = '-private-window';
+elseif contains(base, 'msedge') || contains(base, 'edge')
+    flag = '--inprivate';
+else
+    flag = '--incognito';
+end
 end
 
 

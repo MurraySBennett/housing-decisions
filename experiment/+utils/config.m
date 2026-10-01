@@ -264,6 +264,15 @@ cfg.survey.enabled    = true;
 cfg.survey.baseUrl    = 'https://osu.az1.qualtrics.com/jfe/form/SV_brz4ygB4pfTnzcq';
 cfg.survey.passParams = false;
 
+% Private/InPrivate/Incognito window, found and launched by utils.launchSurvey
+% rather than handed to the OS default handler. Data hygiene, not courtesy: a
+% shared browser profile keeps Qualtrics cookies between participants, so the
+% next session can resume the PREVIOUS participant's partial response, or be
+% refused if "prevent multiple responses" is on. browserExe pins a specific
+% executable when the search order picks the wrong one; empty means search.
+cfg.survey.privateWindow = true;
+cfg.survey.browserExe    = '';
+
 % --- Testing mode -----------------------------------------------------
 cfg.testing.enabled          = opt.testing;
 cfg.testing.windowed         = rp.windowedDefault || opt.testing;
