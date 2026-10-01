@@ -16,15 +16,45 @@ deletes the zero-run manifest so a refusal no longer burns a participant number.
 Verified statically only (`scripts/verify_static.sh`, `scripts/check_utils_calls.py`);
 no MATLAB/Psychtoolbox run has happened.
 
-**Blocked on two things, in order.** (1) The Qualtrics survey does not exist yet —
-build it with the IRB document and the consent checkbox, then set
-`cfg.survey.baseUrl` in `experiment/+utils/config.m` (currently `''`, and
-`cfg.survey.enabled` is `false`; an empty URL with the survey enabled now raises).
-Declare `pid`, `ses`, `domain`, `order`, `runkind`, `version` as blank Embedded
-Data in Survey Flow or Qualtrics silently drops them and every response comes back
-unjoinable. (2) Rehearse once at the rig, deliberately answering `n` at the console
-gate, and confirm the session stops with no data written and the participant number
-is offered again. Rig time is still unbooked and REP is still not set up.
+**2026-10-01 — the survey is used as it already exists; the code was bent to fit
+it, not the reverse.** A participant is booked for today, so nothing in Qualtrics
+was rebuilt. The live survey already ends its consent block on a page telling the
+participant to minimise the window and fetch the RA, so that *is* the protocol:
+one Qualtrics response, two sittings, one browser tab that stays open and
+minimised through the whole battery. Changes made for it:
+
+- `cfg.survey.passParams` (new, `false`). The pid/ses/domain/order/runkind/version
+  query string is no longer sent — the participant types their number into the
+  survey by hand, because the Embedded Data fields it needs are not declared in
+  Survey Flow and Qualtrics drops undeclared parameters without erroring.
+  `launchSurvey` now prints the participant number on its own line for the RA to
+  read out, and `buildUrl` is retained behind the flag for when Survey Flow is
+  fixed.
+- The console gate asks about the consent *block* and the handover page, not the
+  whole survey, and reminds the RA to leave the tab open. Keystroke is still
+  typed `y`/`n` with stop as the default — unchanged on purpose.
+- `run_battery` prints a red NOT FINISHED block after the timing table: restore
+  the minimised tab, do not reopen the link.
+- Doc comments in `launchSurvey`/`run_battery` said "close the browser" and
+  "nothing is minimised mid-session". Both were wrong under this protocol and
+  have been rewritten. `docs/ra-setup-deck.html` gains intake step 03 (minimise,
+  never close; read the pid out) and a new After slide for the second sitting.
+
+**Still blocked, in order.** (1) `cfg.survey.enabled` is `false` and
+`cfg.survey.baseUrl` is `''` — paste the Qualtrics anonymous link and flip the
+flag together; enabled with an empty link raises by design. **This is the only
+thing standing between the current code and today's session.** (2) Rehearse once
+at the rig, deliberately answering `n` at the console gate, and confirm the
+session stops with no data written and the participant number is offered again.
+No MATLAB/Psychtoolbox run has happened on any of this — `verify_static.sh` and
+`check_utils_calls.py` pass, which is not the same thing.
+
+**build — next week, not today.** (a) End-of-battery PTB screen: "thanks for
+participating, press q to close and return to the survey", so the handover does
+not depend on the RA remembering. (b) Declare the six Embedded Data fields in
+Survey Flow and set `passParams = true`, removing the hand-typed number and its
+transcription errors. (c) Decide what to do about a tab that gets closed
+mid-session — currently it silently splits into two unmatched responses.
 
 **Session update 2026-09-25.** The repo is being moved to a clean-clone lab
 workflow: Git/GitHub Desktop is now the deployment path, not a copy-to-share

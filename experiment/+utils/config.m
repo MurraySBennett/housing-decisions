@@ -250,13 +250,19 @@ cfg.elicit.ratingMode = 'drag';   % 'drag' | 'sequential'
 % Qualtrics, opened BEFORE the first task and gated at the console (see
 % utils.launchSurvey). The approved IRB document and its consent checkbox
 % live inside this survey, so turning it off on a participant run means no
-% consent record exists. baseUrl is the anonymous link; the participant number
-% and assignment are appended as query parameters, which Qualtrics keeps ONLY
-% if matching Embedded Data fields (pid, ses, domain, order, runkind, version)
-% are declared and left blank in Survey Flow. Turn enabled off to run the
-% battery alone.
-cfg.survey.enabled = false;
-cfg.survey.baseUrl = '';
+% consent record exists. baseUrl is the anonymous link; enabled and baseUrl go
+% together -- enabled with an empty link raises rather than running the battery
+% with consent silently absent. Turn enabled off to run the battery alone.
+%
+% passParams appends pid/ses/domain/order/runkind/version to the link so the
+% response joins to the run CSVs automatically. It is OFF because the live
+% survey asks the participant to type their participant number instead, and
+% Qualtrics drops query parameters silently unless matching Embedded Data
+% fields are declared and left blank in Survey Flow. Turning this on without
+% declaring those six fields loses the join without any error. See WORK.md.
+cfg.survey.enabled    = false;
+cfg.survey.baseUrl    = '';
+cfg.survey.passParams = false;
 
 % --- Testing mode -----------------------------------------------------
 cfg.testing.enabled          = opt.testing;

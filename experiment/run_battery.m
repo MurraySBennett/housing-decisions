@@ -69,8 +69,9 @@ fprintf('\n\n');
 
 %% ---- Consent and intake ----------------------------------------------
 % BLOCKING. Consent must precede participation, so this runs before any task
-% and aborts the session if consent was not obtained. One browser visit,
-% before any PTB window exists -- close the browser when it returns.
+% and aborts the session if consent was not obtained. The participant consents
+% here, minimises the browser, and comes back to the SAME tab after the battery
+% to finish the survey -- so the tab stays open all session.
 utils.launchSurvey(sess);
 
 %% ---- Run ------------------------------------------------------------
@@ -125,6 +126,18 @@ if ~isempty(timingRows)
     T = vertcat(timingRows{:});
     disp(T);
     fprintf('Session total: %.1f min\n', sum(T.seconds(T.section == "total")) / 60);
+end
+
+% Last thing on the console deliberately: the session is not over. The intake
+% half of the Qualtrics response is still unanswered, and the participant is
+% about to be thanked and walked out. Printed after the timing table so it is
+% what the RA is looking at, not something scrolled past.
+if ~TESTING
+    fprintf(2, ['\n*** NOT FINISHED: the participant still owes the survey. ***\n' ...
+                '    Restore the minimised browser tab (do NOT open a new one --\n' ...
+                '    a fresh link starts a separate response) and let them\n' ...
+                '    complete the rest of it. Participant number is %d.\n\n'], ...
+            sess.participant);
 end
 
 

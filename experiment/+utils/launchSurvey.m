@@ -1,5 +1,5 @@
 function info = launchSurvey(sess)
-%UTILS.LAUNCHSURVEY  Consent and intake, in the browser, before the battery.
+%UTILS.LAUNCHSURVEY  Open the consent survey in the browser, before the battery.
 %
 %   info = utils.launchSurvey(sess)
 %
@@ -9,20 +9,24 @@ function info = launchSurvey(sess)
 %   session. It is the only thing standing between "an RA clicked Run" and
 %   data being collected from someone who did not consent.
 %
-%   One browser visit, not two. No PTB window exists yet (each task opens and
-%   closes its own), so the browser opens onto a bare desktop and is closed
-%   again before the first task -- nothing is minimised mid-session. Anything
-%   that would otherwise go in a post-task survey belongs here too unless it
-%   is numeric: utils.elicitAnchor measures budget/reservation wage a few
-%   minutes later, and a money question in front of it primes the anchor that
-%   sits under the primary DV.
+%   One Qualtrics response, two sittings, one browser tab that stays open the
+%   whole session. The survey itself ends its consent block on a page telling
+%   the participant to minimise the window and ask the RA to set up the next
+%   step; the battery then runs (each task opens and closes its own PTB
+%   window), and afterwards the RA brings the same tab back up so the
+%   participant finishes the remaining questions.
 %
-%   The participant number is passed on the query string so the response can
-%   be joined to the run CSVs, and so the consent record is per-participant
-%   rather than an anonymous pile. Qualtrics keeps a query parameter only if a
-%   matching Embedded Data field is declared (and left blank) in Survey Flow;
-%   without that the values are dropped silently and every response comes back
-%   unjoinable.
+%   The tab must not be CLOSED. An anonymous link reopened in a fresh tab
+%   starts a NEW response, which strands the consent record and the intake
+%   answers in two rows with nothing linking them.
+%
+%   Numeric money questions still do not belong in either sitting:
+%   utils.elicitAnchor measures budget/reservation wage inside the battery, and
+%   a money question in front of it primes the anchor under the primary DV.
+%
+%   The participant number is typed into the survey by the participant, not
+%   passed on the query string -- see cfg.survey.passParams in utils.config for
+%   the automatic alternative and what it needs in Survey Flow first.
 %
 %   MATLAB cannot see into Qualtrics -- web() returns as soon as the browser
 %   has the URL -- so the RA confirming at the console IS the gate. That is
@@ -72,16 +76,27 @@ if isempty(strtrim(cfg.survey.baseUrl))
 end
 
 info.enabled = true;
-info.url = buildUrl(cfg.survey.baseUrl, { ...
-    'pid',     sprintf('%d', sess.participant), ...
-    'ses',     sprintf('%d', sess.sessionNum), ...
-    'domain',  sess.assignment.domain, ...
-    'order',   sprintf('%d', sess.assignment.taskOrder), ...
-    'runkind', sess.runKind, ...
-    'version', sess.codeVersion});
 
+% Off by default: the live survey asks the participant to type their number,
+% and query parameters vanish silently unless Survey Flow declares them.
+if isfield(cfg.survey, 'passParams') && cfg.survey.passParams
+    info.url = buildUrl(cfg.survey.baseUrl, { ...
+        'pid',     sprintf('%d', sess.participant), ...
+        'ses',     sprintf('%d', sess.sessionNum), ...
+        'domain',  sess.assignment.domain, ...
+        'order',   sprintf('%d', sess.assignment.taskOrder), ...
+        'runkind', sess.runKind, ...
+        'version', sess.codeVersion});
+else
+    info.url = strtrim(char(cfg.survey.baseUrl));
+end
+
+% The participant number is printed large because the participant has to type
+% it into the survey from what is on this screen, and a transcription error
+% here is a response that cannot be matched to any run.
 fprintf('\n=== Consent and intake survey ===\n');
-fprintf('Participant: %d (%s)\n', sess.participant, sess.assignment.domain);
+fprintf('PARTICIPANT NUMBER TO TYPE INTO THE SURVEY:  %d\n', sess.participant);
+fprintf('Session %d, domain %s\n', sess.sessionNum, sess.assignment.domain);
 fprintf('%s\n', info.url);
 
 try
@@ -100,9 +115,14 @@ end
 % the session before a single trial is collected. The default is to stop --
 % an RA who taps Enter without reading gets the safe outcome, not the
 % convenient one.
+%
+% The question is about the CONSENT BLOCK, not the whole survey: the rest of it
+% is answered after the battery, in the same tab.
 fprintf('\n');
+fprintf('Leave the browser tab OPEN -- minimised, not closed. The participant\n');
+fprintf('returns to it after the battery to finish the survey.\n');
 answ = lower(strtrim(input( ...
-    'Did the participant complete the survey AND check the consent box? (y/n): ', 's')));
+    'Consent box checked, and the survey minimised at its handover page? (y/n): ', 's')));
 
 if ~strcmp(answ, 'y')
     % startSession has already written the manifest by this point, so without
