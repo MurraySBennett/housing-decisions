@@ -40,14 +40,19 @@ minimised through the whole battery. Changes made for it:
   have been rewritten. `docs/ra-setup-deck.html` gains intake step 03 (minimise,
   never close; read the pid out) and a new After slide for the second sitting.
 
-**Still blocked, in order.** (1) `cfg.survey.enabled` is `false` and
-`cfg.survey.baseUrl` is `''` — paste the Qualtrics anonymous link and flip the
-flag together; enabled with an empty link raises by design. **This is the only
-thing standing between the current code and today's session.** (2) Rehearse once
-at the rig, deliberately answering `n` at the console gate, and confirm the
-session stops with no data written and the participant number is offered again.
-No MATLAB/Psychtoolbox run has happened on any of this — `verify_static.sh` and
-`check_utils_calls.py` pass, which is not the same thing.
+**Survey is wired up.** `cfg.survey.enabled = true`, `baseUrl =
+https://osu.az1.qualtrics.com/jfe/form/SV_brz4ygB4pfTnzcq` (OSU anonymous link).
+A HEAD request returns 200, so the route and form id are valid; it was
+deliberately not fetched with GET, since loading a `jfe` form creates a response
+record and a junk partial in the real dataset is worse than leaving that
+unchecked. Whether the survey is *published* and opens on the consent page is a
+by-hand check at the rig.
+
+**Still blocked.** Rehearse once at the rig, deliberately answering `n` at the
+console gate, and confirm the session stops with no data written and the
+participant number is offered again. No MATLAB/Psychtoolbox run has happened on
+any of the survey work — `verify_static.sh` and `check_utils_calls.py` pass,
+which is not the same thing.
 
 **build — next week, not today.** (a) End-of-battery PTB screen: "thanks for
 participating, press q to close and return to the survey", so the handover does
