@@ -56,7 +56,7 @@ reason is contamination: a shared browser profile keeps Qualtrics cookies
 between participants, so a normal window can resume the *previous* participant's
 partial response, or be refused if "prevent multiple responses" is on. Knobs:
 `cfg.survey.privateWindow` (true) and `cfg.survey.browserExe` ('' = search;
-Windows order is Edge, Chrome, Firefox).
+Windows order is Chrome — what the rig actually has — then Firefox, then Edge).
 
 The tradeoff accepted: an incognito window that gets *closed* is unrecoverable,
 where a normal profile might have resumed by cookie. Closing is a loud failure

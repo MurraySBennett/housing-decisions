@@ -268,7 +268,8 @@ cfg.survey.passParams = false;
 % rather than handed to the OS default handler. Data hygiene, not courtesy: a
 % shared browser profile keeps Qualtrics cookies between participants, so the
 % next session can resume the PREVIOUS participant's partial response, or be
-% refused if "prevent multiple responses" is on. browserExe pins a specific
+% refused if "prevent multiple responses" is on. The Windows search order is
+% Chrome (what the rig has), then Firefox, then Edge. browserExe pins a specific
 % executable when the search order picks the wrong one; empty means search.
 cfg.survey.privateWindow = true;
 cfg.survey.browserExe    = '';
