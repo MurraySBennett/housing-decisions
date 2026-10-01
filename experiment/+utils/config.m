@@ -276,25 +276,6 @@ cfg.survey.passParams = false;
 cfg.survey.privateWindow = true;
 cfg.survey.browserExe    = rp.surveyBrowserExe;
 
-% --- Mailing the session's CSVs off the rig ----------------------------
-% utils.mailSession zips this participant's CSVs at the end of run_battery and
-% mails them. The share is still the system of record and
-% scripts/pull_data_from_share.ps1 is still how data arrives for analysis; this
-% is immediacy and a second copy, nothing more. Gaze and .mat files are never
-% attached, so the zip is kilobytes.
-%
-% The credential is NOT an environment variable and NOT in anyone's MATLAB
-% prefs, because the rig is run by whoever is logged in -- Murray some days, a
-% PhD student or an RA on others, and a per-user setting silently does nothing
-% for everyone else. It lives on the share instead, beside the data. Anyone who
-% can read it can already read every participant CSV, so it adds no exposure,
-% and it works unchanged for a new RA on a reimaged machine with no setup.
-% HW_MAIL_CRED overrides the path for the dev machine. See docs/mail-setup.md.
-cfg.mail.enabled        = true;
-cfg.mail.to             = 'murray.bennett92@gmail.com';
-cfg.mail.credentialFile = fullfile(shareRoot, 'housing_wages', '.mail', 'credentials.json');
-cfg.mail.outbox         = fullfile(cfg.paths.data, 'outbox');
-
 % --- Testing mode -----------------------------------------------------
 cfg.testing.enabled          = opt.testing;
 cfg.testing.windowed         = rp.windowedDefault || opt.testing;

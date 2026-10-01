@@ -9,12 +9,6 @@ experiment/Data/
 experiment/Data_practice/
 !experiment/Data/README.md
 
-# Mail credential. It belongs on the share (docs/mail-setup.md), never here --
-# this is only a guard against a stray copy being committed by accident.
-.mail/
-**/credentials.json
-mail_credentials*.json
-
 # MATLAB
 *.asv
 *.mat

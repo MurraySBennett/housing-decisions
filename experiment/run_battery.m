@@ -110,16 +110,10 @@ for k = 1:numel(thisSession)
         fprintf(2, '\n*** %s [%s] crashed. Details saved to:\n    %s\n', ...
             row.task, strjoin(row.domains, '+'), crashFile);
 
-        % A crash is when an off-rig copy matters most, and rethrow ends the
-        % script -- so mail whatever completed before leaving.
         if k < numel(thisSession)
             go = input('Continue to the next run anyway? (y/n): ', 's');
-            if ~strcmpi(strtrim(go), 'y')
-                utils.mailSession(sess);
-                rethrow(ME);
-            end
+            if ~strcmpi(strtrim(go), 'y'), rethrow(ME); end
         else
-            utils.mailSession(sess);
             rethrow(ME);
         end
     end
@@ -133,11 +127,6 @@ if ~isempty(timingRows)
     disp(T);
     fprintf('Session total: %.1f min\n', sum(T.seconds(T.section == "total")) / 60);
 end
-
-% Zip this session's CSVs and mail them. Never throws, and prints at most a few
-% lines; a failure queues the zip in the outbox rather than losing it. Placed
-% before the NOT FINISHED block so that block stays last on the console.
-utils.mailSession(sess);
 
 % Last thing on the console deliberately: the session is not over. The intake
 % half of the Qualtrics response is still unanswered, and the participant is
