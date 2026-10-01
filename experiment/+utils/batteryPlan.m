@@ -38,12 +38,15 @@ else
         'hw:batteryPlan:badTaskOrder', 'taskOrder must be an integer from 1 to 6.');
 end
 
-% Counterbalancing; sortrows pins the list -- perms() row order is an implementation detail.
-if numel(rows) == 3
-    P = sortrows(perms(1:3));
-    rows = rows(P(taskOrder, :));
-elseif numel(rows) > 1 && mod(participant, 2) == 1
-    rows = fliplr(rows);
-end
+% Counterbalancing; sortrows pins the list -- perms() row order is an
+% implementation detail. PLAN is always three tasks, so slot 1..6 indexes the six
+% orderings directly. (A dead `elseif numel(rows) > 1` branch here used to flip
+% the order for odd participants; it could never run, and it wrongly implied
+% parity affects task order. Parity selects the DOMAIN, ceil(p/2) the order.)
+assert(numel(rows) == 3, 'hw:batteryPlan:planSize', ...
+    'PLAN must hold three tasks for slot-based counterbalancing; got %d.', ...
+    numel(rows));
+P = sortrows(perms(1:3));
+rows = rows(P(taskOrder, :));
 
 end

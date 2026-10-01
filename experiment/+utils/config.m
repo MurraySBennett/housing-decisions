@@ -276,6 +276,16 @@ cfg.survey.passParams = false;
 cfg.survey.privateWindow = true;
 cfg.survey.browserExe    = rp.surveyBrowserExe;
 
+% --- Resuming an unfinished participant --------------------------------
+% How recent an incomplete manifest has to be before startSession will PROPOSE
+% resuming it. A participant who crashes mid-session and comes back does so
+% within the same sitting; one whose manifest has been incomplete for days has
+% abandoned the study. Without a window, `min(resumeIds)` proposed the oldest
+% abandoned participant forever, and every subsequent session was offered that
+% same ID -- which, because the ID drives the counterbalance, silently
+% duplicates a design cell if accepted.
+cfg.session.resumeWindowHours = 12;
+
 % --- Testing mode -----------------------------------------------------
 cfg.testing.enabled          = opt.testing;
 cfg.testing.windowed         = rp.windowedDefault || opt.testing;

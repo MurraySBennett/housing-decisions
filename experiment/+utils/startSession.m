@@ -50,15 +50,16 @@ if opt.testing
     if isempty(opt.domain),      opt.domain      = 1;    end
 else
     if isempty(opt.participant)
-        opt.participant = nextParticipant(cfg);
+        [opt.participant, pick] = nextParticipant(cfg);
         autoAssigned = true;
     else
         autoAssigned = false;
+        pick = struct('kind', 'manual', 'resumeHours', NaN, 'stale', []);
     end
     if isempty(opt.session), opt.session = 1; end
     if isempty(opt.domain), opt.domain = domainNumber(assignedDomain(opt.participant)); end
     if opt.confirmAssignment && strcmpi(cfg.runKind, 'participant')
-        opt = confirmAssignment(opt, cfg, autoAssigned);
+        opt = confirmAssignment(opt, cfg, autoAssigned, pick);
     end
 end
 
@@ -177,9 +178,21 @@ runs = struct('task',{},'sessionNum',{},'runId',{}, ...
               'seed',{},'codeVersion',{});
 end
 
-function id = nextParticipant(cfg)
+function [id, pick] = nextParticipant(cfg)
+%NEXTPARTICIPANT  Propose the participant number for this session.
+%   [id, pick] = nextParticipant(cfg)
+%
+%   A participant with incomplete runs is proposed for RESUMING, but only if the
+%   incompleteness is recent (cfg.session.resumeWindowHours). Anything older is
+%   treated as abandoned: it is skipped, and returned in pick.stale so the
+%   console can show it rather than silently swallowing it.
+%
+%   pick.kind is 'resume' or 'new'. The caller MUST surface this -- proposing a
+%   resume as though it were a fresh participant is how runs get appended to
+%   someone else's data.
 ids = [];
 resumeIds = [];
+resumeHrs = [];
 
 if exist(cfg.paths.sessions, 'dir')
     d = dir(fullfile(cfg.paths.sessions, 'sub-*_manifest.mat'));
@@ -197,6 +210,7 @@ if exist(cfg.paths.sessions, 'dir')
                 statuses = {M.manifest.runs.status};
                 if any(~strcmp(statuses, 'complete'))
                     resumeIds(end+1) = pid; %#ok<AGROW>
+                    resumeHrs(end+1) = manifestAgeHours(M.manifest.runs); %#ok<AGROW>
                 end
             end
         catch
@@ -214,15 +228,84 @@ for k = 1:numel(taskNames)
 end
 
 ids = unique(ids(ids >= 1 & ids < 9000));
-resumeIds = unique(resumeIds);
-if ~isempty(resumeIds)
-    id = min(resumeIds);
+
+% Split resumable participants by how long they have been incomplete. Only a
+% recent one is a genuine mid-session resume; an old one has abandoned the study
+% and must not keep being proposed ahead of the next new participant.
+window = 12;
+if isfield(cfg, 'session') && isfield(cfg.session, 'resumeWindowHours')
+    window = cfg.session.resumeWindowHours;
+end
+isFresh   = resumeHrs <= window;
+fresh     = resumeIds(isFresh);
+freshHrs  = resumeHrs(isFresh);
+stale     = sort(resumeIds(~isFresh));
+
+pick = struct('kind', 'new', 'resumeHours', NaN, 'stale', stale);
+
+if ~isempty(fresh)
+    % Most recently active wins, not lowest ID: with two unfinished participants
+    % the one still in the chair is the one that was just touched.
+    [pick.resumeHours, which] = min(freshHrs);
+    id = fresh(which);
+    pick.kind = 'resume';
     return
 end
+
 if isempty(ids)
     id = 1;
 else
     id = max(ids) + 1;
+end
+end
+
+
+function w = resumeWindow(cfg)
+w = 12;
+if isfield(cfg, 'session') && isfield(cfg.session, 'resumeWindowHours')
+    w = cfg.session.resumeWindowHours;
+end
+end
+
+
+function s = humanHours(h)
+%HUMANHOURS  "40 min" / "3.5 h" / "2 days" -- an RA should not have to convert.
+if isnan(h)
+    s = 'an unknown time';
+elseif h < 1
+    s = sprintf('%d min', max(1, round(h * 60)));
+elseif h < 48
+    s = sprintf('%.1f h', h);
+else
+    s = sprintf('%.0f days', h / 24);
+end
+end
+
+
+function h = manifestAgeHours(runs)
+%MANIFESTAGEHOURS  Hours since the most recent activity in a manifest.
+%   Inf when no timestamp can be read, so an unparseable manifest is treated as
+%   abandoned rather than proposed as a live resume.
+t = NaT;
+for f = {'finishedAt', 'startedAt'}
+    if ~isfield(runs, f{1}), continue; end
+    vals = {runs.(f{1})};
+    for k = 1:numel(vals)
+        if isempty(vals{k}), continue; end
+        try
+            tk = datetime(vals{k}, 'InputFormat', 'yyyy-MM-dd HH:mm:ss');
+            if isnat(t) || tk > t
+                t = tk;
+            end
+        catch
+            % Unreadable stamp; other runs may still carry a usable one.
+        end
+    end
+end
+if isnat(t)
+    h = Inf;
+else
+    h = hours(datetime('now') - t);
 end
 end
 
@@ -236,20 +319,51 @@ for k = 1:numel(names)
 end
 end
 
-function opt = confirmAssignment(opt, cfg, autoAssigned)
+function opt = confirmAssignment(opt, cfg, autoAssigned, pick)
+if nargin < 4
+    pick = struct('kind', 'manual', 'resumeHours', NaN, 'stale', []);
+end
 while true
     domain = char(domainName(opt.domain));
     order = defaultTaskOrder(opt.participant);
     if ~isempty(opt.taskOrder), order = opt.taskOrder; end
     fprintf('\n=== Proposed participant assignment ===\n');
-    fprintf('Participant: %d%s\n', opt.participant, ...
-        utils.ternary(autoAssigned, ' (next unused ID)', ''));
+
+    % A resume must never be presented as a fresh participant: continuing
+    % appends runs to someone who has already done part of the battery.
+    if autoAssigned && strcmp(pick.kind, 'resume')
+        fprintf(2, ['*** THIS IS A RESUME, NOT A NEW PARTICIPANT. ***\n' ...
+                    '    Participant %d has unfinished runs from %s ago.\n' ...
+                    '    Continuing ADDS to their existing data. If the person\n' ...
+                    '    in front of you is new, press e and type the next\n' ...
+                    '    unused number instead.\n'], ...
+            opt.participant, humanHours(pick.resumeHours));
+        label = ' (RESUMING an unfinished participant)';
+    elseif autoAssigned
+        label = ' (next unused ID)';
+    else
+        label = '';
+    end
+    fprintf('Participant: %d%s\n', opt.participant, label);
     fprintf('Session:     %d\n', opt.session);
     fprintf('Domain:      %s (%s participant ID)\n', domain, ...
         utils.ternary(mod(opt.participant, 2) == 1, 'odd', 'even'));
     fprintf('Task order:  slot %d: %s\n', order, taskOrderLabel(order));
     fprintf('Run kind:    %s\n', cfg.runKind);
     fprintf('Data root:   %s\n', cfg.paths.data);
+
+    % Skipped-over abandoned participants are shown, not swallowed: they are the
+    % only trace that someone did not finish, and one of them may be back.
+    if ~isempty(pick.stale)
+        fprintf(2, ['\nNOTE: %d %s unfinished for more than %g h, and NOT ' ...
+                    'proposed here: %s\n' ...
+                    '    Expected if they withdrew. If one of them has come ' ...
+                    'back to finish,\n    press e and type their number.\n'], ...
+            numel(pick.stale), ...
+            utils.ternary(numel(pick.stale) == 1, 'participant is', 'participants are'), ...
+            resumeWindow(cfg), strjoin(compose('%d', pick.stale), ', '));
+    end
+
     answ = lower(strtrim(input('Press Enter to continue, e to edit, q to abort: ', 's')));
     if isempty(answ)
         opt.taskOrder = order;
