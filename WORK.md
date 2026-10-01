@@ -55,8 +55,12 @@ finds a browser on disk and launches it with `--inprivate` / `--incognito` /
 reason is contamination: a shared browser profile keeps Qualtrics cookies
 between participants, so a normal window can resume the *previous* participant's
 partial response, or be refused if "prevent multiple responses" is on. Knobs:
-`cfg.survey.privateWindow` (true) and `cfg.survey.browserExe` ('' = search;
-Windows order is Chrome — what the rig actually has — then Firefox, then Edge).
+`cfg.survey.privateWindow` (true) and `cfg.survey.browserExe`, which now comes
+from the rig profile: `lab` pins `C:\Program Files\Google\Chrome\Application\chrome.exe`
+(confirmed launching an Incognito window on the rig, 2026-10-01), `dev` leaves it
+empty so the search runs. Search order on Windows is Chrome, Edge, Firefox. A
+pinned path that stops existing warns and falls back to the search, so a
+reimaged machine still gets a browser rather than no survey.
 
 The tradeoff accepted: an incognito window that gets *closed* is unrecoverable,
 where a normal profile might have resumed by cookie. Closing is a loud failure

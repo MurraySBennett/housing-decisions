@@ -15,6 +15,12 @@ case 'lab'
     % Windows DWM routinely fails PTB's sync test with a hard OpenWindow
     % error; set false only if this machine is confirmed to pass it.
     p.skipSyncTests     = true;
+    % Confirmed present and launching an Incognito window on this machine
+    % (2026-10-01), so the consent survey does not have to go looking. Pinning
+    % it is not just a shortcut: it stops a reimaged machine from silently
+    % opening the survey in some other browser's shared profile. If the path
+    % stops existing, utils.launchSurvey says so and falls back to searching.
+    p.surveyBrowserExe  = 'C:\Program Files\Google\Chrome\Application\chrome.exe';
 
 case 'dev'
     % Generic 13-14 inch laptop; only needs to be roughly right.
@@ -24,6 +30,9 @@ case 'dev'
     p.aoiEnforcement    = 'informational';
     p.windowedDefault   = true;
     p.skipSyncTests     = true;   % same rationale as 'lab'
+    % Empty, not the lab's path: dev may be macOS or Linux, where that path is
+    % meaningless. Let utils.launchSurvey search.
+    p.surveyBrowserExe  = '';
 
 otherwise
     error('hw:rigProfiles:unknown', ...

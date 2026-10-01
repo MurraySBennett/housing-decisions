@@ -268,11 +268,13 @@ cfg.survey.passParams = false;
 % rather than handed to the OS default handler. Data hygiene, not courtesy: a
 % shared browser profile keeps Qualtrics cookies between participants, so the
 % next session can resume the PREVIOUS participant's partial response, or be
-% refused if "prevent multiple responses" is on. The Windows search order is
-% Chrome (what the rig has), then Firefox, then Edge. browserExe pins a specific
-% executable when the search order picks the wrong one; empty means search.
+% refused if "prevent multiple responses" is on. browserExe comes from the rig
+% profile -- the lab rig pins its confirmed Chrome, dev leaves it empty so
+% launchSurvey searches (Chrome, then Edge, then Firefox). A pinned path that
+% has stopped existing warns and falls back to the search, so a reimaged
+% machine still gets a browser.
 cfg.survey.privateWindow = true;
-cfg.survey.browserExe    = '';
+cfg.survey.browserExe    = rp.surveyBrowserExe;
 
 % --- Testing mode -----------------------------------------------------
 cfg.testing.enabled          = opt.testing;
