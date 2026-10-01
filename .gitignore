@@ -49,10 +49,29 @@ desktop.ini
 !experiment/stimuli/stimgen/configs/
 !experiment/stimuli/stimgen/configs/*.json
 
-# Literature: other peoples
-
-# Literature: other people's papers. The reading list survives; the PDFs do not.
-docs/articles/**/*.pdf
+# Researcher-facing material, deliberately absent from the RA's clone
+# (2026-10-01). The RAs run sessions from physical run-sheets; grant PDFs, a
+# .pptx, meeting notes, three other people's prior studies and the HTML setup
+# deck were 66 of 180 tracked files and none of it is needed to run a session.
+# Several of them (docs/grant/, reference/*/Data/) should not be in an
+# RA-visible clone at all, separate from the clutter.
+#
+# These files still exist on Murray's disk and in git history up to 99e6cce --
+# `git show 99e6cce:docs/grant/...` retrieves any of them. They are untracked,
+# not deleted. Re-add with `git add -f <path>` when the study goes to
+# publication or open access, which is the plan.
+#
+# NOT removed: experiment/README.md stays, because scripts/verify_static.sh
+# asserts eight patterns inside it and it is the live design documentation.
+# Leading slashes matter here: a bare `README.md` would also match
+# experiment/README.md, analysis/README.md and experiment/stimuli/README.md,
+# all three of which are kept.
+/docs/
+/reference/
+/README.md
+/AGENTS.md
+/WORK.md
+/STIMULI.md
 
 # Raw data and media live here but are not tracked. CDMLab_HouseAuctionEyeTracking.mp4
 # alone is 33MB, and GitHub rejects pushes over 100MB per file. Data belongs in

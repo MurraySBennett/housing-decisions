@@ -1,1 +1,0 @@
-1. test that the new item placement/display updates are ok

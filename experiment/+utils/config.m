@@ -259,7 +259,7 @@ cfg.elicit.ratingMode = 'drag';   % 'drag' | 'sequential'
 % survey asks the participant to type their participant number instead, and
 % Qualtrics drops query parameters silently unless matching Embedded Data
 % fields are declared and left blank in Survey Flow. Turning this on without
-% declaring those six fields loses the join without any error. See WORK.md.
+% declaring those six fields loses the join without any error.
 cfg.survey.enabled    = true;
 cfg.survey.baseUrl    = 'https://osu.az1.qualtrics.com/jfe/form/SV_brz4ygB4pfTnzcq';
 cfg.survey.passParams = false;
