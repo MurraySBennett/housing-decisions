@@ -33,6 +33,7 @@ dataMat.trialsPerCell = cfg.rehearsal.trialsPerCell;
 window = [];
 et = struct('enabled', false, 'obj', [], 'showGaze', false, 'analyzable', false);
 
+utils.progressLog(run, 'TASK ENTER');
 try
     % =============================================== display setup
     % Clear PsychImaging's persistent config state left dirty by a prior crashed run.
@@ -291,6 +292,7 @@ try
             end
         end
 
+        utils.progressLog(run, 'TRIALS FINISHED domain=%s; BEGIN result assembly', domain);
         % ---- store ------------------------------------------------
         dataMat.(domain).anchor          = anchor;
         dataMat.(domain).anchorRT        = anchorRT;
@@ -323,33 +325,48 @@ try
         dataMat.(domain).bidCardRect      = bidL.cardRect;
 
         % Gaze goes to its own file: far too large for the behavioural .mat.
+        utils.progressLog(run, 'TRIALS FINISHED domain=%s; entering saving screen', domain);
         savingFact = utils.didYouKnow(run.seed);
         utils.savingScreen(window, cfg, 0.10, 'Collecting eye-tracking samples', savingFact);
 
+        utils.progressLog(run, 'BEGIN final clock sync domain=%s', domain);
         clockSync.end = utils.clockSync(et);
-        gaze = utils.gazeBuffer('flush', et, gazeStore);
+        utils.progressLog(run, 'END final clock sync');
+        utils.progressLog(run, 'BEGIN gaze flush bufferedSamples=%d chunks=%d', gazeStore.n, numel(gazeStore.samples));
+        gaze = utils.gazeBuffer('flush', et, gazeStore, run);
+        utils.progressLog(run, 'END gaze flush samples=%d', numel(gaze));
         if ~isempty(gaze)
             utils.savingScreen(window, cfg, 0.25, 'Writing eye-tracking data', savingFact);
             gazeFile = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
             eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
+            utils.progressLog(run, 'BEGIN gaze MAT save: %s', gazeFile);
             save(gazeFile, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
+            utils.progressLog(run, 'END gaze MAT save');
             dataMat.(domain).gazeFile = gazeFile;
             fprintf('Saved %d gaze samples to %s\n', numel(gaze), gazeFile);
         end
         dataMat.(domain).clockSync = clockSync;
 
         utils.savingScreen(window, cfg, 0.55, 'Releasing images', savingFact);
+        utils.progressLog(run, 'BEGIN releasing textures');
         Screen('Close', struct2texlist(tex));
+        utils.progressLog(run, 'END releasing textures');
     end
 
     % =============================================== payout
     tl = utils.timeline('section', tl, 'payout_save');
+    utils.progressLog(run, 'BEGIN payout computation');
     payout = utils.incentives('compute', sess, dataMat, cfg.incentives);
+    utils.progressLog(run, 'END payout computation');
     dataMat.payout = payout;
     if cfg.incentives.enabled
+        utils.progressLog(run, 'BEGIN payout display; waiting for participant');
         showPayout(window, cfg, payout);
+        utils.progressLog(run, 'END payout display');
     else
+        utils.progressLog(run, 'BEGIN end-of-task message');
         showMessage(window, cfg, 'Thank you. That is the end of this task.', 2.5);
+        utils.progressLog(run, 'END end-of-task message');
     end
 
     % =============================================== save
@@ -357,14 +374,21 @@ try
     utils.savingScreen(window, cfg, 0.75, 'Writing trial data', savingFact);
     tl = utils.timeline('stop', tl);
     dataMat.timing = utils.timeline('table', tl);
-    utils.saveRun(sess, run, dataMat, buildTrialTable(dataMat));
+    utils.progressLog(run, 'BEGIN trial table construction');
+    trialTable = buildTrialTable(dataMat);
+    utils.progressLog(run, 'END trial table construction rows=%d', height(trialTable));
+    utils.saveRun(sess, run, dataMat, trialTable);
+    utils.progressLog(run, 'END behavioral saves');
     utils.savingScreen(window, cfg, 1.00, 'Done - thank you', savingFact);
     WaitSecs(1.2);
 
+    utils.progressLog(run, 'BEGIN display cleanup');
     ListenChar(0); ShowCursor; Priority(0); sca; clear PsychImaging;
+    utils.progressLog(run, 'END display cleanup; task returning');
     if standalone, utils.endRun(sess, run, 'complete'); end
 
 catch ME
+    utils.progressLog(run, 'TASK ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
     ListenChar(0); ShowCursor; Priority(0);
     % sca resets Screen state but not PsychImaging's persistent config; both must run or the next OpenWindow in this MATLAB session fails.
     sca;

@@ -468,3 +468,27 @@ before you trust them.
   for houses.
 - `cfg.contdc.nPairs = 20` per level is the current full-run setting for
   both domains; re-time the task at the rig before participant collection.
+
+## Diagnosing a freeze near task completion
+
+Task progress logging is automatic, including when `TRACE = false`. Each run
+prints `Local progress log: ...` before starting. Logs are append-only text
+files under `fullfile(tempdir, 'housing-wages-logs')` on the computer running
+MATLAB, independent of the experiment's shared data drive. Each entry closes
+its file immediately so it can survive force-closing MATLAB (not a guarantee
+against power loss). Copy the logs before temporary-folder cleanup.
+
+For a rehearsal, use `RUN_KIND = 'practice'` in `run_battery.m`. Keep the usual
+trial counts if reproducing a freeze that might depend on accumulated gaze data.
+After a freeze, reopen MATLAB on the same computer/account. On Windows:
+
+```matlab
+winopen(fullfile(tempdir, 'housing-wages-logs'))
+```
+
+Send the newest `.log` files. They identify the run, source location, code
+version, save destinations, and timestamps around gaze collection, tracker
+stop, gaze assembly, MAT/CSV writes, and manifest updates. An unmatched `BEGIN`
+narrows down the interrupted operation; it does not prove that operation caused
+the freeze. Caught errors are logged before cleanup. Logging is best-effort,
+outside trial timing, and does not implement task or trial resumption.

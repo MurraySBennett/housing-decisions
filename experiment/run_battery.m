@@ -98,10 +98,13 @@ for k = 1:numel(thisSession)
                 error('run_battery:unknownTask', 'Unknown task "%s".', row.task);
         end
         utils.endRun(sess, run, 'complete');
+        utils.progressLog(run, 'BEGIN timing CSV save: %s', timingFile);
         timingRows = appendTiming(timingRows, sess, run, dataMat, ...
             GetSecs - tRunStart, timingFile);
+        utils.progressLog(run, 'END timing CSV save; RUN COMPLETE');
 
     catch ME
+        utils.progressLog(run, 'BATTERY ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
         utils.endRun(sess, run, 'crashed');
         sca; clear PsychImaging; ListenChar(0); ShowCursor;
 

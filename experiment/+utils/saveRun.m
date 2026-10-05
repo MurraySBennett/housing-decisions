@@ -26,7 +26,10 @@ end
 try
     writeRunFiles(run.fileStem, sess, run, dataMat, trialTable);
 catch primaryME
+    utils.progressLog(run, 'PRIMARY SAVE ERROR\n%s', getReport(primaryME, 'extended', 'hyperlinks', 'off'));
+    utils.progressLog(run, 'BEGIN fallback preparation');
     fallbackFileStem = fallbackStem(sess, run);
+    utils.progressLog(run, 'END fallback preparation: %s', fallbackFileStem);
     dataMat.primarySaveError = struct( ...
         'identifier', primaryME.identifier, ...
         'message', primaryME.message, ...
@@ -43,10 +46,13 @@ end
 end
 
 function writeRunFiles(fileStem, sess, run, dataMat, trialTable)
+utils.progressLog(run, 'BEGIN behavioral MAT save: %s.mat', fileStem);
 save([fileStem '.mat'], 'dataMat', '-v7.3');
+utils.progressLog(run, 'END behavioral MAT save');
 
 % --- Long-format CSV --------------------------------------------------
 if nargin >= 5 && ~isempty(trialTable)
+    utils.progressLog(run, 'BEGIN CSV preparation');
     n = height(trialTable);
     keys = table( ...
         repmat(sess.participant, n, 1), ...
@@ -62,7 +68,9 @@ if nargin >= 5 && ~isempty(trialTable)
         trialTable = removevars(trialTable, dupes);
     end
 
+    utils.progressLog(run, 'BEGIN behavioral CSV save rows=%d: %s.csv', n, fileStem);
     writetable([keys trialTable], [fileStem '.csv']);
+    utils.progressLog(run, 'END behavioral CSV save');
 end
 end
 

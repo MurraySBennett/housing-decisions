@@ -54,6 +54,7 @@ dataMat.isiRangeSec = ISI_RANGE_SEC;
 window = [];
 et = struct('enabled', false, 'obj', [], 'showGaze', false, 'analyzable', false);
 
+utils.progressLog(run, 'TASK ENTER');
 try
     %% ---- Display ------------------------------------------------------
     clear PsychImaging;
@@ -138,7 +139,9 @@ try
                             'That section is finished.\n\nClick for the next section.');
                     end
                 end
+                utils.progressLog(run, 'BEGIN releasing preference textures');
                 releaseTextures(tex);
+                utils.progressLog(run, 'END releasing preference textures');
 
             case 'jobs'
                 prefCfg = cfg;
@@ -165,14 +168,21 @@ try
                 error('hw:pref:badDomain', 'Unknown domain "%s".', domain);
         end
 
+        utils.progressLog(run, 'TRIALS FINISHED domain=%s; building event table', domain);
         tl = utils.timeline('section', tl, sprintf('%s:saving', domain));
         dataMat.(domain).events = utils.eventLog('table', log);
+        utils.progressLog(run, 'BEGIN final clock sync domain=%s', domain);
         clockSync.end = utils.clockSync(et);
-        gaze = utils.gazeBuffer('flush', et, gazeStore);
+        utils.progressLog(run, 'END final clock sync');
+        utils.progressLog(run, 'BEGIN gaze flush bufferedSamples=%d chunks=%d', gazeStore.n, numel(gazeStore.samples));
+        gaze = utils.gazeBuffer('flush', et, gazeStore, run);
+        utils.progressLog(run, 'END gaze flush samples=%d', numel(gaze));
         if ~isempty(gaze)
             gf = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
             eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
+            utils.progressLog(run, 'BEGIN gaze MAT save: %s', gf);
             save(gf, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
+            utils.progressLog(run, 'END gaze MAT save');
             dataMat.(domain).gazeFile = gf;
             fprintf('Saved %d gaze samples.\n', numel(gaze));
         end
@@ -183,14 +193,23 @@ try
         end
     end
 
+    utils.progressLog(run, 'BEGIN end-of-task message');
     showMessage(window, cfg, 'This task is finished.\n\nThank you.');
+    utils.progressLog(run, 'END end-of-task message');
     tl = utils.timeline('stop', tl);
     dataMat.timing = utils.timeline('table', tl);
-    utils.saveRun(sess, run, dataMat, buildTrialTable(dataMat));
+    utils.progressLog(run, 'BEGIN trial table construction');
+    trialTable = buildTrialTable(dataMat);
+    utils.progressLog(run, 'END trial table construction rows=%d', height(trialTable));
+    utils.saveRun(sess, run, dataMat, trialTable);
+    utils.progressLog(run, 'END behavioral saves');
+    utils.progressLog(run, 'BEGIN display cleanup');
     Screen('CloseAll');
+    utils.progressLog(run, 'END display cleanup; task returning');
     if standalone, utils.endRun(sess, run, 'complete'); end
 
 catch ME
+    utils.progressLog(run, 'TASK ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
     try
         tl = utils.timeline('stop', tl);
         dataMat.timing = utils.timeline('table', tl);

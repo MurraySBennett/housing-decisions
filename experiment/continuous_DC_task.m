@@ -32,6 +32,7 @@ dataMat.theme   = cfg.style.themeName;
 dataMat.trialsPerCell = cfg.rehearsal.trialsPerCell;
 window = [];
 
+utils.progressLog(run, 'TASK ENTER');
 try
     % =============================================== display
     % Defensive: a prior crashed run can leave PsychImaging config state dirty.
@@ -272,7 +273,9 @@ try
             end
         end
 
+        utils.progressLog(run, 'TRIALS FINISHED domain=%s; BEGIN releasing textures', domain);
         Screen('Close', struct2texlist(tex));
+        utils.progressLog(run, 'END releasing textures; BEGIN result assembly');
 
         % ---- store -----------------------------------------------------
         dataMat.(domain).anchor        = anchor;
@@ -295,16 +298,23 @@ try
 
         % Blocking disk writes from here; see the matching note in auction_task.m.
         tl = utils.timeline('section', tl, sprintf('%s:saving', domain));
+        utils.progressLog(run, 'TRIALS FINISHED domain=%s; entering saving screen', domain);
         savingFact = utils.didYouKnow(run.seed);
         utils.savingScreen(window, cfg, 0.10, 'Collecting eye-tracking samples', savingFact);
 
+        utils.progressLog(run, 'BEGIN final clock sync domain=%s', domain);
         clockSync.end = utils.clockSync(et);
-        gaze = utils.gazeBuffer('flush', et, gazeStore);
+        utils.progressLog(run, 'END final clock sync');
+        utils.progressLog(run, 'BEGIN gaze flush bufferedSamples=%d chunks=%d', gazeStore.n, numel(gazeStore.samples));
+        gaze = utils.gazeBuffer('flush', et, gazeStore, run);
+        utils.progressLog(run, 'END gaze flush samples=%d', numel(gaze));
         if ~isempty(gaze)
             utils.savingScreen(window, cfg, 0.25, 'Writing eye-tracking data', savingFact);
             gf = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
             eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
+            utils.progressLog(run, 'BEGIN gaze MAT save: %s', gf);
             save(gf, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
+            utils.progressLog(run, 'END gaze MAT save');
             dataMat.(domain).gazeFile = gf;
             fprintf('Saved %d gaze samples.\n', numel(gaze));
         end
@@ -312,20 +322,29 @@ try
         utils.savingScreen(window, cfg, 0.55, 'Releasing images', savingFact);
     end
 
+    utils.progressLog(run, 'BEGIN end-of-task message');
     showMessage(window, cfg, 'Thank you. That is the end of this task.', 2.5);
+    utils.progressLog(run, 'END end-of-task message');
 
     savingFact = utils.didYouKnow(run.seed);
     utils.savingScreen(window, cfg, 0.75, 'Writing trial data', savingFact);
     tl = utils.timeline('stop', tl);
     dataMat.timing = utils.timeline('table', tl);
-    utils.saveRun(sess, run, dataMat, buildTrialTable(dataMat));
+    utils.progressLog(run, 'BEGIN trial table construction');
+    trialTable = buildTrialTable(dataMat);
+    utils.progressLog(run, 'END trial table construction rows=%d', height(trialTable));
+    utils.saveRun(sess, run, dataMat, trialTable);
+    utils.progressLog(run, 'END behavioral saves');
     utils.savingScreen(window, cfg, 1.00, 'Done - thank you', savingFact);
     WaitSecs(1.2);
 
+    utils.progressLog(run, 'BEGIN display cleanup');
     ListenChar(0); ShowCursor; Priority(0); sca; clear PsychImaging;
+    utils.progressLog(run, 'END display cleanup; task returning');
     if standalone, utils.endRun(sess, run, 'complete'); end
 
 catch ME
+    utils.progressLog(run, 'TASK ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
     ListenChar(0); ShowCursor; Priority(0);
     % sca does not reset PsychImaging's persistent config state; both are needed or the next OpenWindow in this MATLAB session fails or returns a bad handle.
     sca;

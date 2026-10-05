@@ -47,7 +47,12 @@ entry = struct( ...
     'seed',           run.seed, ...
     'codeVersion',    sess.codeVersion);
 
+logFile = utils.progressLog(run, 'RUN START task=%s domains=%s version=%s MATLAB=%s code=%s data=%s', ...
+    run.task, run.domainStr, sess.codeVersion, version, mfilename('fullpath'), run.fileStem);
+fprintf('Local progress log: %s\n', logFile);
+utils.progressLog(run, 'BEGIN manifest append: %s', sess.manifestFile);
 utils.appendRun(sess.manifestFile, entry);
+utils.progressLog(run, 'END manifest append');
 
 fprintf('Run started: %s (seed %d)\n', run.runId, run.seed);
 
