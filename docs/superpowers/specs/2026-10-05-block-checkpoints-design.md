@@ -7,10 +7,10 @@ for the auction, continuous choice/pricing, and preference tasks. A completed
 block survives MATLAB being forcibly closed; an interrupted block is repeated
 as a new identifiable attempt. Offline tools produce combined analysis data.
 
-The user approved the block-level recovery policy on 2026-10-05. This written
-specification is for review; no implementation or persistent goal is launched.
-The technical details below are proposed implementation choices, not additional
-user requirements. Live progress belongs exclusively in WORK.md.
+The user approved the block-level recovery policy and this written specification
+on 2026-10-05. No implementation or persistent goal is launched. The technical
+details below are approved design choices, not retrospective claims about the
+existing implementation. Live progress belongs exclusively in WORK.md.
 
 ## Evidence and limits
 
