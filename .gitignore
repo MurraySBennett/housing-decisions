@@ -89,3 +89,6 @@ analysis/output/
 # Share-only folders from the retired pre-git layout. Harmless elsewhere.
 Archive/
 screen_recordings/
+
+# Isolated development checkouts
+.worktrees/
