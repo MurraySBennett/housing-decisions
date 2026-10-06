@@ -24,6 +24,7 @@ p.addParameter('jobsArm',     'synthetic', @(x) ismember(lower(char(x)), ...
 p.addParameter('runKind',     'participant', @(x) ismember(lower(char(x)), ...
     {'participant','practice'}));
 p.addParameter('dataRoot',    '', @(x) ischar(x) || isstring(x));
+p.addParameter('localDataRoot', '', @(x) ischar(x) || isstring(x));
 p.addParameter('practiceDataRoot', '', @(x) ischar(x) || isstring(x));
 p.addParameter('assetRoot',   '', @(x) ischar(x) || isstring(x));
 p.addParameter('tobiiRoot',   '', @(x) ischar(x) || isstring(x));
@@ -35,6 +36,7 @@ cfg = utils.config('projRoot', opt.projRoot, 'rig', opt.rig, ...
                 'trialsPerCell', opt.trialsPerCell, ...
                 'runKind', opt.runKind, ...
                 'dataRoot', opt.dataRoot, ...
+                'localDataRoot', opt.localDataRoot, ...
                 'practiceDataRoot', opt.practiceDataRoot, ...
                 'assetRoot', opt.assetRoot, ...
                 'tobiiRoot', opt.tobiiRoot);
@@ -50,8 +52,12 @@ if opt.testing
     if isempty(opt.domain),      opt.domain      = 1;    end
 else
     if isempty(opt.participant)
-        [opt.participant, pick] = nextParticipant(cfg);
-        autoAssigned = true;
+        % Offline local storage cannot allocate a globally unused study ID.
+        opt.participant = utils.promptNumeric('Participant ID from the study register: ', 1, 99999);
+        assert(opt.participant == fix(opt.participant), 'hw:startSession:participant', ...
+            'Participant ID must be an integer.');
+        pick = struct('kind', 'manual', 'resumeHours', NaN, 'stale', []);
+        autoAssigned = false;
     else
         autoAssigned = false;
         pick = struct('kind', 'manual', 'resumeHours', NaN, 'stale', []);
@@ -86,14 +92,16 @@ sess.assignment   = struct( ...
 sess.manifestFile = fullfile(cfg.paths.sessions, ...
     sprintf('sub-%05d_manifest.mat', sess.participant));
 
-% Testing always starts a fresh manifest; resume semantics are for real participants only.
-if opt.testing && exist(sess.manifestFile, 'file')
-    delete(sess.manifestFile);
-end
+% Testing uses the same safe recovery rules; use a separate localDataRoot for a fresh fixture.
 
 if exist(sess.manifestFile, 'file')
     M = load(sess.manifestFile, 'manifest');
     manifest = M.manifest;
+    if isfield(manifest, 'assignment')
+        assert(isequaln(manifest.assignment, sess.assignment), 'hw:startSession:assignment', ...
+            'Saved participant assignment differs; use the original assignment to resume.');
+        sess.assignment = manifest.assignment;
+    end
     if ~isfield(manifest, 'runKind'), manifest.runKind = sess.runKind; end
     if ~isfield(manifest, 'assignment'), manifest.assignment = sess.assignment; end
     if ~isfield(manifest.runs, 'runKind')
@@ -113,11 +121,11 @@ if exist(sess.manifestFile, 'file')
                 'seed', oldRuns(r).seed, ...
                 'codeVersion', oldRuns(r).codeVersion);
         end
-        save(sess.manifestFile, 'manifest');
+        utils.checkpointIO('write', sess.manifestFile, struct('manifest', manifest), true);
     end
     fprintf('\n--- Resuming participant %d ---\n', sess.participant);
     if ~isempty(manifest.runs)
-        fprintf('Tasks already completed:\n');
+        fprintf('Recorded task statuses (block receipts determine completion):\n');
         for k = 1:numel(manifest.runs)
             fprintf('   [%s] %s (session %d, %s) -- %s\n', ...
                 manifest.runs(k).status, manifest.runs(k).task, ...
@@ -138,7 +146,7 @@ manifest = struct();
     manifest.assignment   = sess.assignment;
     manifest.createdAt   = char(datetime('now','Format','yyyy-MM-dd HH:mm:ss'));
     manifest.runs        = emptyRuns();
-    save(sess.manifestFile, 'manifest');
+    utils.checkpointIO('write', sess.manifestFile, struct('manifest', manifest), true);
     fprintf('\n--- New participant %d, manifest created ---\n', sess.participant);
 end
 

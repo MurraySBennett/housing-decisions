@@ -79,7 +79,12 @@ cfg.stimFiles.jobs   = fullfile(cfg.paths.prepared, ...
     sprintf('job_stimuli_%s.csv', cfg.stimuli.jobsArm));
 
 % Data sandbox. Never the real Data/ tree, never the share.
-demoData = fullfile(here, 'Data_demo');
+demoData = fullfile(here, 'Data_demo', utils.checkpointIO('id'));
+cfg.paths.checkpoints = fullfile(demoData, 'blocks');
+cfg.paths.runs = fullfile(demoData, 'runs');
+cfg.paths.localData = demoData;
+cfg.paths.shareData = '';
+cfg.paths.fallbackData = fullfile(demoData, 'emergency');
 cfg.paths.data             = demoData;
 cfg.paths.sessions         = fullfile(demoData, 'sessions');
 cfg.paths.taskData.auction = fullfile(demoData, 'auction');
@@ -102,8 +107,9 @@ if ~strcmp(strayManifest, sess.manifestFile) && isfile(strayManifest)
 end
 if isfile(sess.manifestFile), delete(sess.manifestFile); end
 manifest = struct('participant', sess.participant, ...
+    'runKind', sess.runKind, 'assignment', sess.assignment, ...
     'createdAt', char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')), ...
-    'runs', struct('task',{},'sessionNum',{},'runId',{},'domainOrderStr',{}, ...
+    'runs', struct('task',{},'sessionNum',{},'runId',{},'runKind',{},'domainOrderStr',{}, ...
                    'startedAt',{},'finishedAt',{},'status',{},'dataFile',{}, ...
                    'seed',{},'codeVersion',{}));
 save(sess.manifestFile, 'manifest');

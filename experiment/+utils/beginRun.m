@@ -11,27 +11,17 @@ taskName = lower(char(taskName));
 assert(isfield(sess.cfg.paths.taskData, taskName), ...
     'hw:beginRun:unknownTask', 'No data path configured for task "%s".', taskName);
 
-run.task        = taskName;
-run.domains     = domains;
-run.domainStr   = strjoin(domains, '+');
-run.participant = sess.participant;
-run.sessionNum  = sess.sessionNum;
-run.startedAt   = char(datetime('now','Format','yyyy-MM-dd HH:mm:ss'));
-run.stamp       = char(datetime('now','Format','yyyyMMdd_HHmmss'));
+old = load(sess.manifestFile, 'manifest');
+for k = 1:numel(old.manifest.runs)
+    previous = old.manifest.runs(k);
+    if strcmp(previous.task, taskName) && previous.sessionNum == sess.sessionNum
+        assert(isfile(fullfile(sess.cfg.paths.runs, previous.runId, 'run.mat')), ...
+            'hw:beginRun:legacy', 'This session has legacy task data without block receipts. Do not restart it as a new-format run.');
+    end
+end
 
-% Run id carries the domain set so same-task runs over different domains don't collide.
-run.runId = sprintf('sub-%05d_ses-%02d_task-%s_dom-%s_%s', ...
-    sess.participant, sess.sessionNum, taskName, run.domainStr, run.stamp);
-
-run.dataDir  = sess.cfg.paths.taskData.(taskName);
-run.fileStem = fullfile(run.dataDir, run.runId);
-run.gazeFile = fullfile(sess.cfg.paths.gaze, [run.runId '_gaze.mat']);
-
-% --- Deterministic, reproducible seeding ------------------------------
-% Seed from participant+session+task+domains: replayable, no two runs share a stream.
-run.seed = utils.taskSeed(sess.participant, sess.sessionNum, ...
-    [taskName '_' run.domainStr]);
-run.rngState = rng(run.seed, 'twister');
+run = utils.runCheckpoint('open', sess, taskName, domains);
+rng(run.seed, 'twister');
 
 % --- Append a provisional entry to the manifest -----------------------
 entry = struct( ...
@@ -51,7 +41,10 @@ logFile = utils.progressLog(run, 'RUN START task=%s domains=%s version=%s MATLAB
     run.task, run.domainStr, sess.codeVersion, version, mfilename('fullpath'), run.fileStem);
 fprintf('Local progress log: %s\n', logFile);
 utils.progressLog(run, 'BEGIN manifest append: %s', sess.manifestFile);
-utils.appendRun(sess.manifestFile, entry);
+existing = load(sess.manifestFile, 'manifest');
+if isempty(existing.manifest.runs) || ~any(strcmp({existing.manifest.runs.runId}, run.runId))
+    utils.appendRun(sess.manifestFile, entry);
+end
 utils.progressLog(run, 'END manifest append');
 
 fprintf('Run started: %s (seed %d)\n', run.runId, run.seed);

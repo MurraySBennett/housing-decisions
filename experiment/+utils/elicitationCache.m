@@ -27,7 +27,7 @@ switch lower(action)
 
     case 'save'
         data.savedAt = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss'));
-        save(f, 'data');
+        utils.checkpointIO('write', f, struct('data', data), true);
         out = [];
 
     otherwise

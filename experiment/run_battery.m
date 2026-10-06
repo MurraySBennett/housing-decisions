@@ -85,6 +85,11 @@ for k = 1:numel(thisSession)
     row = thisSession{k};
 
     run = utils.beginRun(sess, row.task, row.domains);
+    if utils.runCheckpoint('complete', sess, run)
+        fprintf('Skipping verified completed task: %s\n', run.runId);
+        utils.endRun(sess, run, 'complete');
+        continue;
+    end
     tRunStart = GetSecs;
     try
         switch row.task
@@ -108,7 +113,7 @@ for k = 1:numel(thisSession)
         utils.endRun(sess, run, 'crashed');
         sca; clear PsychImaging; ListenChar(0); ShowCursor;
 
-        crashFile = fullfile(sess.cfg.paths.crashed, [run.runId '_crash.mat']);
+        crashFile = fullfile(sess.cfg.paths.crashed, [run.runId '_battery_' utils.checkpointIO('id') '_crash.mat']);
         save(crashFile, 'ME', 'sess', 'run');
         fprintf(2, '\n*** %s [%s] crashed. Details saved to:\n    %s\n', ...
             row.task, strjoin(row.domains, '+'), crashFile);
@@ -162,11 +167,18 @@ new{end+1} = table(string(run.task), string(run.domainStr), "total", totalSec, .
     'VariableNames', {'task','domains','section','seconds'});
 rows = [rows, new];
 
-T = vertcat(rows{:});
+T = vertcat(new{:});
 T.participant = repmat(sess.participant, height(T), 1);
 T.session = repmat(sess.sessionNum, height(T), 1);
 try
-    writetable(T, timingFile);
+    if isfile(timingFile)
+        previous = readtable(timingFile, 'TextType', 'string');
+        T = [previous; T];
+    end
+    tmp = [timingFile '.' utils.checkpointIO('id') '.partial.csv'];
+    writetable(T, tmp);
+    [ok,msg] = movefile(tmp, timingFile, 'f');
+    assert(ok, 'hw:timing:rename', '%s', msg);
 catch werr
     warning('run_battery:timingWrite', ...
         'Could not write timing CSV: %s', werr.message);

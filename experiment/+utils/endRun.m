@@ -22,7 +22,11 @@ manifest.runs(idx).finishedAt = char(datetime('now','Format','yyyy-MM-dd HH:mm:s
 manifest.runs(idx).status     = status;
 
 utils.progressLog(run, 'BEGIN manifest save status=%s: %s', status, sess.manifestFile);
-save(sess.manifestFile, 'manifest');
+if strcmp(status, 'complete')
+    assert(utils.runCheckpoint('complete', sess, run), 'hw:endRun:incomplete', ...
+        'Cannot mark a run complete without all verified block receipts.');
+end
+utils.checkpointIO('write', sess.manifestFile, struct('manifest', manifest), true);
 utils.progressLog(run, 'END manifest save status=%s', status);
 fprintf('Run %s -> %s\n', run.runId, status);
 
