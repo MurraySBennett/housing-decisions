@@ -38,9 +38,38 @@ function info = launchSurvey(sess)
 %   why the prompt names consent explicitly rather than asking whether the
 %   survey is "done", and why the answer is written to disk.
 
+%   A RESUMED session does not consent again. run_battery calls this before the
+%   loop that skips already-completed tasks, so after a crash an RA re-running
+%   the battery reaches this line a second time. Re-opening the survey there
+%   would start a SECOND Qualtrics response in a fresh private window, stranding
+%   the first, and would overwrite the record of when consent was actually
+%   obtained. Consent already on file is consent: it is reported and reused.
+
+prior = utils.consentRecord('read', sess);
+if ~isempty(prior) && isfield(prior, 'consented') && prior.consented
+    info = prior;
+    info.resumed = true;
+    announcePriorConsent(info, sess);
+    return
+end
+
 info = runSurvey(sess);
+info.resumed = false;
 recordSurvey(info, sess);
 
+end
+
+
+function announcePriorConsent(info, sess)
+%ANNOUNCEPRIORCONSENT  Say that consent was already taken, and when.
+when = '(time not recorded)';
+if isfield(info, 'startedAt') && ~isempty(info.startedAt), when = info.startedAt; end
+fprintf('\n=== Consent already on file ===\n');
+fprintf('Participant %d consented at %s. The survey is NOT being reopened.\n', ...
+    sess.participant, when);
+fprintf(['If their browser tab was lost in the crash, the remaining survey\n' ...
+         'questions are stranded on that response -- note it on the run sheet\n' ...
+         'rather than opening a new link, which would start a separate one.\n\n']);
 end
 
 
@@ -324,16 +353,7 @@ if ~info.enabled
     return
 end
 info.finishedAt = char(datetime('now','Format','yyyy-MM-dd HH:mm:ss'));
-f = fullfile(sess.cfg.paths.sessions, ...
-    sprintf('sub-%05d_ses-%02d_survey.mat', sess.participant, sess.sessionNum));
-try
-    save(f, 'info');
-catch werr
-    % The session is already complete and saved; a missing audit file is not
-    % worth an error here, but it should not pass quietly either.
-    warning('hw:launchSurvey:recordFailed', ...
-        'Could not write the survey record to %s: %s', f, werr.message);
-end
+utils.consentRecord('write', sess, info);
 end
 
 

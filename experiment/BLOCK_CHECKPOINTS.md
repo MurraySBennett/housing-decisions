@@ -123,18 +123,25 @@ the actual-SDK value-object case still needs the SDK class files. On a computer
 with MATLAB, set HW_TOBII_ROOT and run verify_block_checkpoints as below. A
 readable RA file also permits the storage benchmark without collecting new data.
 
-The 35 cases include actual auction trial-row conversion through block commit,
+The 38 cases include actual auction trial-row conversion through block commit,
 reload and recovery. They do not execute every interactive task screen or prove
 PTB timing, device streaming, browser intake behavior, or physical kill/restart.
 Python/Bash syntax, helper-reference and discovery checks cannot replace them.
 The e20db45 ZIP is superseded: a later source audit found auction missing-anchor
 and demo undefined-variable failures, corrected in the subsequent build.
 
-Before using restart with a participant, resolve the pre-existing intake issue:
-the battery relaunches the survey before skipping completed tasks and writes over
-the prior local survey confirmation. This behavior was not changed because
-consent changes were excluded from checkpoint scope. A clean checkpoint receipt
-alone is not evidence that intake and end-of-task processing are complete.
+The intake issue that previously blocked restart is fixed. `utils.launchSurvey`
+reads `utils.consentRecord` first and, when a consented record is already on
+file for that participant and session, reports when consent was taken and does
+not reopen the survey; the record itself is write-once, so a resumed run can no
+longer replace the evidence of when consent was obtained. A second write lands
+beside the original under `sub-XXXXX_ses-YY_survey_<id>.mat` with a warning.
+
+What this does NOT fix: if the participant's browser tab died with the crash,
+the unanswered half of their Qualtrics response is stranded on that response,
+and no code can reunite it with a new one. The resume path says so on the
+console. A clean checkpoint receipt alone is still not evidence that intake and
+end-of-task processing are complete.
 
 ## Required acceptance before release
 
@@ -157,7 +164,7 @@ The benchmark reads its input and writes uniquely named copies. It requires exac
 roundtrip equivalence of every original field/type/shape; report measured sizes
 and save/load times, not a guessed compression ratio. Optional `'shareRoot',path`
 creates another unique benchmark directory there, only when that write is wanted.
-The suite requires exactly 35 discovered cases and fails if the actual-SDK test is skipped. The rig also needs Psychtoolbox
+The suite requires exactly 38 discovered cases and fails if the actual-SDK test is skipped. The rig also needs Psychtoolbox
 for the existing `verify_matlab` checks where applicable.
 
 Then rehearse **each of auction, continuous DC and preference**, in isolated
