@@ -63,8 +63,4 @@ else
     fprintf('%d file(s) FAILED to parse. Fix these before any session.\n', nBad);
 end
 fprintf('=============================================================\n\n');
-
-if nargout == 0
-    clear nBad
-end
 end
