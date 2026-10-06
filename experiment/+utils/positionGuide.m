@@ -206,9 +206,9 @@ if isempty(samples), return; end
 sample = samples(end);
 acc = zeros(1, 3);
 
-for side = {'left_eye', 'right_eye'}
+for side = {{'LeftEye', 'left_eye'}, {'RightEye', 'right_eye'}}
     try
-        p = trackBox(sample.(side{1}));
+        p = trackBox(pickField(sample, side{1}));
     catch
         p = [NaN NaN NaN];
     end
@@ -228,29 +228,80 @@ end
 %% ======================================================================
 function p = trackBox(eye)
 %TRACKBOX  Track-box coordinates for one eye, across SDK spellings.
+%
+% The PascalCase names are the real SDK's and are tried first. This function
+% used to try only snake_case (gaze_origin.in_track_box_coordinate_system),
+% which cannot match a real sample -- every access fell into its catch, so
+% headPosition returned NaNs, ok stayed false, and the guide sat on "Looking
+% for your eyes..." for the whole timeout. That is the 2026-09-18 rig failure
+% that put cfg.et.positionGuide.enabled to false.
+%
+% Confirmed, not assumed: utils.gazeCodec's eyeArgs reads
+% e.GazeOrigin.InTrackBoxCoordinateSystem, and the actual-SDK roundtrip case
+% in scripts/tests/test_gaze_codec.m exercises that path and passed at the rig.
 
 p = [NaN NaN NaN];
 
-% Skip an eye marked invalid; unreadable validity falls through to the finite check.
 try
-    if eye.gaze_origin.validity ~= Validity.Valid
+    origin = pickField(eye, {'GazeOrigin', 'gaze_origin'});
+catch
+    return
+end
+
+% Skip an eye the tracker marks invalid. An UNREADABLE validity deliberately
+% falls through to the finite check instead of returning -- a positioning aid
+% must not refuse to show a position it actually has.
+try
+    if ~validityIsValid(pickField(origin, {'Validity', 'validity'}))
         return
     end
 catch
 end
 
 try
-    p = double(eye.gaze_origin.in_track_box_coordinate_system(:))';
+    v = pickField(origin, {'InTrackBoxCoordinateSystem', ...
+        'in_track_box_coordinate_system', ...
+        'position_in_track_box_coordinate_system'});
+    p = double(v(:))';
 catch
-    try
-        p = double(eye.gaze_origin.position_in_track_box_coordinate_system(:))';
-    catch
-        return
-    end
+    return
 end
 
 if numel(p) ~= 3 || ~all(isfinite(p))
     p = [NaN NaN NaN];
 end
+
+end
+
+
+%% ======================================================================
+function v = pickField(s, names)
+%PICKFIELD  First readable field/property from a list of candidate spellings.
+%   Errors if none can be read, so every caller's existing catch still fires.
+
+for k = 1:numel(names)
+    try
+        v = s.(names{k});
+        return
+    catch
+    end
+end
+error('hw:positionGuide:field', 'No candidate field among: %s.', strjoin(names, ', '));
+
+end
+
+
+%% ======================================================================
+function tf = validityIsValid(v)
+%VALIDITYISVALID  True/false for a validity the real SDK wraps in an object.
+%   Errors when the value cannot be read at all, which the caller treats as
+%   "unknown" and falls through, rather than as "invalid".
+
+if ~isnumeric(v) && ~islogical(v)
+    v = v.value;
+end
+assert(isscalar(v) && (isnumeric(v) || islogical(v)), ...
+    'hw:positionGuide:validity', 'Unreadable validity.');
+tf = double(v) == 1;
 
 end

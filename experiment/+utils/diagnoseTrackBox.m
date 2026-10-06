@@ -52,8 +52,8 @@ try
     fprintf('Received %d sample(s). Latest sample fields:\n', numel(samples));
     printFields(sample, 'sample');
 
-    printCandidate(sample, 'left_eye');
-    printCandidate(sample, 'right_eye');
+    printCandidate(sample, {'LeftEye', 'left_eye'});
+    printCandidate(sample, {'RightEye', 'right_eye'});
 catch ME
     fprintf('Track-box diagnostic failed: %s\n', ME.message);
 end
@@ -63,9 +63,16 @@ end
 
 %% ======================================================================
 function printFields(x, name)
+f = {};
 try
     f = fieldnames(x);
 catch
+    try
+        f = properties(x);
+    catch
+    end
+end
+if isempty(f)
     fprintf('  %s: %s\n', name, class(x));
     return
 end
@@ -78,11 +85,16 @@ for k = 1:numel(f)
     catch
         continue
     end
+    yf = {};
     try
         yf = fieldnames(y);
     catch
-        continue
+        try
+            yf = properties(y);
+        catch
+        end
     end
+    if isempty(yf), continue; end
     fprintf('  %s.%s: %s\n', name, child, strjoin(yf(:)', ', '));
 end
 
@@ -90,22 +102,61 @@ end
 
 
 %% ======================================================================
-function printCandidate(sample, side)
-try
-    eye = sample.(side);
-    origin = eye.gaze_origin;
-catch
+function printCandidate(sample, sideNames)
+%PRINTCANDIDATE  Dump one eye's gaze-origin fields across SDK spellings.
+%
+% This took only snake_case (sample.left_eye.gaze_origin), which a real sample
+% never has, so the lookup fell into its catch and the function returned having
+% printed nothing -- it reported no track-box field under precisely the
+% condition it exists to diagnose. PascalCase is the real SDK's spelling and is
+% tried first.
+
+[eyeData, sideUsed] = firstReadable(sample, sideNames);
+if isempty(sideUsed), return; end
+
+[origin, originUsed] = firstReadable(eyeData, {'GazeOrigin', 'gaze_origin'});
+if isempty(originUsed)
+    fprintf('\n%s has no gaze-origin field. Fields present:\n', sideUsed);
+    printFields(eyeData, sideUsed);
     return
 end
 
-fprintf('\nCandidate fields for %s.gaze_origin:\n', side);
-printFields(origin, [side '.gaze_origin']);
-for name = {'in_track_box_coordinate_system', ...
+label = [sideUsed '.' originUsed];
+fprintf('\nCandidate fields for %s:\n', label);
+printFields(origin, label);
+for name = {'InTrackBoxCoordinateSystem', 'in_track_box_coordinate_system', ...
             'position_in_track_box_coordinate_system', ...
-            'in_user_coordinate_system'}
+            'InUserCoordinateSystem', 'in_user_coordinate_system', ...
+            'Validity', 'validity'}
     try
         val = origin.(name{1});
-        fprintf('  %s = %s\n', name{1}, mat2str(double(val(:)')));
+        if isnumeric(val) || islogical(val)
+            fprintf('  %s = %s\n', name{1}, mat2str(double(val(:)')));
+        else
+            fprintf('  %s = <%s>', name{1}, class(val));
+            try
+                fprintf(' .value = %s', mat2str(double(val.value)));
+            catch
+            end
+            fprintf('\n');
+        end
+    catch
+    end
+end
+
+end
+
+
+%% ======================================================================
+function [v, used] = firstReadable(s, names)
+%FIRSTREADABLE  First readable field/property, with the name that worked.
+
+v = []; used = '';
+for k = 1:numel(names)
+    try
+        v = s.(names{k});
+        used = names{k};
+        return
     catch
     end
 end
