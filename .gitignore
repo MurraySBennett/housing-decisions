@@ -7,6 +7,8 @@ experiment/stimuli/*
 # clone, but stay ignored if a rig-local checkout creates them.
 experiment/Data/
 experiment/Data_practice/
+Data_local/
+experiment/Data_local/
 !experiment/Data/README.md
 
 # MATLAB

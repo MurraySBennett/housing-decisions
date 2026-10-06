@@ -19,6 +19,7 @@ p.addParameter('jobsArm',  'synthetic', @(x) ismember(lower(char(x)), ...
 p.addParameter('runKind',  'participant', @(x) ismember(lower(char(x)), ...
     {'participant','practice'}));
 p.addParameter('dataRoot', '', @(x) ischar(x) || isstring(x));
+p.addParameter('localDataRoot', '', @(x) ischar(x) || isstring(x));
 p.addParameter('practiceDataRoot', '', @(x) ischar(x) || isstring(x));
 p.addParameter('assetRoot', '', @(x) ischar(x) || isstring(x));
 p.addParameter('tobiiRoot', '', @(x) ischar(x) || isstring(x));
@@ -88,43 +89,31 @@ end
 participantData = optOrEnv(opt.dataRoot, 'HW_DATA_ROOT', defaultData);
 practiceData = optOrEnv(opt.practiceDataRoot, 'HW_PRACTICE_DATA_ROOT', defaultPracticeData);
 if strcmp(cfg.runKind, 'practice')
-    cfg.paths.data = practiceData;
+    cfg.paths.shareData = practiceData;
 else
-    cfg.paths.data = participantData;
+    cfg.paths.shareData = participantData;
 end
-cfg.paths.fallbackData = fullfile(cfg.paths.local, 'Data_fallback', cfg.runKind);
-cfg.paths.sessions         = fullfile(cfg.paths.data, 'sessions');
-cfg.paths.taskData.auction = fullfile(cfg.paths.data, 'auction');
-cfg.paths.taskData.contdc  = fullfile(cfg.paths.data, 'cont_dc');
-cfg.paths.taskData.pref    = fullfile(cfg.paths.data, 'pref');
-cfg.paths.gaze             = fullfile(cfg.paths.data, 'gaze');
-cfg.paths.crashed          = fullfile(cfg.paths.data, 'Crashes');
+% Storage never probes the share during capture. Replication is explicit/offline.
+if ~externalDefaults
+    defaultLocal = fullfile(projRoot, 'Data_local');
+elseif ispc && ~isempty(getenv('LOCALAPPDATA'))
+    defaultLocal = fullfile(getenv('LOCALAPPDATA'), 'housing-wages', 'Data');
+else
+    defaultLocal = fullfile(prefdir, 'housing-wages', 'Data');
+end
+localRoot = optOrEnv(opt.localDataRoot, 'HW_LOCAL_DATA_ROOT', defaultLocal);
+cfg.paths.data = fullfile(localRoot, cfg.runKind);
+cfg.paths.localData = cfg.paths.data;
+cfg.paths.checkpoints = fullfile(cfg.paths.data, 'blocks');
+cfg.paths.runs = fullfile(cfg.paths.data, 'runs');
+cfg.paths.fallbackData = fullfile(cfg.paths.data, 'emergency');
+cfg.paths = dataPathSet(cfg.paths, cfg.paths.data, '');
 cfg.paths = dataPathSet(cfg.paths, cfg.paths.fallbackData, 'fallback');
-
-primaryDirs = writeDirsFor(cfg.paths, '');
+primaryDirs = [writeDirsFor(cfg.paths, '') {cfg.paths.checkpoints, cfg.paths.runs}];
 fallbackDirs = writeDirsFor(cfg.paths, 'fallback');
-if ~ensureWriteDirs(primaryDirs)
-    warning('hw:config:dataRootFallback', ...
-        ['Could not create or write to the configured data root:\n    %s\n' ...
-         'Using local fallback data root:\n    %s'], ...
-        cfg.paths.data, cfg.paths.fallbackData);
-    cfg.paths.primaryData = cfg.paths.data;
-    cfg.paths.data = cfg.paths.fallbackData;
-    cfg.paths.sessions         = fullfile(cfg.paths.data, 'sessions');
-    cfg.paths.taskData.auction = fullfile(cfg.paths.data, 'auction');
-    cfg.paths.taskData.contdc  = fullfile(cfg.paths.data, 'cont_dc');
-    cfg.paths.taskData.pref    = fullfile(cfg.paths.data, 'pref');
-    cfg.paths.gaze             = fullfile(cfg.paths.data, 'gaze');
-    cfg.paths.crashed          = fullfile(cfg.paths.data, 'Crashes');
-    primaryDirs = writeDirsFor(cfg.paths, '');
-end
-
 if ~ensureWriteDirs(primaryDirs) || ~ensureWriteDirs(fallbackDirs)
     error('hw:config:dataRootMissing', ...
-        ['Could not create writable data directories under either:\n' ...
-         '    %s\n    %s\n' ...
-         'Set HW_DATA_ROOT or HW_PRACTICE_DATA_ROOT to a writable location.'], ...
-        cfg.paths.data, cfg.paths.fallbackData);
+        'Local data storage is not writable. Set HW_LOCAL_DATA_ROOT: %s', cfg.paths.data);
 end
 
 % --- Stimulus files -----------------------------------------------------
