@@ -365,8 +365,7 @@ try
             if t == numel(plan) || plan(t+1).block ~= b
                 log = utils.eventLog('add', log, 'recording_stop', GetSecs, struct('trial', 0));
                 blockTrials = trials(firstTrial:end);
-                blockData = struct(); blockData.domains = {domain}; blockData.(domain).trials = blockTrials;
-                payload = struct('trials', blockTrials, 'trialTable', buildTrialTable(blockData), ...
+                payload = struct('trials', blockTrials, 'trialTable', utils.auctionTrialTable(domain, blockTrials, anchor), ...
                     'events', utils.eventLog('table', log), 'clockSync', clockSync);
                 metadataPlan = rmfield(frozen, 'practiceRecording');
                 payload.metadata = struct('frozenPlan', metadataPlan, 'gridLayout', L, ...
@@ -377,7 +376,7 @@ try
                 utils.savingScreen(window, cfg, 0.1, 'Saving completed block', utils.didYouKnow(run.seed));
                 receipt = utils.taskBlock('finish', sess, run, domain, attempt, payload, et, gazeStore);
                 parentAttempt = receipt.attemptId; domainEvents{end+1} = payload.events;
-                clear gazeStore recording payload blockData blockTrials;
+                clear gazeStore recording payload blockTrials;
             end
         end
 
@@ -1276,42 +1275,15 @@ end
 
 %% ======================================================================
 function T = buildTrialTable(dataMat)
-%BUILDTRIALTABLE  Long-format one row per trial, for the CSV.
-rows = {};
+tables = {};
 for d = 1:numel(dataMat.domains)
     dom = dataMat.domains{d};
-    if ~isfield(dataMat, dom) || ~isfield(dataMat.(dom), 'trials'), continue; end
-    Tr = dataMat.(dom).trials;
-    for t = 1:numel(Tr)
-        rows{end+1} = { dom, Tr(t).trial, Tr(t).practice, Tr(t).competition, ...
-            Tr(t).block, Tr(t).blockPos, Tr(t).nAttrs, ...
-            Tr(t).nPresented, Tr(t).nRejected, rejectedList(Tr(t).rejected), Tr(t).duration, ...
-            Tr(t).bidAccepted, Tr(t).bid, Tr(t).bidRT, Tr(t).bidStartFrac, ...
-            Tr(t).threshold, Tr(t).pricePaid, ...
-            Tr(t).trueValue, Tr(t).bidStimIdx, Tr(t).endReason, ...
-            dataMat.(dom).anchor }; %#ok<AGROW>
-    end
+    if ~isfield(dataMat,dom) || ~isfield(dataMat.(dom),'trials'), continue; end
+    tables{end+1} = utils.auctionTrialTable(dom,dataMat.(dom).trials,dataMat.(dom).anchor); %#ok<AGROW>
 end
-if isempty(rows), T = table(); return; end
-M = vertcat(rows{:});
-T = cell2table(M, 'VariableNames', {'domain','trial','practice','competition', ...
-    'block','blockPos','nAttrs', ...
-    'nPresented','nRejected','rejectedStimIdx','durationSec','bidAccepted','bid','bidRT', ...
-    'bidStartFrac','threshold','pricePaid','trueValue','bidStimIdx','endReason','anchor'});
+T = utils.stackTables(tables);
 end
 
-
-%% ======================================================================
-function s = rejectedList(idx)
-%REJECTEDLIST  Rejected stimulus indices as one semicolon-joined string.
-%   '' for none, '14', '14;27;31'; order is rejection order.
-
-if isempty(idx)
-    s = "";
-    return
-end
-s = string(strjoin(arrayfun(@(k) sprintf('%d', k), idx(:)', 'UniformOutput', false), ';'));
-end
 
 %% ======================================================================
 function s = quitNotice()

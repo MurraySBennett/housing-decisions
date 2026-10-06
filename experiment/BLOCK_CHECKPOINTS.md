@@ -115,6 +115,27 @@ explicit legacy files unchanged under `legacy/` with source hashes and a timing
 limitation record. It does not infer blocks or exact onsets, mix old and new
 attempts, or make unreadable gaze files readable.
 
+## Checks away from the lab
+
+The MATLAB checkpoint suite can run without a display session or connected eye
+tracker. It uses temporary directories and fake tracking for buffer/drift tests;
+the actual-SDK value-object case still needs the SDK class files. On a computer
+with MATLAB, set HW_TOBII_ROOT and run verify_block_checkpoints as below. A
+readable RA file also permits the storage benchmark without collecting new data.
+
+The 35 cases include actual auction trial-row conversion through block commit,
+reload and recovery. They do not execute every interactive task screen or prove
+PTB timing, device streaming, browser intake behavior, or physical kill/restart.
+Python/Bash syntax, helper-reference and discovery checks cannot replace them.
+The e20db45 ZIP is superseded: a later source audit found auction missing-anchor
+and demo undefined-variable failures, corrected in the subsequent build.
+
+Before using restart with a participant, resolve the pre-existing intake issue:
+the battery relaunches the survey before skipping completed tasks and writes over
+the prior local survey confirmation. This behavior was not changed because
+consent changes were excluded from checkpoint scope. A clean checkpoint receipt
+alone is not evidence that intake and end-of-task processing are complete.
+
 ## Required acceptance before release
 
 On a MATLAB machine, from this development checkout's root:
@@ -136,7 +157,7 @@ The benchmark reads its input and writes uniquely named copies. It requires exac
 roundtrip equivalence of every original field/type/shape; report measured sizes
 and save/load times, not a guessed compression ratio. Optional `'shareRoot',path`
 creates another unique benchmark directory there, only when that write is wanted.
-The suite requires exactly 34 discovered cases and fails if the actual-SDK test is skipped. The rig also needs Psychtoolbox
+The suite requires exactly 35 discovered cases and fails if the actual-SDK test is skipped. The rig also needs Psychtoolbox
 for the existing `verify_matlab` checks where applicable.
 
 Then rehearse **each of auction, continuous DC and preference**, in isolated

@@ -133,7 +133,7 @@ fprintf('  rig         : %s   eye tracking: %s\n', cfg.rig, ...
 fprintf('  intake      : %s\n', ...
     utils.ternary(SHOW_INTAKE, 'shown (elicitation, instructions, checks, practice)', 'skipped'));
 fprintf('  market      : %s\n', utils.ternary(DEMO_FAST, 'COMPRESSED (demo only)', 'real pacing'));
-fprintf('  data -> %s\n', demoData);
+fprintf('  data -> %s\n', cfg.paths.data);
 fprintf('  NOT a pilot. Trial counts and (if DEMO_FAST) market timing are not the design.\n\n');
 
 %% ---- Run --------------------------------------------------------------
@@ -166,9 +166,9 @@ for k = 1:numel(DEMO_TASKS)
 end
 
 fprintf('\n=== Demo finished. ===\n');
-fprintf('Files written under %s\n', demoData);
+fprintf('Files written under %s\n', cfg.paths.data);
 fprintf('Next: produce descriptive plots from it with\n');
-fprintf('    Rscript analysis/R/run_all.R --data %s\n\n', demoData);
+fprintf('    Rscript analysis/R/run_all.R --data %s\n\n', cfg.paths.data);
 
 
 %% ======================================================================

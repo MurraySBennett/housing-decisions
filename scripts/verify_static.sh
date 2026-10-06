@@ -211,7 +211,7 @@ check_grep 'quitNotice' experiment/auction_task.m 'auction quit notice'
 check_grep 'quitNotice' experiment/continuous_DC_task.m 'contdc quit notice'
 
 # Rejected options reach the CSV, not just the .mat.
-check_grep 'rejectedStimIdx' experiment/auction_task.m 'rejected options in the CSV'
+check_grep 'rejectedStimIdx' experiment/+utils/auctionTrialTable.m 'rejected options in the CSV'
 
 check_grep 'showValueMarker' experiment/+utils/config.m 'value-marker knob'
 check_grep 's\.marker' experiment/+utils/style.m 'scale marker colour'

@@ -39,3 +39,25 @@ end
 function removeStubs(path)
 rmpath(path); clear Screen GetSecs WaitSecs DrawFormattedText;
 end
+function testRealAuctionRowsCanBeSavedAndRecovered(testCase)
+root = tempname; mkdir(root); cleaner = onCleanup(@() rmdir(root,'s')); %#ok<NASGU>
+tr = struct('trial',1,'practice',false,'competition','low','block',1,'blockPos',1, ...
+    'nAttrs',6,'nPresented',3,'nRejected',2,'rejected',[4 7],'duration',5.5, ...
+    'bidAccepted',true,'bid',400000,'bidRT',1.2,'bidStartFrac',NaN, ...
+    'threshold',390000,'pricePaid',390000,'trueValue',410000,'bidStimIdx',8,'endReason','accepted');
+T = utils.auctionTrialTable('houses',tr,400000);
+verifyEqual(testCase,T.anchor,400000);
+verifyEqual(testCase,string(T.rejectedStimIdx),"4;7");
+cfg.paths.checkpoints = fullfile(root,'blocks');
+c = struct('schemaVersion',1,'logicalRunId','auction-integration','participant',9999, ...
+    'session',1,'task','auction','domain','houses','runKind','practice', ...
+    'blockOrdinal',1,'parentAttemptId','');
+a = utils.blockStore('begin',cfg,c,struct('seed',3));
+p = struct('trials',tr,'trialTable',T,'events',table(),'metadata',struct(), ...
+    'gaze',[],'clockSync',struct(),'nextState',struct('seed',4));
+utils.blockStore('commit',cfg,a,p);
+s = utils.blockStore('recover',cfg,c.logicalRunId);
+verifyEqual(testCase,s.nextBlock,2);
+saved = load(fullfile(a.directory,'behavior.mat'),'behavior');
+verifyEqual(testCase,saved.behavior.trialTable,T);
+end
