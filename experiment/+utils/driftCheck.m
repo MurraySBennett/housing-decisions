@@ -5,12 +5,21 @@ function [offsetDeg, recalibrated, store, markers] = driftCheck(et, window, cfg,
 %   blocks running several minutes and no re-check, that drift accumulates
 %   silently and shows up as AOIs that no longer line up with the stimuli.
 
-ownsRecording = nargin < 5;
-if ownsRecording, store = []; end
+% store is REQUIRED. There used to be an `ownsRecording = nargin < 5` branch
+% for callers that omitted it, which opened a SEPARATE recording and then
+% called gazeBuffer('flush') -- discarding every drift sample and stopping
+% the tracker stream mid-block -- and returned store = [], clobbering the
+% caller's buffer. It also dropped the drift/calibration markers, leaving
+% alignBlockGaze with no boundary for the epoch. Both tasks now pass their
+% own block buffer, so the drift epoch stays in the block gaze and is
+% delimited by the markers this function returns.
+assert(nargin >= 5, 'hw:driftCheck:store', ...
+    ['driftCheck needs the calling block''s gaze store as the 5th argument. ' ...
+     'See auction_task.m and continuous_DC_task.m.']);
 markers = struct('event',{},'flipTime',{},'phase',{});
 offsetDeg = NaN;
 recalibrated = false;
-if ~et.enabled || isempty(et.obj) || ~cfg.et.driftCheck
+if ~isstruct(et) || ~et.enabled || isempty(et.obj) || ~cfg.et.driftCheck
     return
 end
 
@@ -18,11 +27,7 @@ s = cfg.style;
 [cx, cy] = deal(centre(1), centre(2));
 
 % An active task owns its buffer: never clear, discard, or stop that stream.
-if ownsRecording
-    recording = utils.blockRecording('start',et); store = recording.store;
-else
-    store = utils.gazeBuffer('poll',et,store);
-end
+store = utils.gazeBuffer('poll',et,store);
 
 % Draw a fixation target and collect a short sample
 Screen('FillRect', window, s.bg);
@@ -47,10 +52,6 @@ if firstChunk <= numel(store.samples)
 else
     samples = [];
 end
-if ownsRecording
-    utils.gazeBuffer('flush',et,store);
-end
-
 if isempty(samples)
     warning('hw:driftCheck:noSamples', 'Drift check collected no gaze data.');
     return
@@ -72,7 +73,10 @@ if offsetDeg > cfg.et.driftTolDeg && cfg.et.recalOnFail
     [recalibrated,firstFlip,lastFlip] = utils.calibrate(et, window, cfg);
     markers(end+1) = struct('event','calibration_onset','flipTime',firstFlip,'phase','calibration');
     markers(end+1) = struct('event','intertrial_onset','flipTime',lastFlip,'phase','intertrial');
-    if ~ownsRecording, store = utils.gazeBuffer('poll',et,store); end
+    % Recalibration runs for ~30 s without polling, so the SDK's own queue
+    % is the only thing holding samples across it. The markers above delimit
+    % that gap; drain as soon as calibrate returns.
+    store = utils.gazeBuffer('poll',et,store);
 end
 
 end

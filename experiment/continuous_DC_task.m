@@ -71,7 +71,10 @@ try
         'analyzable', et.analyzable, 'positioned', et.positioned, ...
         'mediaMode', et.showGaze, ...
         'requestedSampleRateHz', et.requestedSampleRateHz, ...
-        'actualSampleRateHz', et.actualSampleRateHz);
+        'actualSampleRateHz', et.actualSampleRateHz, ...
+        'setupFailureStage', et.setupFailureStage, ...
+        'setupFailureMessage', et.setupFailureMessage, ...
+        'operatorChoice', et.operatorChoice);
 
     % =============================================== per domain
     for d = 1:numel(domainList)
@@ -266,13 +269,6 @@ try
             sel = selByLevel.(key);
             pairs = pairsByLevel.(key);
 
-            if cfg.et.driftCheck && mod(b, cfg.contdc.driftEvery) == 1 && b > 1
-                [off, recal] = utils.driftCheck(et, window, cfg, ...
-                    [winRect(3)/2, winRect(4)/2]);
-                log = utils.eventLog('add', log, 'drift_check', GetSecs, ...
-                    struct('offsetDeg', off, 'recalibrated', double(recal)));
-            end
-
             utils.trace('block %d/%d: %s, level %d', b, numel(blocks), task, lvl);
             showBlockIntro(window, cfg, task, lvl, b, numel(blocks));
 
@@ -282,6 +278,28 @@ try
             recording = utils.blockRecording('start', et);
             gazeStore = recording.store; clockSync = recording.clockSync;
             order = randperm(rs, numel(pairs));
+
+            % Drift check runs INSIDE this block's recording, mirroring
+            % auction_task.m:339. It used to run above the block with no
+            % gazeStore, which took driftCheck's ownsRecording branch: that
+            % opens a separate recording, and gazeBuffer('flush') then
+            % discarded every drift sample and stopped the stream, while the
+            % drift/calibration markers were dropped entirely so
+            % alignBlockGaze had no boundary for the epoch.
+            % Placed after randperm on purpose: whether the check runs must
+            % not change RNG consumption, or trial order would diverge on a
+            % resume of this block.
+            if cfg.et.driftCheck && mod(b, cfg.contdc.driftEvery) == 1 && b > 1
+                [off, recal, gazeStore, driftMarkers] = utils.driftCheck(et, window, cfg, ...
+                    [winRect(3)/2, winRect(4)/2], gazeStore);
+                for markerIdx = 1:numel(driftMarkers)
+                    marker = driftMarkers(markerIdx);
+                    log = utils.eventLog('add', log, marker.event, marker.flipTime, ...
+                        struct('trial', 0, 'phase', marker.phase));
+                end
+                log = utils.eventLog('add', log, 'drift_check', GetSecs, ...
+                    struct('offsetDeg', off, 'recalibrated', double(recal)));
+            end
 
             % Price blocks run two trials per pair, so totals differ by task type.
             if strcmp(task, 'choice')
