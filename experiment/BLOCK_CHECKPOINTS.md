@@ -120,15 +120,15 @@ attempts, or make unreadable gaze files readable.
 The MATLAB checkpoint suite can run without a display session or connected eye
 tracker. It uses temporary directories and fake tracking for buffer/drift tests;
 the actual-SDK value-object case still needs the SDK class files. On a computer
-with MATLAB, set HW_TOBII_ROOT and run verify_block_checkpoints as below. A
-readable RA file also permits the storage benchmark without collecting new data.
+with MATLAB, set HW_TOBII_ROOT and run `rig_checks` as described under Required
+acceptance below. A readable RA file also permits the storage benchmark without
+collecting new data.
 
-The 38 cases include actual auction trial-row conversion through block commit,
-reload and recovery. They do not execute every interactive task screen or prove
-PTB timing, device streaming, browser intake behavior, or physical kill/restart.
-Python/Bash syntax, helper-reference and discovery checks cannot replace them.
-The e20db45 ZIP is superseded: a later source audit found auction missing-anchor
-and demo undefined-variable failures, corrected in the subsequent build.
+The 39 cases include actual auction trial-row conversion through block commit,
+reload and recovery, and the gaze-to-pixel validity accessor. They do not
+execute every interactive task screen or prove PTB timing, device streaming,
+browser intake behavior, or physical kill/restart. Python/Bash syntax,
+helper-reference and discovery checks cannot replace them.
 
 The intake issue that previously blocked restart is fixed. `utils.launchSurvey`
 reads `utils.consentRecord` first and, when a consented record is already on
@@ -145,27 +145,74 @@ end-of-task processing are complete.
 
 ## Required acceptance before release
 
-On a MATLAB machine, from this development checkout's root:
+### Step 1 — `rig_checks`, the only command you need to remember
 
 ```matlab
-addpath('experiment','scripts');
-setenv('HW_TOBII_ROOT','C:\path\to\TobiiPro.SDK.Matlab_1.9.0.59');
-diary(fullfile(tempdir,'housing-checkpoint-validation.log'));
-verify_block_checkpoints;
-verify_matlab;
-report = benchmark_gaze_storage('C:\path\to\readable_RA_gaze.mat', ...
-    fullfile(tempdir,'housing-gaze-benchmarks'));
-disp(struct2table(report.outputs));
-diary off;
+rig_checks
 ```
 
-Replace those two paths with the installed SDK and a known-readable RA file.
-The benchmark reads its input and writes uniquely named copies. It requires exact
-roundtrip equivalence of every original field/type/shape; report measured sizes
-and save/load times, not a guessed compression ratio. Optional `'shareRoot',path`
-creates another unique benchmark directory there, only when that write is wanted.
-The suite requires exactly 38 discovered cases and fails if the actual-SDK test is skipped. The rig also needs Psychtoolbox
-for the existing `verify_matlab` checks where applicable.
+That is the whole first step. Run it from wherever MATLAB opens — it finds the
+repository root from its own location, so the old
+`addpath('experiment','scripts')` from the checkout root is no longer needed and
+is in fact the trap it was written to remove: the lab workflow opens MATLAB in
+`experiment/`, where that relative addpath silently adds nothing and every
+script comes back as "Unrecognized function".
+
+Pass the SDK path as `rig_checks('C:\path\to\TobiiPro.SDK.Matlab_1.9.0.59')`
+only if `HW_TOBII_ROOT` is not already set; it defaults to the share copy.
+
+It runs `check_syntax`, `probe_sdk_types` and `verify_block_checkpoints` in
+order, stopping at the first failure, and it prints **the checked-out commit
+SHA** — which is how we know which code actually ran, rather than assuming the
+pull landed. It tees the whole transcript to `rig-checks.log` (share first,
+tempdir second) and prints the path at the end.
+
+**Send that log file, not a photo of the screen.** A phone photo loses the error
+identifiers, class names and stack lines, which are the entire reason for
+running it.
+
+Expect **39 passing cases, 0 incomplete**. Zero incomplete is the number that
+matters: the actual-SDK case is `assumeTrue`-skipped when the SDK is absent, and
+a skip reports as incomplete rather than as a failure. 39 passed with any
+incomplete means the SDK was not really on the path and the result proves less
+than it appears to.
+
+### Step 2 — the storage benchmark, which is the save-crash test
+
+This is the step that settles why a session died at end-of-block saving. Not
+optional, and **pass `shareRoot`** — a large `-v7.3` write to the UNC share is
+the leading hypothesis, so a local-only benchmark tests everything except the
+thing in question.
+
+```matlab
+setenv('HW_TOBII_ROOT','C:\path\to\TobiiPro.SDK.Matlab_1.9.0.59');
+report = benchmark_gaze_storage('C:\path\to\readable_RA_gaze.mat', ...
+    fullfile(tempdir,'housing-gaze-benchmarks'), ...
+    'shareRoot','\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages');
+disp(struct2table(report.outputs));
+```
+
+Use a known-*readable* RA gaze file. It reads its input and never modifies it,
+writing uniquely named copies. Report measured sizes and save/load times, never
+a guessed compression ratio.
+
+If it hangs, that is itself the result: it rewrites `report.mat` before each
+stage, so open that file and read `report.stage` to see exactly which save was
+in progress. Note the elapsed wait before you kill it.
+
+### Step 3 — Psychtoolbox and interactive checks
+
+`verify_matlab` covers the AOI assertions and needs Psychtoolbox and a display;
+`rig_checks` deliberately does not run it, so that step 1 needs no display at
+all. Then one practice block, then the full dress rehearsal.
+
+### What none of this proves
+
+The suite does not execute every interactive task screen, and does not prove PTB
+timing, device streaming, browser intake behaviour, or physical kill/restart.
+Python/Bash syntax, helper-reference and discovery checks cannot replace it. A
+clean checkpoint receipt is not evidence that intake and end-of-task processing
+completed.
 
 Then rehearse **each of auction, continuous DC and preference**, in isolated
 practice storage using the same settings intended for capture:
