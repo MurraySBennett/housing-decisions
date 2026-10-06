@@ -416,10 +416,25 @@ catch ME
     % sca does not reset PsychImaging's persistent config state; both are needed or the next OpenWindow in this MATLAB session fails or returns a bad handle.
     sca;
     clear PsychImaging;
-    crashFile = fullfile(cfg.paths.crashed, sprintf('%s_%s_crash.mat', run.runId, utils.checkpointIO('id')));
-    save(crashFile, 'ME', 'dataMat', 'sess', 'run');
-    fprintf(2, '\nCrashed. Partial data saved to:\n  %s\n', crashFile);
-    if standalone, utils.endRun(sess, run, 'crashed'); end
+    % Best-effort and separately guarded, matching preference_task. These were
+    % bare, so a failure writing the dump or updating the manifest propagated
+    % INSTEAD of ME: the battery above then caught the bookkeeping error and the
+    % real reason the session died was gone. rethrow(ME) must always be what
+    % leaves this block.
+    try
+        crashFile = fullfile(cfg.paths.crashed, sprintf('%s_%s_crash.mat', run.runId, utils.checkpointIO('id')));
+        save(crashFile, 'ME', 'dataMat', 'sess', 'run');
+        fprintf(2, '\nCrashed. Partial data saved to:\n  %s\n', crashFile);
+    catch dumpME
+        fprintf(2, '\nCrashed, and the crash dump could not be written (%s).\n', dumpME.message);
+    end
+    if standalone
+        try
+            utils.endRun(sess, run, 'crashed');
+        catch manifestME
+            fprintf(2, 'Could not mark the run crashed in the manifest: %s\n', manifestME.message);
+        end
+    end
     rethrow(ME);
 end
 

@@ -111,13 +111,34 @@ for k = 1:numel(thisSession)
 
     catch ME
         utils.progressLog(run, 'BATTERY ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
-        utils.endRun(sess, run, 'crashed');
+        % Display first, before anything that can throw. The tasks clean up in
+        % their own catch, but an error raised out here -- endRun at the top of
+        % the try, appendTiming, or a task failing before its try opens -- would
+        % otherwise reach this handler with PTB still up.
         sca; clear PsychImaging; ListenChar(0); ShowCursor;
 
-        crashFile = fullfile(sess.cfg.paths.crashed, [run.runId '_battery_' utils.checkpointIO('id') '_crash.mat']);
-        save(crashFile, 'ME', 'sess', 'run');
-        fprintf(2, '\n*** %s [%s] crashed. Details saved to:\n    %s\n', ...
-            row.task, strjoin(row.domains, '+'), crashFile);
+        % Then bookkeeping, each step guarded. Both of these were bare, so
+        % either one failing replaced ME with its own error and skipped the
+        % "continue anyway?" prompt below -- turning one bad run into the end of
+        % the battery, and destroying the richest record of why it died.
+        try
+            utils.endRun(sess, run, 'crashed');
+        catch manifestME
+            fprintf(2, 'Could not mark the run crashed in the manifest: %s\n', manifestME.message);
+        end
+
+        try
+            crashFile = fullfile(sess.cfg.paths.crashed, [run.runId '_battery_' utils.checkpointIO('id') '_crash.mat']);
+            save(crashFile, 'ME', 'sess', 'run');
+            fprintf(2, '\n*** %s [%s] crashed. Details saved to:\n    %s\n', ...
+                row.task, strjoin(row.domains, '+'), crashFile);
+        catch dumpME
+            % The dump is how a crash gets diagnosed after the fact, so if it
+            % cannot be written, put the original report on screen instead.
+            fprintf(2, '\n*** %s [%s] crashed, and the crash dump could not be written (%s).\n', ...
+                row.task, strjoin(row.domains, '+'), dumpME.message);
+            fprintf(2, '%s\n', getReport(ME, 'extended', 'hyperlinks', 'off'));
+        end
 
         if k < numel(thisSession)
             go = input('Continue to the next run anyway? (y/n): ', 's');
