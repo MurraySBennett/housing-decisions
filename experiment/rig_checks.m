@@ -28,6 +28,16 @@ addpath(fullfile(root, 'experiment'), ...
         fullfile(root, 'scripts', 'tests'), ...
         fullfile(root, 'scripts', 'tests', 'fixtures'));
 
+% Capture the whole transcript to a file. Reading this output off a photo of a
+% phone screen loses exactly the detail that matters -- error identifiers,
+% class names, stack lines -- so write it somewhere it can be opened as text.
+% The share is preferred because Murray can read it without touching the rig.
+logFile = resolveLog();
+if ~isempty(logFile)
+    diary(logFile);
+    diaryCloser = onCleanup(@() diary('off')); %#ok<NASGU>
+end
+
 if nargin >= 1 && ~isempty(tobiiRoot)
     setenv('HW_TOBII_ROOT', char(tobiiRoot));
 elseif isempty(getenv('HW_TOBII_ROOT'))
@@ -64,8 +74,35 @@ catch ME
 end
 
 fprintf('\n########################################################\n');
-fprintf('Done. Paste everything above this line back to Murray.\n');
+if isempty(logFile)
+    fprintf('Done. Could not open a transcript file; copy the text above.\n');
+else
+    fprintf('Done. Full transcript saved as TEXT -- send this file, not a photo:\n');
+    fprintf('  %s\n', logFile);
+end
 fprintf('########################################################\n\n');
+end
+
+
+function logFile = resolveLog()
+%RESOLVELOG Pick a writable transcript path, share first, tempdir second.
+% Returns '' if neither works, in which case the checks still run.
+candidates = { ...
+    fullfile('\\asc-files.asc.ohio-state.edu\projects\PSY-kvam.4\housing_wages', ...
+             'rig-checks.log'), ...
+    fullfile(tempdir, 'rig-checks.log')};
+for k = 1:numel(candidates)
+    candidate = candidates{k};
+    parent = fileparts(candidate);
+    if ~isfolder(parent), continue; end
+    fid = fopen(candidate, 'a');
+    if fid >= 0
+        fclose(fid);
+        logFile = candidate;
+        return
+    end
+end
+logFile = '';
 end
 
 
