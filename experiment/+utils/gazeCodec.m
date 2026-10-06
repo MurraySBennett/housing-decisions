@@ -9,12 +9,13 @@ switch lower(action)
         if isempty(value), out.emptyValue = value; return; end
         assert(isstruct(value) || isa(value, 'GazeData'), 'hw:gazeCodec:type', ...
             'Expected SDK GazeData or sample structs; unsupported data was not discarded.');
+        % Schema from sample 1 only. This used to run a full recursive
+        % describe() on EVERY sample purely to compare schemas -- order 10^5
+        % interpreted property walks per block -- while the leaf loop below
+        % already asserts class and shape per sample per leaf, and getLeaf
+        % throws outright on a field that is missing. Samples in one block
+        % come from one SDK class, so the field set cannot vary between them.
         [prototype, leaves] = describe(value(1), {});
-        for i = 2:numel(value)
-            [~, sampleLeaves] = describe(value(i), {});
-            assert(isequaln(sampleLeaves, leaves), 'hw:gazeCodec:shape', ...
-                'SDK fields/classes/shapes changed at sample %d.', i);
-        end
         out.prototype = prototype;
         out.leafSchema = leaves;
         out.columns = cell(1, numel(leaves));
@@ -66,12 +67,18 @@ switch lower(action)
             % asserted above -- so the seed element is never read.
             out = repmat(makeGazeData(plain(1)), value.originalShape);
             for i = 1:value.sampleCount
-                v = plain(i);
-                out(i) = makeGazeData(v);
-                [check, ~] = describe(out(i), {});
-                assert(isequaln(check, v), 'hw:gazeCodec:type', ...
-                    'SDK reconstruction changed properties; retain the original data.');
+                out(i) = makeGazeData(plain(i));
             end
+            % Verify the reconstruction on sample 1 only. This used to
+            % describe() and isequaln() every reconstructed object, which is a
+            % third full pass over the block, and blockStore.m:26 then asserts
+            % isequaln on the WHOLE reconstructed array against the original
+            % anyway -- so every sample is still checked, once, by the caller
+            % that owns the guarantee. Sample 1 stays as a fast, local failure
+            % for a constructor that cannot round-trip its own properties.
+            [check, ~] = describe(out(1), {});
+            assert(isequaln(check, plain(1)), 'hw:gazeCodec:type', ...
+                'SDK reconstruction changed properties; retain the original data.');
         end
     otherwise
         error('hw:gazeCodec:action', 'Unknown codec action %s.', action);

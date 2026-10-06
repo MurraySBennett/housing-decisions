@@ -326,15 +326,25 @@ try
             log = utils.eventLog('context', log, struct('trial', t));
             % Break message must not name the direction of the competition change.
             if levelChange(t)
-                log = utils.eventLog('add', log, 'block_break', GetSecs, ...
-                    struct('trial', t, 'fromBlock', plan(t-1).block, ...
-                           'toBlock', plan(t).block, 'run', runIdx + 1));
-                showClickMessage(window, cfg, sprintf(['End of part %d of %d.' ...
+                % This break sits INSIDE the block recording started above, and
+                % it waits on a click for as long as the participant wants.
+                % showClickMessage never polled, and get_gaze_data() is the only
+                % thing that empties the SDK queue, so samples were dropped from
+                % a block still reported complete. The marker now carries the
+                % real flip time and a phase, making the break an explicit
+                % interval in the gaze association instead of an unexplained
+                % gap; it previously logged GetSecs with no phase at all.
+                [gazeStore, breakOnset] = showBreakMessage(window, cfg, ...
+                    sprintf(['End of part %d of %d.' ...
                     '\n\nTake a moment if you would like one.' ...
                     '\n\nWhat follows is a different market: how much ' ...
                     'competition there is for these options has changed.' ...
                     '\n\nClick when you are ready to continue.'], ...
-                    runIdx, nRuns));
+                    runIdx, nRuns), et, gazeStore);
+                log = utils.eventLog('add', log, 'block_break', breakOnset, ...
+                    struct('trial', t, 'phase', 'break', ...
+                           'fromBlock', plan(t-1).block, ...
+                           'toBlock', plan(t).block, 'run', runIdx + 1));
                 runIdx = runIdx + 1;
             end
 
@@ -1200,6 +1210,32 @@ Screen('TextSize', window, s.sizeHeading);
 DrawFormattedText(window, msg, 'center', 'center', s.text, 55, 0, 0, 1.6);
 Screen('Flip', window);
 utils.waitForClick(window);
+end
+
+
+%% ======================================================================
+function [store, onset] = showBreakMessage(window, cfg, msg, et, store)
+%SHOWBREAKMESSAGE showClickMessage that keeps draining the tracker.
+% Same wait as utils.waitForClick, with a gazeBuffer poll in the loop. Used
+% for waits that happen while a block recording is live and may last minutes.
+s = cfg.style;
+Screen('FillRect', window, s.bg);
+Screen('TextFont', window, s.fontContent);
+Screen('TextSize', window, s.sizeHeading);
+DrawFormattedText(window, msg, 'center', 'center', s.text, 55, 0, 0, 1.6);
+onset = Screen('Flip', window);
+
+buttons = false(1,3);
+while ~any(buttons)
+    [~, ~, buttons] = utils.getMouse(window);
+    store = utils.gazeBuffer('poll', et, store);
+    utils.checkForQuit;
+    WaitSecs(0.01);
+end
+while any(buttons)
+    [~, ~, buttons] = utils.getMouse(window);
+end
+store = utils.gazeBuffer('poll', et, store);
 end
 
 

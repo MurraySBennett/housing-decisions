@@ -91,6 +91,25 @@ end
 end
 function T = keys(T,run,domain,r,complete)
 n = height(T);
+% The task's own block column and the checkpoint ordinal are the same number
+% by construction -- auction_task.m:315-320 passes plan(t).block AS the
+% ordinal, and recovery matches plan.block == recovery.nextBlock, so they
+% cannot drift apart. This used to overwrite the column without checking,
+% which silently relabels any row where that stops being true. Practice rows
+% carry block = NaN (auction_task.m:713), and relabelling one of those as a
+% real block would be invisible in the exported CSV.
+if n > 0 && ismember('block', T.Properties.VariableNames)
+    existing = T.block;
+    if isnumeric(existing)
+        mismatch = ~isnan(existing) & existing ~= r.blockOrdinal;
+    else
+        mismatch = string(existing) ~= string(r.blockOrdinal);
+    end
+    assert(~any(mismatch), 'hw:combine:blockMismatch', ...
+        ['Trial block column disagrees with checkpoint ordinal %d in %s/%s ' ...
+         '(%d of %d rows). Export would relabel them; resolve before analysis.'], ...
+        r.blockOrdinal, run.runId, domain, nnz(mismatch), n);
+end
 T.participant = repmat(run.participant,n,1); T.session = repmat(run.sessionNum,n,1);
 T.run_id = repmat(string(run.runId),n,1); T.task = repmat(string(run.task),n,1);
 T.domain = repmat(string(domain),n,1); T.run_kind = repmat(string(run.runKind),n,1);
