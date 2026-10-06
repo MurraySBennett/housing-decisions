@@ -336,8 +336,13 @@ try
             end
 
             if cfg.et.driftCheck && mod(t, cfg.auction.driftEvery) == 1 && t > 1
-                [offset, recal] = utils.driftCheck(et, window, cfg, ...
-                    [winRect(3)/2, winRect(4)/2]);
+                [offset, recal, gazeStore, driftMarkers] = utils.driftCheck(et, window, cfg, ...
+                    [winRect(3)/2, winRect(4)/2], gazeStore);
+                for markerIdx = 1:numel(driftMarkers)
+                    marker = driftMarkers(markerIdx);
+                    log = utils.eventLog('add',log,marker.event,marker.flipTime, ...
+                        struct('trial',0,'phase',marker.phase));
+                end
                 log = utils.eventLog('add', log, 'drift_check', GetSecs, ...
                     struct('offsetDeg', offset, 'recalibrated', double(recal)));
             end
@@ -679,9 +684,11 @@ while true
 end
 
 if ~strcmp(trial.endReason, 'accepted')
-    showMarketClosed(window, cfg, trial.endReason);
+    closedFlip = showMarketClosed(window, cfg, trial.endReason);
+    log = utils.eventLog('add',log,'market_closed',closedFlip,struct('phase','feedback'));
 end
 
+log = utils.eventLog('add',log,'trial_end',GetSecs,struct('trial',0));
 trial.duration    = GetSecs - t0;
 trial.presented   = presented;
 trial.rejected    = rejected;
@@ -1171,13 +1178,13 @@ end
 
 
 %% ======================================================================
-function showMessage(window, cfg, msg, secs)
+function onset = showMessage(window, cfg, msg, secs)
 s = cfg.style;
 Screen('FillRect', window, s.bg);
 Screen('TextFont', window, s.fontContent);
 Screen('TextSize', window, s.sizeHeading);
 DrawFormattedText(window, msg, 'center', 'center', s.text, 55, 0, 0, 1.6);
-Screen('Flip', window);
+onset = Screen('Flip', window);
 WaitSecs(secs);
 end
 
@@ -1195,13 +1202,13 @@ end
 
 
 %% ======================================================================
-function showMarketClosed(window, cfg, reason)
+function onset = showMarketClosed(window, cfg, reason)
 if strcmp(reason, 'timeout')
     msg = 'The market has closed.';
 else
     msg = 'There are no more options in this market.';
 end
-showMessage(window, cfg, msg, 1.4);
+onset = showMessage(window, cfg, msg, 1.4);
 end
 
 

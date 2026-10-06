@@ -1,7 +1,7 @@
 function tests = test_block_exports
 tests = functiontests(localfunctions);
 end
-function exactExportAndMissing(testCase)
+function testExactExportAndMissing(testCase)
 root = tempname; mkdir(root); cleanup = onCleanup(@() rmdir(root,'s')); %#ok<NASGU>
 [f,a] = checkpoint_fixture(fullfile(root,'raw'));
 out = fullfile(root,'derived');
@@ -20,4 +20,17 @@ verifyError(testCase,@() combine_blocks(f.root,fullfile(root,'missing')), 'hw:co
 r = combine_blocks(f.root,fullfile(root,'partial'),'allowPartial',true);
 verifyFalse(testCase,r(1).complete);
 verifyFalse(testCase,isfolder(fullfile(root,'partial','cont_dc')));
+end
+function testAbandonedAttemptInventory(testCase)
+root = tempname; mkdir(root); cleaner = onCleanup(@() rmdir(root,'s')); %#ok<NASGU>
+[f,a] = checkpoint_fixture(fullfile(root,'raw'));
+c = rmfield(a,{'attemptId','directory','startedAt'});
+failed = utils.blockStore('begin',f.cfg,c,struct('seed',1));
+out = fullfile(root,'derived'); combine_blocks(f.root,out);
+s = load(fullfile(out,'cont_dc',[f.run.runId '.mat']),'dataMat');
+inv = s.dataMat.attemptInventory;
+ix = strcmp({inv.attemptId},failed.attemptId);
+verifyEqual(testCase,sum(ix),1);
+verifyEqual(testCase,inv(ix).status,'excluded');
+verifyEqual(testCase,inv(ix).reason,'superseded interrupted attempt');
 end

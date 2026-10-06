@@ -402,7 +402,7 @@ check_grep 'run_kind' experiment/+utils/saveRun.m 'CSV output carries run kind'
 check_grep "RUN_KIND[[:space:]]*=[[:space:]]*'participant'" experiment/run_battery.m 'battery defaults to participant data root'
 check_grep "'runKind',[[:space:]]*RUN_KIND" experiment/run_battery.m 'battery passes run kind to session config'
 check_grep 'confirmAssignment' experiment/+utils/startSession.m 'participant assignment confirmation gate'
-check_grep 'nextParticipant' experiment/+utils/startSession.m 'participant auto-increment assignment'
+check_grep 'Participant ID from the study register' experiment/+utils/startSession.m 'explicit study-register identity for offline capture'
 check_grep 'assignmentOverride' experiment/+utils/startSession.m 'manual assignment override is recorded'
 
 # --- preference_task display setup matches the battery tasks -------------
@@ -473,3 +473,6 @@ fi
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi
+
+# Test bodies must actually be discoverable by MATLAB functiontests.
+python3 scripts/check_checkpoint_test_discovery.py

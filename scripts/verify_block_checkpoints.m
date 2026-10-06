@@ -6,7 +6,9 @@ addpath(fullfile(root, 'scripts'), fullfile(root, 'scripts', 'tests'));
 addpath(fullfile(root, 'scripts', 'tests', 'fixtures'));
 sdk = getenv('HW_TOBII_ROOT');
 if ~isempty(sdk), addpath(genpath(sdk)); end
-results = runtests(fullfile(root, 'scripts', 'tests'));
+suite = testsuite(fullfile(root, 'scripts', 'tests'));
+assert(numel(suite) == 34, 'hw:tests:discovery', 'Expected 34 checkpoint test cases, discovered %d.', numel(suite));
+results = run(suite);
 disp(results);
 assert(~isempty(results) && all([results.Passed]), 'hw:tests:failed', ...
     'Block-checkpoint tests did not all pass.');

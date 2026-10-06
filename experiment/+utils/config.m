@@ -94,9 +94,7 @@ else
     cfg.paths.shareData = participantData;
 end
 % Storage never probes the share during capture. Replication is explicit/offline.
-if ~externalDefaults
-    defaultLocal = fullfile(projRoot, 'Data_local');
-elseif ispc && ~isempty(getenv('LOCALAPPDATA'))
+if ispc && ~isempty(getenv('LOCALAPPDATA'))
     defaultLocal = fullfile(getenv('LOCALAPPDATA'), 'housing-wages', 'Data');
 else
     defaultLocal = fullfile(prefdir, 'housing-wages', 'Data');

@@ -47,6 +47,7 @@ else
 end
 
 %% ---- Session ----------------------------------------------------------
+demoParent = fullfile(tempdir,'housing-wages-demo',utils.checkpointIO('id'));
 sess = utils.startSession( ...
     'participant', DEMO_PARTICIPANT, ...
     'session',     DEMO_SESSION, ...
@@ -54,12 +55,10 @@ sess = utils.startSession( ...
     'testing',     true, ...
     'rig',         RIG, ...
     'projRoot',    demoRoot, ...
+    'localDataRoot', demoParent, ...
     'jobsArm',     JOBS_ARM, ...
     'eyeTracking', EYETRACKING, ...
     'showEyePos',  SHOW_GAZE);
-
-% Data paths get re-pointed at the sandbox below, so this manifest is stray.
-strayManifest = sess.manifestFile;
 
 cfg = sess.cfg;
 
@@ -78,42 +77,8 @@ cfg.stimFiles.houses = fullfile(cfg.paths.stimuli, 'house_stimuli.csv');
 cfg.stimFiles.jobs   = fullfile(cfg.paths.prepared, ...
     sprintf('job_stimuli_%s.csv', cfg.stimuli.jobsArm));
 
-% Data sandbox. Never the real Data/ tree, never the share.
-demoData = fullfile(here, 'Data_demo', utils.checkpointIO('id'));
-cfg.paths.checkpoints = fullfile(demoData, 'blocks');
-cfg.paths.runs = fullfile(demoData, 'runs');
-cfg.paths.localData = demoData;
+% Session creation already used a unique local demo sandbox.
 cfg.paths.shareData = '';
-cfg.paths.fallbackData = fullfile(demoData, 'emergency');
-cfg.paths.data             = demoData;
-cfg.paths.sessions         = fullfile(demoData, 'sessions');
-cfg.paths.taskData.auction = fullfile(demoData, 'auction');
-cfg.paths.taskData.contdc  = fullfile(demoData, 'cont_dc');
-cfg.paths.taskData.pref    = fullfile(demoData, 'pref');
-cfg.paths.gaze             = fullfile(demoData, 'gaze');
-cfg.paths.crashed          = fullfile(demoData, 'Crashes');
-demoDirs = {cfg.paths.sessions, cfg.paths.taskData.auction, ...
-            cfg.paths.taskData.contdc, cfg.paths.taskData.pref, ...
-            cfg.paths.gaze, cfg.paths.crashed};
-for k = 1:numel(demoDirs)
-    if ~isfolder(demoDirs{k}), mkdir(demoDirs{k}); end
-end
-
-% Recompute the manifest path or the demo would append to the real manifest.
-sess.manifestFile = fullfile(cfg.paths.sessions, ...
-    sprintf('sub-%05d_manifest.mat', sess.participant));
-if ~strcmp(strayManifest, sess.manifestFile) && isfile(strayManifest)
-    delete(strayManifest);          % only ever the demo ID's, just created
-end
-if isfile(sess.manifestFile), delete(sess.manifestFile); end
-manifest = struct('participant', sess.participant, ...
-    'runKind', sess.runKind, 'assignment', sess.assignment, ...
-    'createdAt', char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')), ...
-    'runs', struct('task',{},'sessionNum',{},'runId',{},'runKind',{},'domainOrderStr',{}, ...
-                   'startedAt',{},'finishedAt',{},'status',{},'dataFile',{}, ...
-                   'seed',{},'codeVersion',{}));
-save(sess.manifestFile, 'manifest');
-sess.manifest = manifest;
 
 %% ---- Domain availability check ----------------------------------------
 domain = lower(char(DEMO_DOMAIN));

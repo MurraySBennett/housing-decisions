@@ -4,6 +4,7 @@ switch lower(action)
     case 'open'
         task = char(varargin{1}); domains = varargin{2};
         if ischar(domains) || isstring(domains), domains = cellstr(domains); end
+        utils.sessionContext('run',sess,task,domains);
         id = sprintf('sub-%05d_ses-%02d_task-%s_dom-%s', ...
             sess.participant, sess.sessionNum, task, strjoin(domains, '-'));
         file = fullfile(sess.cfg.paths.runs, id, 'run.mat');
@@ -27,6 +28,8 @@ switch lower(action)
         out.rngState = rng; % diagnostic; actual block entry states are explicit.
         record = struct('signature', signature, 'run', out);
         utils.checkpointIO('write', file, struct('record', record));
+    case 'signature'
+        out = fingerprint(sess);
     case 'freeze'
         run = varargin{1}; domain = varargin{2}; proposed = varargin{3};
         file = fullfile(sess.cfg.paths.runs, run.runId, [domain '-plan.mat']);

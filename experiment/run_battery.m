@@ -50,12 +50,13 @@ if ~isempty(TRIALS_PER_CELL)
 end
 if strcmpi(RUN_KIND, 'practice')
     fprintf(2, ['\n*** PRACTICE DATA ROOT ACTIVE. ***\n' ...
-                '    This run writes to HW_PRACTICE_DATA_ROOT, not the participant\n' ...
+                '    This run writes to the local practice root, not the participant\n' ...
                 '    data root. Set RUN_KIND = ''participant'' for collection.\n\n']);
 end
 
 thisSession = utils.batteryPlan(sess.participant, sess.sessionNum, ...
     FORCE_DOMAIN, sess.assignment.taskOrder);
+utils.sessionContext('battery', sess, thisSession);
 if ~isempty(FORCE_DOMAIN)
     fprintf('*** FORCE_DOMAIN active: every run this session uses "%s" regardless of PLAN. ***\n', ...
         FORCE_DOMAIN);
@@ -170,6 +171,8 @@ rows = [rows, new];
 T = vertcat(new{:});
 T.participant = repmat(sess.participant, height(T), 1);
 T.session = repmat(sess.sessionNum, height(T), 1);
+T.run_id = repmat(string(run.runId), height(T), 1);
+T.timing_id = repmat(string(utils.checkpointIO('id')), height(T), 1);
 try
     if isfile(timingFile)
         previous = readtable(timingFile, 'TextType', 'string');

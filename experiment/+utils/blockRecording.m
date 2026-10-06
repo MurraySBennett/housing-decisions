@@ -8,9 +8,9 @@ switch lower(action)
             'clockSync', struct('start', utils.clockSync(et), 'end', []));
     case 'finish'
         store = varargin{1}; anchors = varargin{2}; run = varargin{3};
-        anchors.end = utils.clockSync(et);
         utils.progressLog(run, 'BEGIN block gaze drain samples=%d chunks=%d', store.n, numel(store.samples));
         raw = utils.gazeBuffer('flush', et, store, run);
+        anchors.end = utils.clockSync(et);
         utils.progressLog(run, 'END block gaze drain samples=%d syncOK=%d/%d', ...
             numel(raw), anchors.start.ok, anchors.end.ok);
         out = struct('gaze', raw, 'clockSync', anchors);

@@ -6,6 +6,7 @@ function report = combine_blocks(localRoot, outputRoot, varargin)
 p = inputParser; p.addParameter('allowPartial',false,@islogical);
 p.addParameter('legacyFiles',{},@iscell); p.parse(varargin{:});
 root = fileparts(fileparts(mfilename('fullpath'))); addpath(fullfile(root,'experiment'));
+localRoot = char(localRoot); outputRoot = char(outputRoot);
 sourcePath = char(java.io.File(localRoot).getCanonicalPath());
 outputPath = char(java.io.File(outputRoot).getCanonicalPath());
 assert(~strcmp(sourcePath,outputPath) && ~startsWith([outputPath filesep],[sourcePath filesep]) && ...
@@ -32,11 +33,20 @@ for k = 1:numel(files)
     destination = outputRoot;
     if ~complete, destination = fullfile(outputRoot,'partial'); end
     behaviorTables = {}; events = {}; domainData = struct(); sampleCount = 0;
+    attemptInventory = struct('domain',{},'blockOrdinal',{},'attemptId',{},'parentAttemptId',{}, ...
+        'status',{},'reason',{},'evidencePath',{});
     for d = 1:numel(run.domains)
         domain = run.domains{d}; state = states{d}; blocks = cell(1,numel(state.receipts));
+        for j = 1:numel(state.incomplete)
+            a = state.incomplete{j}.attempt; a.directory = state.incomplete{j}.artifactDirectory; reason = 'interrupted; no verified completion';
+            if a.blockOrdinal < state.nextBlock, reason = 'superseded interrupted attempt'; end
+            attemptInventory(end+1) = inventory(a,'excluded',reason); %#ok<AGROW>
+        end
         trialCells = {}; metadata = {};
         for b = 1:numel(state.receipts)
             receipt = state.receipts(b);
+            a = receipt.identity; a.directory = receipt.artifactDirectory;
+            attemptInventory(end+1) = inventory(a,'included','verified canonical lineage'); %#ok<AGROW>
             s = load(fullfile(receipt.artifactDirectory,'behavior.mat'),'behavior');
             g = load(fullfile(receipt.artifactDirectory,'gaze.mat'),'gaze');
             T = keys(s.behavior.trialTable,run,domain,receipt,complete);
@@ -62,7 +72,8 @@ for k = 1:numel(files)
     taskDir = run.task; if strcmp(taskDir,'contdc'), taskDir = 'cont_dc'; end
     stem = fullfile(destination,taskDir,run.runId);
     dataMat = struct('schemaVersion',1,'run',run,'signature',record.record.signature, ...
-        'complete',complete,'domains',{run.domains},'domainData',domainData,'events',eventTable);
+        'complete',complete,'domains',{run.domains},'domainData',domainData,'events',eventTable, ...
+        'attemptInventory',attemptInventory);
     utils.checkpointIO('write',[stem '.mat'],struct('dataMat',dataMat,'trialTable',trialTable));
     writeCsv([stem '.csv'],trialTable);
     utils.checkpointIO('write',fullfile(destination,'events',[run.runId '_events.mat']),struct('events',eventTable));
@@ -94,4 +105,9 @@ utils.checkpointIO('copy',tmp,file);
 end
 function removeTemp(file)
 if isfile(file), delete(file); end
+end
+
+function row = inventory(a,status,reason)
+row = struct('domain',a.domain,'blockOrdinal',a.blockOrdinal,'attemptId',a.attemptId, ...
+    'parentAttemptId',a.parentAttemptId,'status',status,'reason',reason,'evidencePath',a.directory);
 end

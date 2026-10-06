@@ -26,8 +26,15 @@ switch lower(action)
         end
 
     case 'save'
+        if isfile(f)
+            prior = load(f, 'data'); existing = prior.data;
+            if isfield(existing,'savedAt'), existing = rmfield(existing,'savedAt'); end
+            if isfield(data,'savedAt'), data = rmfield(data,'savedAt'); end
+            assert(isequaln(existing,data), 'hw:elicitationCache:conflict', 'Same-session elicitation cannot be replaced.');
+            out = []; return;
+        end
         data.savedAt = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss'));
-        utils.checkpointIO('write', f, struct('data', data), true);
+        utils.checkpointIO('write', f, struct('data', data));
         out = [];
 
     otherwise

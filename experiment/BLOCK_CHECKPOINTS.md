@@ -10,6 +10,8 @@ Capture and recovery use a **local** disk. On Windows the default parent is
 `%LOCALAPPDATA%\housing-wages\Data`; otherwise it is MATLAB's
 `fullfile(prefdir,'housing-wages','Data')`. `HW_LOCAL_DATA_ROOT` overrides that
 parent. Its `participant` and `practice` subdirectories are separate.
+Demo runs use a fresh `fullfile(tempdir,'housing-wages-demo',UUID)` sandbox;
+the console prints its full data path. `projRoot` never chooses the capture disk.
 `utils.startSession` prints the resolved data root. Enter the participant ID
 from the study register; local disks cannot safely allocate study-wide IDs.
 
@@ -29,6 +31,9 @@ Inside the selected run-kind root:
   numeric columns, schema and sample association; no downsampling or rounding.
 - `prepared.mat`, `receipt.mat`: hashes, identity and counts. A receipt confirms
   the bundle; recovery can reconstruct it from a valid finalized pair after a kill.
+- `sessions/`: immutable resolved battery/task context and elicitation; current
+  manifests and timing. `session_history/` retains byte-identical versions during
+  replication; incompatible calibration/assignment changes stop the transfer.
 - `emergency/`: raw chunks from catchable failures. These never count as completion.
 - `auction/`, `cont_dc/`, `pref/`: optional whole-task summaries. Receipts remain
   authoritative if a summary save fails.
@@ -95,7 +100,8 @@ lineage is exported. Raw fragments are never analysis CSVs.
 
 Canonical CSVs retain the old behavioral columns and add `block`, `attempt_id`,
 `checkpoint_schema`, and `complete`. Companion MAT files retain block metadata,
-events and cross-block reversal scores. Each `<run>_<domain>_gaze.mat` contains
+events, cross-block reversal scores, and an `attemptInventory` identifying both
+included receipts and excluded interrupted attempts with evidence paths. Each `<run>_<domain>_gaze.mat` contains
 `gazeExport.blocks`, a cell per block. Each block retains its integer clock
 columns, leaf schema, raw sample order, events' association and attempt identity;
 clock epochs are not concatenated into a fictitious continuous session clock.
@@ -130,7 +136,7 @@ The benchmark reads its input and writes uniquely named copies. It requires exac
 roundtrip equivalence of every original field/type/shape; report measured sizes
 and save/load times, not a guessed compression ratio. Optional `'shareRoot',path`
 creates another unique benchmark directory there, only when that write is wanted.
-The suite fails if the actual-SDK test is skipped. The rig also needs Psychtoolbox
+The suite requires exactly 34 discovered cases and fails if the actual-SDK test is skipped. The rig also needs Psychtoolbox
 for the existing `verify_matlab` checks where applicable.
 
 Then rehearse **each of auction, continuous DC and preference**, in isolated

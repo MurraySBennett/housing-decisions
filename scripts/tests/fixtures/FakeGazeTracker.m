@@ -12,7 +12,8 @@ classdef FakeGazeTracker < handle
             if obj.reads == 1 || obj.reads == 5
                 samples = [];
             else
-                samples = repmat(struct('SystemTimeStamp',uint64(0)),obj.reads,1);
+                eyeSample = struct('GazePoint',struct('Validity',1,'OnDisplayArea',[.5 .5]));
+                samples = repmat(struct('SystemTimeStamp',uint64(0),'LeftEye',eyeSample,'RightEye',eyeSample),obj.reads,1);
                 for k = 1:numel(samples)
                     samples(k).SystemTimeStamp = uint64(100*obj.reads+k);
                 end

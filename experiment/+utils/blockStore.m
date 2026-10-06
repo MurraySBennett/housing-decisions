@@ -45,6 +45,7 @@ switch lower(action)
         for k = 1:numel(entries)
             folder = entries(k).folder;
             entry = load(fullfile(folder, 'entry.mat'), 'attempt', 'entryState');
+            entry.artifactDirectory = folder;
             attempt = entry.attempt;
             validateContext(attempt);
             assert(strcmp(attempt.logicalRunId, varargin{1}), 'hw:blockStore:identity', 'Logical run mismatch.');

@@ -1,7 +1,7 @@
 function tests = test_contdc_blocks
 tests = functiontests(localfunctions);
 end
-function matchedPricingRetry(testCase)
+function testMatchedPricingRetry(testCase)
 root = tempname; mkdir(root); cleanup = onCleanup(@() rmdir(root,'s')); %#ok<NASGU>
 [f,a] = checkpoint_fixture(root);
 before = utils.checkpointIO('hash',fullfile(a.directory,'behavior.mat'));

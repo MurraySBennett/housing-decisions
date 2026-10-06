@@ -1,7 +1,7 @@
 function tests = test_block_recording
 tests = functiontests(localfunctions);
 end
-function exactIntegerAlignment(testCase)
+function testExactIntegerAlignment(testCase)
 base = bitshift(uint64(1),53) + uint64(1);
 g = repmat(struct('SystemTimeStamp', base), 4, 1);
 for k = 1:4, g(k).SystemTimeStamp = base + uint64((k-1)*1000000); end
@@ -19,7 +19,7 @@ a = utils.alignBlockGaze(p, events, clockSync);
 verifyTrue(testCase, all(isnan(a.ptbTime)));
 verifyTrue(testCase, all(a.phase == "unknown"));
 end
-function restartSubscriptionRetainsEveryPoll(testCase)
+function testRestartSubscriptionRetainsEveryPoll(testCase)
 tracker = FakeGazeTracker();
 et = struct('enabled',true,'obj',tracker,'operations',[]);
 r = utils.blockRecording('start',et);
@@ -38,10 +38,21 @@ r = utils.blockRecording('finish',et,r.store,r.clockSync,struct('runId','synthet
 verifyEqual(testCase,[r.gaze.SystemTimeStamp],uint64(601:606));
 utils.gazeBuffer('release');
 end
-function resetClockStaysUnknown(testCase)
+function testResetClockStaysUnknown(testCase)
 g = [struct('SystemTimeStamp',uint64(20)); struct('SystemTimeStamp',uint64(10))];
 c = struct('start',struct('ok',true,'ptbSecs',1,'tobiiSystemTimeStamp',uint64(1)), ...
     'end',struct('ok',true,'ptbSecs',2,'tobiiSystemTimeStamp',uint64(30)));
 a = utils.alignBlockGaze(utils.gazeCodec('pack',g),table(),c);
 verifyTrue(testCase,all(a.phase == "unknown"));
+end
+function testFeedbackEndsStimulusExposure(testCase)
+g = repmat(struct('SystemTimeStamp',uint64(0)),3,1);
+for k = 1:3, g(k).SystemTimeStamp = uint64(k*1000000); end
+c = struct('start',struct('ok',true,'ptbSecs',1,'tobiiSystemTimeStamp',uint64(1000000)), ...
+    'end',struct('ok',true,'ptbSecs',3,'tobiiSystemTimeStamp',uint64(3000000)));
+e = table([1;2;3],[1;1;0],{'stimulus';'feedback';'intertrial'}, ...
+    'VariableNames',{'flipTime','trial','phase'});
+a = utils.alignBlockGaze(utils.gazeCodec('pack',g),e,c);
+verifyEqual(testCase,a.phase,["stimulus";"feedback";"intertrial"]);
+verifyEqual(testCase,a.trial,[1;1;0]);
 end

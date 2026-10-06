@@ -7,7 +7,7 @@ addpath(expDir);
 
 tmpRoot = fullfile(tempdir, ['housing_decisions_verify_' char(java.util.UUID.randomUUID)]);
 cleanup = onCleanup(@() cleanupTemp(tmpRoot));
-cfg = utils.config('projRoot', tmpRoot, 'rig', 'dev', 'testing', true);
+cfg = utils.config('projRoot', tmpRoot, 'localDataRoot', fullfile(tmpRoot,'data'), 'rig', 'dev', 'testing', true);
 assert(isstruct(cfg.contdc.nPairs), 'cfg.contdc.nPairs must be per-domain struct');
 assert(isfield(cfg.contdc.nPairs, 'houses') && isfield(cfg.contdc.nPairs, 'jobs'), ...
     'cfg.contdc.nPairs must define houses and jobs');
@@ -79,8 +79,8 @@ assert(isfield(pfAoi, 'allAoiOK') && pfAoi.allAoiOK, ...
     'preflight lab AOI checks must pass');
 
 % Rehearsal must shorten the run, change nothing else, and stay independent of testing mode.
-cfgFull = utils.config('projRoot', tmpRoot, 'rig', 'lab');
-cfgReh  = utils.config('projRoot', tmpRoot, 'rig', 'lab', 'trialsPerCell', 2);
+cfgFull = utils.config('projRoot', tmpRoot, 'localDataRoot', fullfile(tmpRoot,'data'), 'rig', 'lab');
+cfgReh  = utils.config('projRoot', tmpRoot, 'localDataRoot', fullfile(tmpRoot,'data'), 'rig', 'lab', 'trialsPerCell', 2);
 assert(isempty(cfgFull.rehearsal.trialsPerCell), ...
     'a full run must leave cfg.rehearsal.trialsPerCell empty');
 assert(cfgReh.rehearsal.trialsPerCell == 2, 'rehearsal knob must reach cfg');

@@ -31,6 +31,7 @@ dataMat.theme   = cfg.style.themeName;
 % [] on a full run; integer on a rehearsal, filterable in analysis.
 dataMat.trialsPerCell = cfg.rehearsal.trialsPerCell;
 window = [];
+et = struct('enabled', false, 'obj', [], 'showGaze', false, 'analyzable', false);
 
 utils.progressLog(run, 'TASK ENTER');
 try

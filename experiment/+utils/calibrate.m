@@ -1,7 +1,7 @@
-function ok = calibrate(et, window, cfg)
+function [ok, firstFlip, lastFlip] = calibrate(et, window, cfg)
 %UTILS.CALIBRATE  Five-point Tobii calibration.
 
-ok = false;
+ok = false; firstFlip = NaN; lastFlip = NaN;
 if ~et.enabled || isempty(et.obj), return; end
 
 s = cfg.style;
@@ -15,7 +15,7 @@ DrawFormattedText(window, ...
     ['Calibration\n\nPlease follow the dot with your eyes.\n\n' ...
      'Try to keep your head still.\n\nClick to begin.'], ...
     'center', 'center', s.text, 60, 0, 0, 1.5);
-Screen('Flip', window);
+firstFlip = Screen('Flip', window);
 utils.waitForClick(window);
 
 calib = ScreenBasedCalibration(et.obj);
@@ -50,6 +50,6 @@ else
 end
 
 Screen('FillRect', window, s.bg);
-Screen('Flip', window);
+lastFlip = Screen('Flip', window);
 
 end

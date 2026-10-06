@@ -10,7 +10,7 @@ end
 function teardown(testCase)
 rmdir(testCase.TestData.root, 's');
 end
-function validCommitAndStaleReceipt(testCase)
+function testValidCommitAndStaleReceipt(testCase)
 cfg = testCase.TestData.cfg;
 c = context();
 a = utils.blockStore('begin', cfg, c, struct('seed', 4));
@@ -27,7 +27,7 @@ verifyEqual(testCase, s.nextBlock, 2);
 verifyEqual(testCase, utils.checkpointIO('hash', f), before);
 verifyEqual(testCase, s.receipts(1).files, r.files);
 end
-function incompleteRetryIsSeparate(testCase)
+function testIncompleteRetryIsSeparate(testCase)
 cfg = testCase.TestData.cfg; c = context();
 a = utils.blockStore('begin', cfg, c, struct('seed', 4));
 s = utils.blockStore('recover', cfg, c.logicalRunId);
@@ -37,14 +37,14 @@ b = utils.blockStore('begin', cfg, c, s.entryState);
 verifyNotEqual(testCase, a.attemptId, b.attemptId);
 verifyTrue(testCase, isfolder(a.directory));
 end
-function corruptArtifactNotComplete(testCase)
+function testCorruptArtifactNotComplete(testCase)
 cfg = testCase.TestData.cfg; c = context();
 a = utils.blockStore('begin', cfg, c, struct());
 utils.blockStore('commit', cfg, a, payload());
 fid = fopen(fullfile(a.directory, 'gaze.mat'), 'w'); fwrite(fid, 'truncated'); fclose(fid);
 verifyError(testCase, @() utils.blockStore('recover', cfg, c.logicalRunId), 'hw:blockStore:corrupt');
 end
-function disabledTracker(testCase)
+function testDisabledTracker(testCase)
 cfg = testCase.TestData.cfg; c = context();
 a = utils.blockStore('begin', cfg, c, struct());
 p = payload(); p.gaze = [];
@@ -63,7 +63,7 @@ p = struct('trials', struct('trial', 1), 'trialTable', table(1, 'VariableNames',
     'clockSync', struct(), 'nextState', struct('seed', 8));
 end
 
-function localConfigDoesNotProbeShare(testCase)
+function testLocalConfigDoesNotProbeShare(testCase)
 cfg = utils.config('projRoot', testCase.TestData.root, ...
     'localDataRoot', fullfile(testCase.TestData.root, 'local'), ...
     'dataRoot', fullfile(testCase.TestData.root, 'not-created-share'), ...
@@ -72,7 +72,7 @@ verifyEqual(testCase, cfg.paths.data, fullfile(testCase.TestData.root, 'local', 
 verifyFalse(testCase, isfolder(fullfile(testCase.TestData.root, 'not-created-share')));
 verifyTrue(testCase, isfolder(cfg.paths.checkpoints));
 end
-function beforeDescriptorIsRecoverable(testCase)
+function testBeforeDescriptorIsRecoverable(testCase)
 cfg = testCase.TestData.cfg; c = context();
 a = utils.blockStore('begin',cfg,c,struct('seed',4));
 utils.blockStore('commit',cfg,a,payload());
@@ -80,7 +80,7 @@ delete(fullfile(a.directory,'receipt.mat')); delete(fullfile(a.directory,'prepar
 s = utils.blockStore('recover',cfg,c.logicalRunId);
 verifyEqual(testCase,s.nextBlock,2);
 end
-function behaviorOnlyDoesNotComplete(testCase)
+function testBehaviorOnlyDoesNotComplete(testCase)
 cfg = testCase.TestData.cfg; c = context();
 a = utils.blockStore('begin',cfg,c,struct('seed',4));
 p = payload(); behavior = rmfield(p,'gaze'); behavior.identity = a;
@@ -89,14 +89,14 @@ s = utils.blockStore('recover',cfg,c.logicalRunId);
 verifyEqual(testCase,s.nextBlock,1);
 verifyEqual(testCase,s.entryState.seed,4);
 end
-function twoValidAttemptsConflict(testCase)
+function testTwoValidAttemptsConflict(testCase)
 cfg = testCase.TestData.cfg; c = context();
 a = utils.blockStore('begin',cfg,c,struct('seed',4));
 b = utils.blockStore('begin',cfg,c,struct('seed',4));
 utils.blockStore('commit',cfg,a,payload()); utils.blockStore('commit',cfg,b,payload());
 verifyError(testCase,@() utils.blockStore('recover',cfg,c.logicalRunId),'hw:blockStore:conflict');
 end
-function unsupportedGazeKeepsBehavior(testCase)
+function testUnsupportedGazeKeepsBehavior(testCase)
 cfg = testCase.TestData.cfg; c = context();
 a = utils.blockStore('begin',cfg,c,struct('seed',4));
 p = payload(); p.gaze = struct('unsupported',{{1,2}});
