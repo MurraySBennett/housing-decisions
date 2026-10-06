@@ -3,6 +3,22 @@
 Descriptive analysis of the housing/wages battery. R, because these scripts
 have to be runnable and checkable on a machine with no MATLAB.
 
+## Block-checkpoint exports
+
+For the new format, run MATLAB `scripts/combine_blocks.m` on the immutable local
+run-kind root, writing to a separate derived directory. Point `--data` at that
+derived root. Do not put attempt fragments or incomplete exports in the task CSV
+directories. Discovery is nonrecursive; `blocks/`, `partial/`, and `legacy/` are
+excluded. Duplicate logical runs across CSV files cause an error.
+
+The existing behavioral columns remain available. New columns identify the block,
+attempt, schema and completeness. The gaze sidecar now stores `gazeExport.blocks`
+with packed numeric leaves and sample-to-trial/phase associations per block;
+integer timestamps retain their original precision. Invalid sync and legacy
+onset limitations are explicit. See [storage and recovery instructions](../experiment/BLOCK_CHECKPOINTS.md).
+Combining/syncing never modifies raw participant files. Legacy files can be
+explicitly archived with the combiner, but their exact onsets are not reconstructed.
+
 ## Run it
 
 For participant data QC, use `analysis/R/00_participant_qc.R`. Simulation is

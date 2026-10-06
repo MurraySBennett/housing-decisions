@@ -59,8 +59,8 @@ check_grep 'utils\.attrSlotRects' experiment/+utils/drawOptionCard.m 'fixed card
 
 check_grep "RandStream\\('twister',[[:space:]]*'Seed',[[:space:]]*run\\.seed\\)" experiment/continuous_DC_task.m 'private contdc RNG'
 check_absent 'rs[[:space:]]*=[[:space:]]*RandStream\.getGlobalStream' experiment/continuous_DC_task.m 'global contdc RNG'
-check_grep 'ch\(k\)\.timedOut' experiment/continuous_DC_task.m 'skip timed-out reversals'
-check_grep 'isnan\(ch\(k\)\.choseMoney\)' experiment/continuous_DC_task.m 'skip NaN reversals'
+check_grep 'ch\(k\)\.timedOut' experiment/+utils/scoreReversals.m 'skip timed-out reversals'
+check_grep 'isnan\(ch\(k\)\.choseMoney\)' experiment/+utils/scoreReversals.m 'skip NaN reversals'
 check_grep 'cfg\.contdc\.nPairs\.\(lower\(domain\)\)' experiment/continuous_DC_task.m 'domain-specific pair counts'
 check_grep 'cfg\.contdc\.allowCrossLevelReuse[[:space:]]*=[[:space:]]*true' experiment/+utils/config.m 'cross-level reuse defaults on for balanced contdc cells'
 check_grep "error\\('hw:contdc:shortPairs'" experiment/continuous_DC_task.m 'short contdc pair generation is fatal'
@@ -77,8 +77,9 @@ check_grep 'w\.idx[[:space:]]*=[[:space:]]*find\(valid[[:space:]]*&' experiment/
 check_grep 'pick\.trial' experiment/+utils/incentives.m 'incentive selected trial'
 check_grep 'detailAoiRects' experiment/auction_task.m 'auction detail AOI rects saved'
 check_grep 'layoutDetailAOIs' experiment/auction_task.m 'auction detail AOI helper'
-check_grep 'utils\.clockSync' experiment/auction_task.m 'auction clock sync'
-check_grep 'utils\.clockSync' experiment/continuous_DC_task.m 'contdc clock sync'
+check_grep 'utils\.blockRecording' experiment/auction_task.m 'auction block recording'
+check_grep 'utils\.blockRecording' experiment/continuous_DC_task.m 'contdc block recording'
+check_grep 'utils\.clockSync' experiment/+utils/blockRecording.m 'per-block clock sync'
 check_grep 'actualSampleRateHz' experiment/+utils/setupEyeTracker.m 'actual sample-rate field'
 check_grep 'get_gaze_output_frequency' experiment/+utils/setupEyeTracker.m 'query Tobii sample rate'
 check_file experiment/+utils/clockSync.m
@@ -393,7 +394,7 @@ check_grep 'HW_PRACTICE_DATA_ROOT' experiment/+utils/config.m 'practice data roo
 check_grep 'HW_ASSET_ROOT' experiment/+utils/config.m 'house image root comes from environment'
 check_grep 'HW_TOBII_ROOT' experiment/+utils/config.m 'Tobii SDK root comes from environment'
 check_grep 'runKind' experiment/+utils/config.m 'config carries participant/practice run kind'
-check_grep 'Data_fallback' experiment/+utils/config.m 'config has local fallback data root'
+check_grep 'HW_LOCAL_DATA_ROOT' experiment/+utils/config.m 'capture has a durable local data root'
 check_grep 'ensureWriteDirs' experiment/+utils/config.m 'config checks writable data roots'
 check_grep 'fallbackFileStem' experiment/+utils/saveRun.m 'saveRun can redirect to fallback root'
 check_grep 'dataMat\.primarySaveError' experiment/+utils/saveRun.m 'fallback save records primary save failure'
@@ -423,7 +424,7 @@ check_grep 'sortrows\(perms\(1:3\)\)' experiment/+utils/batteryPlan.m 'three-tas
 check_grep 'assignedDomain' experiment/+utils/batteryPlan.m 'battery plan uses between-subject domain assignment'
 check_grep 'domainIndex' experiment/+utils/batteryPlan.m 'task order is balanced within assigned domain'
 check_grep "case 'pref'" experiment/run_battery.m 'battery dispatches the pref task'
-check_grep 'cfg\.paths\.taskData\.pref' experiment/+utils/config.m 'pref data directory configured'
+check_grep 'paths\.taskData\.pref' experiment/+utils/config.m 'pref data directory configured'
 
 # --- display formatting -------------------------------------------------
 check_absent "sprintf\\('%\\.4g'" experiment/+utils/valueString.m 'attribute values must not use scientific notation'

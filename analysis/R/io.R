@@ -51,12 +51,28 @@ find_run_files <- function(data_dir) {
     select(task, path)
 }
 
+# Canonical exports and legacy CSVs must never count the same logical run twice.
+read_run_set <- function(paths) {
+  rows <- lapply(paths, read_run_csv)
+  seen <- character()
+  for (i in seq_along(rows)) {
+    x <- rows[[i]]
+    if (!"run_id" %in% names(x)) stop("Run CSV has no run_id: ", paths[[i]])
+    ids <- unique(as.character(x$run_id))
+    if (any(ids %in% seen)) stop("Duplicate run across CSV files: ", paths[[i]])
+    if ("complete" %in% names(x) && any(!as_lgl_flex(x$complete) | is.na(x$complete)))
+      stop("Incomplete checkpoint export in canonical task directory: ", paths[[i]])
+    seen <- c(seen, ids)
+  }
+  bind_rows(rows)
+}
+
 #' Load and tidy the auction runs.
 load_auction <- function(data_dir) {
   files <- find_run_files(data_dir) %>% filter(task == "auction")
   if (nrow(files) == 0) return(NULL)
 
-  bind_rows(lapply(files$path, read_run_csv)) %>%
+  read_run_set(files$path) %>%
     mutate(
       competition = factor(competition, levels = c("low", "high")),
       endReason   = factor(endReason, levels = c("accepted", "timeout", "exhausted")),
@@ -81,7 +97,7 @@ load_contdc <- function(data_dir) {
   files <- find_run_files(data_dir) %>% filter(task == "contdc")
   if (nrow(files) == 0) return(NULL)
 
-  bind_rows(lapply(files$path, read_run_csv)) %>%
+  read_run_set(files$path) %>%
     mutate(
       taskType      = factor(taskType, levels = c("choice", "price")),
       attrLevel     = factor(attrLevel, levels = sort(unique(attrLevel))),
@@ -98,7 +114,7 @@ load_pref <- function(data_dir) {
   files <- find_run_files(data_dir) %>% filter(task == "pref")
   if (nrow(files) == 0) return(NULL)
 
-  bind_rows(lapply(files$path, read_run_csv)) %>%
+  read_run_set(files$path) %>%
     mutate(
       section = factor(section, levels = c("rating", "pwc")),
       domain  = factor(domain, levels = c("jobs", "houses"))

@@ -6,6 +6,13 @@ stimulus-reuse fixes — a lot has changed underneath this since it was
 first written, including the whole package moving from `+hw` to `+utils`.
 If you see `hw.` anywhere in comments or old notes, it means `utils.` now.
 
+## Block checkpoint storage
+
+The development checkpoint format saves verified local blocks and resumes the
+first unfinished block. See [operator instructions and release checks](BLOCK_CHECKPOINTS.md)
+for locations, logging, offline sync, combining, and required MATLAB/rig validation.
+This format is not yet cleared for participant deployment.
+
 ## What this is
 
 Two tasks, sharing one participant-management layer, testing three

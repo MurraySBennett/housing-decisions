@@ -2,6 +2,8 @@ function verify_block_checkpoints
 % Run the headless checkpoint tests; PTB/rig validation is separate.
 root = fileparts(fileparts(mfilename('fullpath')));
 addpath(fullfile(root, 'experiment'));
+addpath(fullfile(root, 'scripts'), fullfile(root, 'scripts', 'tests'));
+addpath(fullfile(root, 'scripts', 'tests', 'fixtures'));
 sdk = getenv('HW_TOBII_ROOT');
 if ~isempty(sdk), addpath(genpath(sdk)); end
 results = runtests(fullfile(root, 'scripts', 'tests'));

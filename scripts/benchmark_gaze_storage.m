@@ -3,6 +3,8 @@ function report = benchmark_gaze_storage(sourceFile, outputRoot, varargin)
 % report = benchmark_gaze_storage(sourceFile, outputRoot, 'shareRoot', path)
 p = inputParser; p.addParameter('shareRoot', ''); p.parse(varargin{:});
 root = fileparts(fileparts(mfilename('fullpath'))); addpath(fullfile(root, 'experiment'));
+sdk = getenv('HW_TOBII_ROOT');
+if ~isempty(sdk), addpath(genpath(sdk)); end
 assert(isfile(sourceFile), 'hw:benchmark:source', 'Source gaze file is missing.');
 assert(~isfile(outputRoot), 'hw:benchmark:output', 'Output root must be a directory.');
 runDir = fullfile(outputRoot, ['gaze-benchmark-' char(java.util.UUID.randomUUID)]);
