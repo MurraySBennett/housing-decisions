@@ -150,7 +150,20 @@ cfg.sampling.minN   = 12;         % widen until this many stimuli are inside
 % Per domain: false selects in-window rows (sampleWindow), true rank-fits all
 % values onto the window (fitToWindow). Houses need fitting: 80 items, 126:1 spread.
 cfg.sampling.fitToWindow.houses = true;
-cfg.sampling.fitToWindow.jobs   = false;
+% Jobs needs it too, for the same reason houses did, found from participant 7's
+% aborted session. Jobs narrows TWICE: nTopIndustries cuts 128 rows to 64, and
+% only then does the wage window apply -- and sampleWindow's widening/minN floor
+% operates on the already-halved set, so it cannot recover what the industry cut
+% removed. At that participant's anchor (~$11-12/hr, window $7-$18) 13-16
+% stimuli reached pairing; capped at two uses each that tops out near 17 pairs
+% against nPairs=20, and continuous_DC_task refuses imbalanced cells, so the run
+% died before its first trial. A low reservation wage is ordinary in a student
+% sample, so this was not an edge case.
+% Fitting removes the wage stage as a filter entirely: all 64 post-industry
+% stimuli survive at EVERY anchor. It costs only the real wage marginals, and in
+% the synthetic arm wage is orthogonal to the attributes by construction, so the
+% design loses nothing -- the same argument that justified fitting for houses.
+cfg.sampling.fitToWindow.jobs   = true;
 cfg.sampling.nTopIndustries = 4;
 
 % --- Auction task -----------------------------------------------------
