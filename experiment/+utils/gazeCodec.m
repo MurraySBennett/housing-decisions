@@ -58,11 +58,16 @@ switch lower(action)
         end
         if strcmpi(action, 'validate'), out = true; return; end
         if strcmp(value.sourceClass, 'GazeData')
-            plain = out; out = repmat(GazeData(), value.originalShape);
+            plain = out;
+            % Preallocate from a real reconstruction. GazeData's constructor
+            % takes all 18 properties and the SDK does not offer a zero-argument
+            % form, so repmat(GazeData(), ...) threw here. Every element is
+            % overwritten below -- prod(originalShape) == sampleCount is
+            % asserted above -- so the seed element is never read.
+            out = repmat(makeGazeData(plain(1)), value.originalShape);
             for i = 1:value.sampleCount
                 v = plain(i);
-                args = [eyeArgs(v.LeftEye) eyeArgs(v.RightEye)];
-                out(i) = GazeData(v.DeviceTimeStamp, v.SystemTimeStamp, args{:});
+                out(i) = makeGazeData(v);
                 [check, ~] = describe(out(i), {});
                 assert(isequaln(check, v), 'hw:gazeCodec:type', ...
                     'SDK reconstruction changed properties; retain the original data.');
@@ -98,6 +103,11 @@ function s = putLeaf(s, path, v)
 if isempty(path), s = v; return; end
 name = path{1};
 s.(name) = putLeaf(s.(name), path(2:end), v);
+end
+
+function g = makeGazeData(v)
+args = [eyeArgs(v.LeftEye) eyeArgs(v.RightEye)];
+g = GazeData(v.DeviceTimeStamp, v.SystemTimeStamp, args{:});
 end
 
 function args = eyeArgs(e)

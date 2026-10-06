@@ -47,11 +47,23 @@ end
 
 function writeRunFiles(fileStem, sess, run, dataMat, trialTable)
 utils.progressLog(run, 'BEGIN behavioral MAT save: %s.mat', fileStem);
-save([fileStem '.mat'], 'dataMat', '-v7.3');
+% Temp-then-rename with read-back, the same way checkpointIO writes block
+% artifacts. A direct in-place -v7.3 save leaves a truncated file with no
+% valid HDF signature if anything interrupts it, and that file can never
+% be loaded again.
+% Field assigned, not struct('dataMat', dataMat): struct() expands a
+% non-scalar value into a struct ARRAY, which would silently change what
+% gets written.
+variables = struct();
+variables.dataMat = dataMat;
+utils.checkpointIO('write', [fileStem '.mat'], variables, true);
 utils.progressLog(run, 'END behavioral MAT save');
 
 % --- Long-format CSV --------------------------------------------------
-if nargin >= 5 && ~isempty(trialTable)
+% Guard on content only. This used to read `nargin >= 5`, which is the
+% nargin of THIS function (always 5), not saveRun's -- so it never gated
+% anything, and adding a parameter would have silently disabled the CSV.
+if ~isempty(trialTable)
     utils.progressLog(run, 'BEGIN CSV preparation');
     n = height(trialTable);
     keys = table( ...
@@ -69,7 +81,13 @@ if nargin >= 5 && ~isempty(trialTable)
     end
 
     utils.progressLog(run, 'BEGIN behavioral CSV save rows=%d: %s.csv', n, fileStem);
-    writetable([keys trialTable], [fileStem '.csv']);
+    % Same reason as the MAT above: never leave a half-written CSV at the
+    % final path. FileType is explicit because the temp name is not *.csv.
+    csvFile = [fileStem '.csv'];
+    csvTmp = [csvFile '.' utils.checkpointIO('id') '.partial'];
+    writetable([keys trialTable], csvTmp, 'FileType', 'text', 'Delimiter', ',');
+    [ok, msg] = movefile(csvTmp, csvFile, 'f');
+    assert(ok, 'hw:saveRun:rename', 'Could not finalize %s: %s', csvFile, msg);
     utils.progressLog(run, 'END behavioral CSV save');
 end
 end

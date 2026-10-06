@@ -3,7 +3,10 @@ function out = blockRecording(action, et, varargin)
 switch lower(action)
     case 'start'
         % Subscribe/drain pre-block samples. No task stimulus has started yet.
-        if et.enabled && ~isempty(et.obj), et.obj.get_gaze_data(); end
+        % Guarded like clockSync.m:12 and gazeBuffer.m:22: a failed
+        % setupEyeTracker can leave et non-struct, and bare et.enabled then
+        % throws "Dot indexing is not supported" at the first block.
+        if isstruct(et) && et.enabled && ~isempty(et.obj), et.obj.get_gaze_data(); end
         out = struct('store', utils.gazeBuffer('init'), ...
             'clockSync', struct('start', utils.clockSync(et), 'end', []));
     case 'finish'
