@@ -5,6 +5,7 @@ if nargin < 3, doCalibrate = true; end
 
 et.enabled     = cfg.et.enabled;
 et.obj         = [];
+et.operations  = [];
 et.mediaMode   = cfg.et.mediaMode;
 et.showGaze    = cfg.et.mediaMode && cfg.et.showGaze;
 et.calibrated  = false;
@@ -32,6 +33,7 @@ end
 
 try
     Tobii = EyeTrackingOperations();
+    et.operations = Tobii;
     trackers = Tobii.find_all_eyetrackers();
     if isempty(trackers)
         error('hw:setupEyeTracker:noTracker', 'No eye tracker found.');

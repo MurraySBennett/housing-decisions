@@ -4,16 +4,24 @@ function sync = clockSync(et)
 %   Two pairs, one near run start and one near run end, are enough to estimate
 %   offset and drift between Tobii system timestamps and PTB event times.
 
-sync = struct('ptbSecs', GetSecs, 'tobiiSystemTimeStamp', NaN, 'ok', false);
+sync = struct('ptbSecs', NaN, 'tobiiSystemTimeStamp', NaN, ...
+    'ok', false, 'uncertaintySecs', NaN, 'error', '');
+
+try, sync.ptbSecs = GetSecs; catch, end
 
 if ~isstruct(et) || ~et.enabled || isempty(et.obj)
     return
 end
 
 try
-    sync.tobiiSystemTimeStamp = et.obj.get_system_time_stamp();
-    sync.ok = true;
-catch
+    before = GetSecs;
+    sync.tobiiSystemTimeStamp = et.operations.get_system_time_stamp();
+    after = GetSecs;
+    sync.ptbSecs = (before + after) / 2;
+    sync.uncertaintySecs = (after - before) / 2;
+    sync.ok = isinteger(sync.tobiiSystemTimeStamp) && isscalar(sync.tobiiSystemTimeStamp);
+catch ME
+    sync.error = ME.message;
 end
 
 end

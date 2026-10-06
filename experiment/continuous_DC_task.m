@@ -79,6 +79,8 @@ try
 
         utils.trace('domain %s: loading stimuli', domain);
         A = utils.attributes(domain);
+        frozen = utils.runCheckpoint('peek', sess, run, domain);
+        if isempty(frozen)
         stimuli = utils.readStimuli(cfg, domain);
         utils.trace('domain %s: %d stimuli loaded', domain, height(stimuli));
 
@@ -197,6 +199,42 @@ try
         utils.trace('domain %s: %d distinct stimuli claimed across %d levels (reuse %s)', ...
             domain, numel(usedAcrossLevels), numel(unique(levels)), ...
             utils.ternary(cfg.contdc.allowCrossLevelReuse, 'allowed', 'blocked'));
+        frozen = struct();
+        frozen.anchor = anchor;
+        frozen.anchorRT = anchorRT;
+        frozen.poolRatings = poolRatings;
+        frozen.attrRTs = attrRTs;
+        frozen.coreRatings = coreRatings;
+        frozen.coreRTs = coreRTs;
+        frozen.industryRatings = industryRatings;
+        frozen.inWindow = inWindow;
+        frozen.win = win;
+        frozen.levels = levels;
+        frozen.blocks = blocks;
+        frozen.pairsByLevel = pairsByLevel;
+        frozen.selByLevel = selByLevel;
+        frozen.neededIdx = neededIdx;
+        frozen.blockCount = numel(blocks);
+        frozen.rsState = rs.State; frozen.globalState = rng; frozen.screenRect = winRect;
+        utils.runCheckpoint('freeze', sess, run, domain, frozen);
+        else
+            anchor = frozen.anchor;
+            anchorRT = frozen.anchorRT;
+            poolRatings = frozen.poolRatings;
+            attrRTs = frozen.attrRTs;
+            coreRatings = frozen.coreRatings;
+            coreRTs = frozen.coreRTs;
+            industryRatings = frozen.industryRatings;
+            inWindow = frozen.inWindow;
+            win = frozen.win;
+            levels = frozen.levels;
+            blocks = frozen.blocks;
+            pairsByLevel = frozen.pairsByLevel;
+            selByLevel = frozen.selByLevel;
+            neededIdx = frozen.neededIdx;
+        end
+        assert(isequal(winRect, frozen.screenRect), 'hw:contdc:displayChanged', 'Display geometry changed on resume.');
+        rs.State = frozen.rsState; rng(frozen.globalState);
         aoiLayouts = buildAoiLayouts(winRect, cfg, geom, selByLevel, levels);
 
         tl = utils.timeline('section', tl, sprintf('%s:instructions', domain));
@@ -209,13 +247,17 @@ try
             domain, numel(unique(neededIdx)), win.n);
         tex = utils.loadStimulusTextures(window, cfg, inWindow, A, neededIdx, true);
 
-        log = utils.eventLog('init', 20000);
-        gazeStore = utils.gazeBuffer('init');
-        clockSync = struct('start', utils.clockSync(et), 'end', []);
-        trials = struct([]);
-
+        recovery = utils.taskBlock('recover', sess, run, domain);
+        trials = recovery.trials;
+        domainEvents = recovery.events;
+        parentAttempt = recovery.parentAttemptId;
+        if ~isempty(recovery.entryState)
+            rs.State = recovery.entryState.rsState; rng(recovery.entryState.globalState);
+        end
         tl = utils.timeline('section', tl, sprintf('%s:trials', domain));
-        for b = 1:numel(blocks)
+        for b = recovery.nextBlock:numel(blocks)
+            firstTrial = numel(trials) + 1;
+            log = utils.eventLog('init', 20000);
             lvl  = blocks(b).attrLevel;
             task = blocks(b).taskType;
 
@@ -233,6 +275,11 @@ try
             utils.trace('block %d/%d: %s, level %d', b, numel(blocks), task, lvl);
             showBlockIntro(window, cfg, task, lvl, b, numel(blocks));
 
+            entryState = struct('rsState', rs.State, 'globalState', rng);
+            attempt = utils.taskBlock('begin', sess, run, domain, b, entryState, parentAttempt);
+            log = utils.eventLog('context', log, struct('block', b, 'attemptId', attempt.attemptId));
+            recording = utils.blockRecording('start', et);
+            gazeStore = recording.store; clockSync = recording.clockSync;
             order = randperm(rs, numel(pairs));
 
             % Price blocks run two trials per pair, so totals differ by task type.
@@ -248,6 +295,7 @@ try
 
                 if strcmp(task, 'choice')
                     trialInBlock = trialInBlock + 1;
+                    log = utils.eventLog('context', log, struct('trial', trialInBlock));
                     [tr, log, gazeStore] = runChoiceTrial(window, cfg, geom, et, ...
                         log, gazeStore, inWindow, tex, sel, A, p, domain, ...
                         struct('block', b, 'nBlocks', numel(blocks), 'level', lvl, ...
@@ -260,6 +308,7 @@ try
                     o2 = randperm(rs, 2);
                     for q = o2
                         trialInBlock = trialInBlock + 1;
+                        log = utils.eventLog('context', log, struct('trial', trialInBlock));
                         [tr, log, gazeStore] = runPriceTrial(window, cfg, geom, et, ...
                             log, gazeStore, inWindow, tex, sel, A, items(q), ...
                             isMoney(q), win, domain, rs, ...
@@ -271,6 +320,22 @@ try
                 end
                 utils.checkForQuit;
             end
+            log = utils.eventLog('add', log, 'recording_stop', GetSecs, struct('trial', 0));
+            blockTrials = trials(firstTrial:end);
+            blockData = struct(); blockData.domains = {domain}; blockData.(domain).trials = blockTrials;
+            payload = struct(); payload.trials = blockTrials;
+            payload.trialTable = buildTrialTable(blockData);
+            payload.trialTable.trial = (1:numel(blockTrials))';
+            payload.events = utils.eventLog('table', log);
+            payload.metadata = struct('frozenPlan', frozen, 'aoiLayouts', aoiLayouts, ...
+                'eyeTracking', dataMat.eyeTracking, 'attributes', A);
+            payload.clockSync = clockSync;
+            payload.nextState = struct('rsState', rs.State, 'globalState', rng);
+            utils.savingScreen(window, cfg, 0.1, 'Saving completed block', utils.didYouKnow(run.seed));
+            receipt = utils.taskBlock('finish', sess, run, domain, attempt, payload, et, gazeStore);
+            parentAttempt = receipt.attemptId;
+            domainEvents{end+1} = payload.events;
+            clear gazeStore recording payload blockData blockTrials;
         end
 
         utils.progressLog(run, 'TRIALS FINISHED domain=%s; BEGIN releasing textures', domain);
@@ -292,34 +357,12 @@ try
         dataMat.(domain).blocks        = blocks;
         dataMat.(domain).pairs         = pairsByLevel;
         dataMat.(domain).trials        = trials;
-        dataMat.(domain).events        = utils.eventLog('table', log);
-        dataMat.(domain).reversals     = scoreReversals(trials);
+        dataMat.(domain).events        = utils.stackTables(domainEvents);
+        dataMat.(domain).reversals     = utils.scoreReversals(trials);
         dataMat.(domain).aoiLayouts    = aoiLayouts;
 
-        % Blocking disk writes from here; see the matching note in auction_task.m.
-        tl = utils.timeline('section', tl, sprintf('%s:saving', domain));
-        utils.progressLog(run, 'TRIALS FINISHED domain=%s; entering saving screen', domain);
-        savingFact = utils.didYouKnow(run.seed);
-        utils.savingScreen(window, cfg, 0.10, 'Collecting eye-tracking samples', savingFact);
+        dataMat.(domain).checkpointRun = [run.runId '_' domain];
 
-        utils.progressLog(run, 'BEGIN final clock sync domain=%s', domain);
-        clockSync.end = utils.clockSync(et);
-        utils.progressLog(run, 'END final clock sync');
-        utils.progressLog(run, 'BEGIN gaze flush bufferedSamples=%d chunks=%d', gazeStore.n, numel(gazeStore.samples));
-        gaze = utils.gazeBuffer('flush', et, gazeStore, run);
-        utils.progressLog(run, 'END gaze flush samples=%d', numel(gaze));
-        if ~isempty(gaze)
-            utils.savingScreen(window, cfg, 0.25, 'Writing eye-tracking data', savingFact);
-            gf = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
-            eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
-            utils.progressLog(run, 'BEGIN gaze MAT save: %s', gf);
-            save(gf, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
-            utils.progressLog(run, 'END gaze MAT save');
-            dataMat.(domain).gazeFile = gf;
-            fprintf('Saved %d gaze samples.\n', numel(gaze));
-        end
-        dataMat.(domain).clockSync = clockSync;
-        utils.savingScreen(window, cfg, 0.55, 'Releasing images', savingFact);
     end
 
     utils.progressLog(run, 'BEGIN end-of-task message');
@@ -333,7 +376,11 @@ try
     utils.progressLog(run, 'BEGIN trial table construction');
     trialTable = buildTrialTable(dataMat);
     utils.progressLog(run, 'END trial table construction rows=%d', height(trialTable));
-    utils.saveRun(sess, run, dataMat, trialTable);
+    try
+        utils.saveRun(sess, run, dataMat, trialTable);
+    catch aggregateError
+        utils.progressLog(run, 'Optional task summary failed: %s', aggregateError.message);
+    end
     utils.progressLog(run, 'END behavioral saves');
     utils.savingScreen(window, cfg, 1.00, 'Done - thank you', savingFact);
     WaitSecs(1.2);
@@ -344,12 +391,13 @@ try
     if standalone, utils.endRun(sess, run, 'complete'); end
 
 catch ME
+    utils.preserveGazeFailure(sess, run, et);
     utils.progressLog(run, 'TASK ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
     ListenChar(0); ShowCursor; Priority(0);
     % sca does not reset PsychImaging's persistent config state; both are needed or the next OpenWindow in this MATLAB session fails or returns a bad handle.
     sca;
     clear PsychImaging;
-    crashFile = fullfile(cfg.paths.crashed, sprintf('%s_crash.mat', run.runId));
+    crashFile = fullfile(cfg.paths.crashed, sprintf('%s_%s_crash.mat', run.runId, utils.checkpointIO('id')));
     save(crashFile, 'ME', 'dataMat', 'sess', 'run');
     fprintf(2, '\nCrashed. Partial data saved to:\n  %s\n', crashFile);
     if standalone, utils.endRun(sess, run, 'crashed'); end
@@ -404,13 +452,11 @@ tr.moneyIdx   = pair.moneyIdx;
 tr.qualityIdx = pair.qualityIdx;
 tr.contrast   = pair.contrast;
 
-log = utils.eventLog('add', log, 'choice_onset', GetSecs, ...
-    struct('leftIdx', leftIdx, 'rightIdx', rightIdx, 'level', blockInfo.level));
-
-% t0 is the fixation click's flip time, the stimulus-locked RT reference.
+% Fixation click permits presentation; the first stimulus flip defines t0.
 [t0, log] = utils.awaitFixationStart(window, cfg, log, struct( ...
     'trial', blockInfo.trialInBlock, 'nTrials', blockInfo.nTrialsInBlock, ...
     'label', sprintf('%s - choose - %d attributes', domain, blockInfo.level)));
+t0 = NaN;
 
 while true
     % No HUD on the response screen by design.
@@ -428,7 +474,12 @@ while true
     if et.showGaze && ~isempty(gazeStore.latest)
         drawGazeDot(window, cfg, gazeStore.latest);
     end
-    Screen('Flip', window);
+    vbl = Screen('Flip', window);
+    if isnan(t0)
+        t0 = vbl;
+        log = utils.eventLog('add', log, 'choice_onset', vbl, ...
+            struct('leftIdx', leftIdx, 'rightIdx', rightIdx, 'level', blockInfo.level));
+    end
     utils.checkForQuit;
 
     [mx, my, buttons] = utils.getMouse(window);
@@ -458,7 +509,8 @@ HideCursor(window);
 log = utils.eventLog('add', log, 'choice_response', GetSecs, ...
     struct('chosenIdx', tr.chosenIdx, 'choseMoney', double(tr.choseMoney), 'rt', tr.rt));
 
-interTrial(window, cfg);
+itiOnset = interTrial(window, cfg);
+log = utils.eventLog('add', log, 'intertrial_onset', itiOnset, struct('trial', 0));
 
 end
 
@@ -485,10 +537,6 @@ else
     q = 'What is the lowest hourly wage you would accept for this job?';
 end
 
-log = utils.eventLog('add', log, 'price_onset', GetSecs, ...
-    struct('itemIdx', idx, 'level', blockInfo.level, ...
-           'isMoneyOption', double(isMoneyOption)));
-
 scaleMin = win.scaleMin;
 scaleMax = win.scaleMax;
 
@@ -502,10 +550,11 @@ tickVals = linspace(scaleMin, scaleMax, nTicks);
 
 itemValue = stimTbl.(A.valueVar)(idx);
 
-% t0 is the fixation click's flip time, the stimulus-locked RT reference.
+% Fixation click permits presentation; the first stimulus flip defines t0.
 [t0, log] = utils.awaitFixationStart(window, cfg, log, struct( ...
     'trial', blockInfo.trialInBlock, 'nTrials', blockInfo.nTrialsInBlock, ...
     'label', sprintf('%s - price - %d attributes', domain, blockInfo.level)));
+t0 = NaN;
 
 % NaN startFrac marks "not forced" in the saved data.
 tr.startFrac = NaN;
@@ -573,7 +622,12 @@ while true
     if et.showGaze && ~isempty(gazeStore.latest)
         drawGazeDot(window, cfg, gazeStore.latest);
     end
-    Screen('Flip', window);
+    vbl = Screen('Flip', window);
+    if isnan(t0)
+        t0 = vbl;
+        log = utils.eventLog('add', log, 'price_onset', vbl, ...
+            struct('itemIdx', idx, 'level', blockInfo.level, 'isMoneyOption', double(isMoneyOption)));
+    end
     utils.checkForQuit;
 
     if buttons(1)
@@ -591,7 +645,8 @@ end
 log = utils.eventLog('add', log, 'price_response', GetSecs, ...
     struct('itemIdx', idx, 'price', tr.price, 'rt', tr.rt));
 
-interTrial(window, cfg);
+itiOnset = interTrial(window, cfg);
+log = utils.eventLog('add', log, 'intertrial_onset', itiOnset, struct('trial', 0));
 
 end
 
@@ -650,46 +705,6 @@ end
 
 
 %% ======================================================================
-function rev = scoreReversals(trials)
-%SCOREREVERSALS  Per pair: chose one option but priced the other higher.
-
-rev = struct('pairIdx', {}, 'level', {}, 'choseMoney', {}, ...
-             'pricedMoneyHigher', {}, 'reversal', {});
-
-if isempty(trials), return; end
-levels = unique([trials.level]);
-
-for L = levels
-    sub = trials([trials.level] == L);
-    ch  = sub(strcmp({sub.taskType}, 'choice'));
-    pr  = sub(strcmp({sub.taskType}, 'price'));
-
-    for k = 1:numel(ch)
-        if ch(k).timedOut || isnan(ch(k).choseMoney)
-            continue
-        end
-        pIdx = ch(k).pairIdx;
-        pp = pr([pr.pairIdx] == pIdx);
-        if numel(pp) < 2, continue; end
-
-        m = pp([pp.isMoneyOption]);
-        q = pp(~[pp.isMoneyOption]);
-        if isempty(m) || isempty(q) || isnan(m(1).price) || isnan(q(1).price)
-            continue
-        end
-
-        pricedMoneyHigher = m(1).price > q(1).price;
-        r = struct();
-        r.pairIdx           = pIdx;
-        r.level             = L;
-        r.choseMoney        = ch(k).choseMoney;
-        r.pricedMoneyHigher = pricedMoneyHigher;
-        r.reversal          = (ch(k).choseMoney ~= pricedMoneyHigher);
-        rev(end+1) = r; %#ok<AGROW>
-    end
-end
-
-end
 
 
 %% ======================================================================
@@ -748,12 +763,12 @@ end
 
 
 %% ======================================================================
-function interTrial(window, cfg)
+function vbl = interTrial(window, cfg)
 s = cfg.style;
 Screen('FillRect', window, s.bg);
 scr = Screen('Rect', window);
 Screen('DrawDots', window, [scr(3)/2; scr(4)/2], 10, s.textDim, [], 2);
-Screen('Flip', window);
+vbl = Screen('Flip', window);
 WaitSecs(cfg.contdc.itiSec);
 end
 

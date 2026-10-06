@@ -83,6 +83,8 @@ try
 
         utils.trace('domain %s: loading stimuli', domain);
         A = utils.attributes(domain);
+        frozen = utils.runCheckpoint('peek', sess, run, domain);
+        if isempty(frozen)
         stimuli = utils.readStimuli(cfg, domain);
         utils.trace('domain %s: %d stimuli loaded', domain, height(stimuli));
 
@@ -177,6 +179,20 @@ try
             [plan.competition] = deal(cfg.testing.forceCompetition);
         end
 
+        else
+            anchor = frozen.anchor;
+            anchorRT = frozen.anchorRT;
+            poolRatings = frozen.poolRatings;
+            attrRTs = frozen.attrRTs;
+            coreRatings = frozen.coreRatings;
+            coreRTs = frozen.coreRTs;
+            industryRatings = frozen.industryRatings;
+            sel = frozen.sel;
+            inWindow = frozen.inWindow;
+            win = frozen.win;
+            plan = frozen.plan;
+        end
+
         % ---- textures ---------------------------------------------
         neededIdx = [];
         for t = 1:numel(plan)
@@ -188,7 +204,9 @@ try
 
         % ---- instructions -----------------------------------------
         tl = utils.timeline('section', tl, sprintf('%s:instructions', domain));
-        if ~(cfg.testing.enabled && cfg.testing.skipInstructions)
+        if ~isempty(frozen)
+            comprehension = frozen.comprehension;
+        elseif ~(cfg.testing.enabled && cfg.testing.skipInstructions)
             showInstructions(window, cfg, domain);
             comprehension = runComprehensionChecks(window, cfg, domain);
         else
@@ -225,8 +243,9 @@ try
         trials = struct([]);
         wonStimIdx = [];
         log = utils.eventLog('init', 20000);
-        gazeStore = utils.gazeBuffer('init');
-        clockSync = struct('start', utils.clockSync(et), 'end', []);
+        if isempty(frozen)
+        recording = utils.blockRecording('start', et);
+        gazeStore = recording.store;
         tl = utils.timeline('section', tl, sprintf('%s:practice', domain));
         if ~(cfg.testing.enabled && cfg.testing.skipInstructions)
             [practiceTrial, log, gazeStore] = runPracticeEpisode( ...
@@ -245,6 +264,40 @@ try
                 numel(plan), nParts));
         end
 
+        practiceRecording = utils.blockRecording('finish', et, gazeStore, recording.clockSync, run);
+        practice = struct('trials', trials, 'events', utils.eventLog('table', log), ...
+            'gaze', utils.gazeCodec('pack', practiceRecording.gaze), 'clockSync', practiceRecording.clockSync);
+        frozen = struct();
+        frozen.anchor = anchor;
+        frozen.anchorRT = anchorRT;
+        frozen.poolRatings = poolRatings;
+        frozen.attrRTs = attrRTs;
+        frozen.coreRatings = coreRatings;
+        frozen.coreRTs = coreRTs;
+        frozen.industryRatings = industryRatings;
+        frozen.sel = sel;
+        frozen.inWindow = inWindow;
+        frozen.win = win;
+        frozen.plan = plan;
+        frozen.comprehension = comprehension;
+        frozen.practiceTrials = trials;
+        frozen.practiceRecording = practice;
+        frozen.blockCount = max([plan.block]);
+        frozen.rsState = rs.State; frozen.globalState = rng; frozen.screenRect = winRect;
+        utils.runCheckpoint('freeze', sess, run, domain, frozen);
+        clear practiceRecording practice gazeStore recording;
+        end
+        assert(isequal(winRect, frozen.screenRect), 'hw:auction:displayChanged', 'Display geometry changed on resume.');
+        rs.State = frozen.rsState; rng(frozen.globalState);
+        recovery = utils.taskBlock('recover', sess, run, domain);
+        trials = [frozen.practiceTrials recovery.trials];
+        domainEvents = recovery.events;
+        parentAttempt = recovery.parentAttemptId;
+        if ~isempty(recovery.entryState)
+            plan = recovery.entryState.plan; wonStimIdx = recovery.entryState.wonStimIdx;
+            rs.State = recovery.entryState.rsState; rng(recovery.entryState.globalState);
+        end
+
         % Breaks go at competition-level changes, not block indices: ABBA makes blocks 2-3 one continuous run.
         tl = utils.timeline('section', tl, sprintf('%s:trials', domain));
         levelChange = [false, ~strcmp({plan(2:end).competition}, ...
@@ -252,8 +305,22 @@ try
         nRuns = 1 + sum(levelChange);
         utils.trace('domain %s: starting %d trials, %d blocks, %d run(s) of a level', ...
             domain, numel(plan), numel(unique([plan.block])), nRuns);
-        runIdx = 1;
-        for t = 1:numel(plan)
+        firstPending = find([plan.block] == recovery.nextBlock, 1);
+        if isempty(firstPending), firstPending = numel(plan) + 1; end
+        runIdx = 1 + sum(levelChange(1:max(0, firstPending-1)));
+        for t = firstPending:numel(plan)
+            b = plan(t).block;
+            if t == firstPending || plan(t-1).block ~= b
+                firstTrial = numel(trials) + 1;
+                entryState = struct('plan', plan, 'wonStimIdx', wonStimIdx, ...
+                    'rsState', rs.State, 'globalState', rng);
+                attempt = utils.taskBlock('begin', sess, run, domain, b, entryState, parentAttempt);
+                log = utils.eventLog('init', 20000);
+                log = utils.eventLog('context', log, struct('block', b, 'attemptId', attempt.attemptId));
+                recording = utils.blockRecording('start', et);
+                gazeStore = recording.store; clockSync = recording.clockSync;
+            end
+            log = utils.eventLog('context', log, struct('trial', t));
             % Break message must not name the direction of the competition change.
             if levelChange(t)
                 log = utils.eventLog('add', log, 'block_break', GetSecs, ...
@@ -290,6 +357,23 @@ try
                     struct('stimIdx', trial.bidStimIdx, 'trial', t, ...
                            'struckFromTrials', nStruck));
             end
+            if t == numel(plan) || plan(t+1).block ~= b
+                log = utils.eventLog('add', log, 'recording_stop', GetSecs, struct('trial', 0));
+                blockTrials = trials(firstTrial:end);
+                blockData = struct(); blockData.domains = {domain}; blockData.(domain).trials = blockTrials;
+                payload = struct('trials', blockTrials, 'trialTable', buildTrialTable(blockData), ...
+                    'events', utils.eventLog('table', log), 'clockSync', clockSync);
+                metadataPlan = rmfield(frozen, 'practiceRecording');
+                payload.metadata = struct('frozenPlan', metadataPlan, 'gridLayout', L, ...
+                    'detailAOIs', detailAOIs, 'bidAOIs', bidAOIs, 'bidLayout', bidL, ...
+                    'eyeTracking', dataMat.eyeTracking, 'attributes', A);
+                payload.nextState = struct('plan', plan, 'wonStimIdx', wonStimIdx, ...
+                    'rsState', rs.State, 'globalState', rng);
+                utils.savingScreen(window, cfg, 0.1, 'Saving completed block', utils.didYouKnow(run.seed));
+                receipt = utils.taskBlock('finish', sess, run, domain, attempt, payload, et, gazeStore);
+                parentAttempt = receipt.attemptId; domainEvents{end+1} = payload.events;
+                clear gazeStore recording payload blockData blockTrials;
+            end
         end
 
         utils.progressLog(run, 'TRIALS FINISHED domain=%s; BEGIN result assembly', domain);
@@ -312,7 +396,7 @@ try
         dataMat.(domain).comprehension   = comprehension;
         dataMat.(domain).wonStimIdx      = wonStimIdx;
         dataMat.(domain).trials          = trials;
-        dataMat.(domain).events          = utils.eventLog('table', log);
+        dataMat.(domain).events          = utils.stackTables(domainEvents);
         dataMat.(domain).aoiRects        = L.aoiRects;
         dataMat.(domain).aoiNames        = L.aoiNames;
         dataMat.(domain).aoiReport       = aoiReport;
@@ -324,28 +408,8 @@ try
         dataMat.(domain).bidAoiReport     = bidAoiReport;
         dataMat.(domain).bidCardRect      = bidL.cardRect;
 
-        % Gaze goes to its own file: far too large for the behavioural .mat.
-        utils.progressLog(run, 'TRIALS FINISHED domain=%s; entering saving screen', domain);
+        dataMat.(domain).checkpointRun = [run.runId '_' domain];
         savingFact = utils.didYouKnow(run.seed);
-        utils.savingScreen(window, cfg, 0.10, 'Collecting eye-tracking samples', savingFact);
-
-        utils.progressLog(run, 'BEGIN final clock sync domain=%s', domain);
-        clockSync.end = utils.clockSync(et);
-        utils.progressLog(run, 'END final clock sync');
-        utils.progressLog(run, 'BEGIN gaze flush bufferedSamples=%d chunks=%d', gazeStore.n, numel(gazeStore.samples));
-        gaze = utils.gazeBuffer('flush', et, gazeStore, run);
-        utils.progressLog(run, 'END gaze flush samples=%d', numel(gaze));
-        if ~isempty(gaze)
-            utils.savingScreen(window, cfg, 0.25, 'Writing eye-tracking data', savingFact);
-            gazeFile = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
-            eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
-            utils.progressLog(run, 'BEGIN gaze MAT save: %s', gazeFile);
-            save(gazeFile, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
-            utils.progressLog(run, 'END gaze MAT save');
-            dataMat.(domain).gazeFile = gazeFile;
-            fprintf('Saved %d gaze samples to %s\n', numel(gaze), gazeFile);
-        end
-        dataMat.(domain).clockSync = clockSync;
 
         utils.savingScreen(window, cfg, 0.55, 'Releasing images', savingFact);
         utils.progressLog(run, 'BEGIN releasing textures');
@@ -377,7 +441,11 @@ try
     utils.progressLog(run, 'BEGIN trial table construction');
     trialTable = buildTrialTable(dataMat);
     utils.progressLog(run, 'END trial table construction rows=%d', height(trialTable));
-    utils.saveRun(sess, run, dataMat, trialTable);
+    try
+        utils.saveRun(sess, run, dataMat, trialTable);
+    catch summaryError
+        utils.progressLog(run, 'Optional summary save failed: %s; block receipts remain authoritative', summaryError.message);
+    end
     utils.progressLog(run, 'END behavioral saves');
     utils.savingScreen(window, cfg, 1.00, 'Done - thank you', savingFact);
     WaitSecs(1.2);
@@ -388,12 +456,13 @@ try
     if standalone, utils.endRun(sess, run, 'complete'); end
 
 catch ME
+    utils.preserveGazeFailure(sess, run, et);
     utils.progressLog(run, 'TASK ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
     ListenChar(0); ShowCursor; Priority(0);
     % sca resets Screen state but not PsychImaging's persistent config; both must run or the next OpenWindow in this MATLAB session fails.
     sca;
     clear PsychImaging;
-    crashFile = fullfile(cfg.paths.crashed, [run.runId '_crash.mat']);
+    crashFile = fullfile(cfg.paths.crashed, [run.runId '_' utils.checkpointIO('id') '_crash.mat']);
     save(crashFile, 'ME', 'dataMat', 'sess', 'run');
     fprintf(2, '\nCrashed. Partial data saved to:\n  %s\n', crashFile);
     if standalone, utils.endRun(sess, run, 'crashed'); end
@@ -457,6 +526,8 @@ trial.endReason   = 'exhausted';
     'trial', planRow.trial, 'nTrials', nTrials, ...
     'label', sprintf('%s - %s competition', domain, planRow.competition)));
 lastFlip = t0;
+gridVisible = false;
+pending = {};
 
 while true
     now = GetSecs - t0;
@@ -466,7 +537,7 @@ while true
         if ~isnan(boxStim(b))
             k = find(planRow.stimIdx == boxStim(b), 1);
             if ~isempty(k) && now > expiry(k)
-                log = utils.eventLog('add', log, 'option_remove', lastFlip, ...
+                pending{end+1} = struct('event', 'option_remove', 'info', ...
                     struct('box', b, 'stimIdx', boxStim(b), ...
                            'trial', planRow.trial, 'reason', 'expired'));
                 boxStim(b) = NaN;
@@ -483,22 +554,12 @@ while true
             boxStim(b)  = planRow.stimIdx(nextIdx);
             boxSince(b) = now;
             presented(end+1) = planRow.stimIdx(nextIdx); %#ok<AGROW>
-            log = utils.eventLog('add', log, 'option_appear', lastFlip, ...
+            pending{end+1} = struct('event', 'option_appear', 'info', ...
                 struct('box', b, 'stimIdx', boxStim(b), ...
                        'trial', planRow.trial, ...
                        'repIdx', planRow.repIdx(nextIdx)));
             nextIdx = nextIdx + 1;
         end
-    end
-
-    % ---- end conditions ---------------------------------------------
-    if all(isnan(boxStim)) && nextIdx > numel(planRow.stimIdx)
-        trial.endReason = 'exhausted';
-        break
-    end
-    if now > cfg.auction.trialTimeoutSec
-        trial.endReason = 'timeout';
-        break
     end
 
     % ---- draw --------------------------------------------------------
@@ -512,6 +573,24 @@ while true
     end
 
     lastFlip = Screen('Flip', window);
+    if ~gridVisible
+        log = utils.eventLog('add', log, 'search_onset', lastFlip, struct('trial', planRow.trial));
+        gridVisible = true;
+    end
+    for eventIdx = 1:numel(pending)
+        log = utils.eventLog('add', log, pending{eventIdx}.event, lastFlip, pending{eventIdx}.info);
+    end
+    pending = {};
+    % ---- end conditions ---------------------------------------------
+    if all(isnan(boxStim)) && nextIdx > numel(planRow.stimIdx)
+        trial.endReason = 'exhausted';
+        break
+    end
+    if now > cfg.auction.trialTimeoutSec
+        trial.endReason = 'timeout';
+        break
+    end
+
     utils.checkForQuit;
 
     % ---- respond ------------------------------------------------------
@@ -530,20 +609,19 @@ while true
     if ~isLeft
         % Right click = reject. This is the rejection-threshold data.
         rejected(end+1) = stimIdx; %#ok<AGROW>
-        log = utils.eventLog('add', log, 'option_reject', lastFlip, ...
+        log = utils.eventLog('add', log, 'option_reject', GetSecs, ...
             struct('box', b, 'stimIdx', stimIdx, 'trial', planRow.trial, ...
                    'dwellSec', now - boxSince(b)));
+        pending{end+1} = struct('event', 'option_remove', 'info', ...
+            struct('box', b, 'stimIdx', stimIdx, 'trial', planRow.trial, 'reason', 'rejected'));
         boxStim(b) = NaN;
         boxVacantUntil(b) = now + vacancyGap(cfg, rs);
         continue
     end
 
     % ---- detail view ---------------------------------------------------
-    enterT = GetSecs;
-    log = utils.eventLog('add', log, 'detail_enter', lastFlip, ...
-        struct('stimIdx', stimIdx, 'trial', planRow.trial, 'box', b));
-
-    [action, gazeStore, log] = showDetail(window, cfg, geom, et, log, ...
+    gridVisible = false;
+    [action, gazeStore, log, enterT] = showDetail(window, cfg, geom, et, log, ...
         gazeStore, stimTbl, tex, sel, A, stimIdx, domain, ...
         struct('trial', planRow.trial, 'nTrials', nTrials, ...
                'label', [domain ' - ' planRow.competition]));
@@ -588,13 +666,15 @@ while true
         trial.bidAccepted = true;
         trial.pricePaid   = threshold;      % <- threshold, not bid
         trial.endReason   = 'accepted';
-        showOutcome(window, cfg, true, domain, threshold, bid);
+        feedbackFlip = showOutcome(window, cfg, true, domain, threshold, bid);
+        log = utils.eventLog('add', log, 'feedback_onset', feedbackFlip, struct('phase', 'feedback'));
         break
     else
         boxStim(b) = NaN;
         now = GetSecs - t0;
         boxVacantUntil(b) = now + vacancyGap(cfg, rs);
-        showOutcome(window, cfg, false, domain, threshold, bid);
+        feedbackFlip = showOutcome(window, cfg, false, domain, threshold, bid);
+        log = utils.eventLog('add', log, 'feedback_onset', feedbackFlip, struct('phase', 'feedback'));
     end
 end
 
@@ -719,7 +799,7 @@ end
 
 
 %% ======================================================================
-function [action, gazeStore, log] = showDetail(window, cfg, geom, et, log, ...
+function [action, gazeStore, log, onset] = showDetail(window, cfg, geom, et, log, ...
     gazeStore, stimTbl, tex, sel, A, idx, domain, hud) %#ok<INUSD>
 %SHOWDETAIL  Full-width attribute panel for one option.
 %   Photo grid and attribute-slot layout shared with continuous_DC_task's card.
@@ -730,7 +810,7 @@ H = winRect(4);
 n = numel(sel.shown);
 detailAOIs = utils.layoutDetailAOIs(winRect, cfg, sel);
 
-action = '';
+action = ''; onset = NaN;
 while true
     Screen('FillRect', window, s.bg);
 
@@ -780,7 +860,11 @@ while true
     if et.showGaze && ~isempty(gazeStore.latest)
         drawGazeDot(window, cfg, gazeStore.latest);
     end
-    Screen('Flip', window);
+    flip = Screen('Flip', window);
+    if isnan(onset)
+        onset = flip;
+        log = utils.eventLog('add', log, 'detail_onset', onset, struct('stimIdx', idx, 'trial', hud.trial));
+    end
     utils.checkForQuit;
 
     [~, ~, buttons] = utils.getMouse(window);
@@ -825,7 +909,7 @@ bid = NaN; rt = NaN;
 
 % Pointer is not forced; NaN marks "not forced" in the saved data.
 startFrac = NaN;
-t0 = GetSecs;
+t0 = NaN;
 
 while true
     Screen('FillRect', window, s.bg);
@@ -907,14 +991,18 @@ while true
     if et.showGaze && ~isempty(gazeStore.latest)
         drawGazeDot(window, cfg, gazeStore.latest);
     end
-    Screen('Flip', window);
+    flip = Screen('Flip', window);
+    if isnan(t0)
+        t0 = flip;
+        log = utils.eventLog('add', log, 'bid_onset', t0, struct('stimIdx', idx, 'trial', planRow.trial));
+    end
     utils.checkForQuit;
 
     if buttons(1)
         bid = curVal;
         rt = GetSecs - t0;
         while any(buttons), [~,~,buttons] = utils.getMouse(window); end
-        log = utils.eventLog('add', log, 'bid_made', GetSecs, ...
+        log = utils.eventLog('add', log, 'bid_response', GetSecs, ...
             struct('stimIdx', idx, 'trial', planRow.trial, 'bid', bid, 'rt', rt));
         return
     elseif buttons(3)
@@ -927,7 +1015,7 @@ end
 
 
 %% ======================================================================
-function showOutcome(window, cfg, accepted, domain, pricePaid, bid)
+function onset = showOutcome(window, cfg, accepted, domain, pricePaid, bid)
 s = cfg.style;
 Screen('FillRect', window, s.bg);
 Screen('TextFont', window, s.fontContent);
@@ -966,7 +1054,7 @@ DrawFormattedText(window, tag, 'center', 260, col);
 Screen('TextFont', window, s.fontContent);
 Screen('TextSize', window, s.sizeHeading);
 DrawFormattedText(window, msg, 'center', 'center', s.text, 55, 0, 0, 1.6);
-Screen('Flip', window);
+onset = Screen('Flip', window);
 WaitSecs(cfg.auction.feedbackSec);
 
 end

@@ -14,6 +14,7 @@ cx = scr(3)/2; cy = scr(4)/2;
 hitR = max(30, cfg.geom.deg2px(1.0));
 
 ShowCursor('Arrow', window);
+onsetLogged = false;
 armed = false;   % debounce: don't accept a click still held from the last screen
 
 while true
@@ -33,6 +34,10 @@ while true
     DrawFormattedText(window, 'Click the target to begin', 'center', cy + hitR + 40, s.textDim);
 
     flipTime = Screen('Flip', window);
+    if ~onsetLogged
+        log = utils.eventLog('add', log, 'fixation_onset', flipTime, info);
+        onsetLogged = true;
+    end
     utils.checkForQuit;
 
     [mx, my, buttons] = utils.getMouse(window);

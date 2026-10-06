@@ -84,113 +84,97 @@ try
     for d = 1:numel(domainList)
         domain = lower(domainList{d});
         tl = utils.timeline('section', tl, sprintf('%s:load', domain));
-        log = utils.eventLog('init');
-        gazeStore = utils.gazeBuffer('init');
-        clockSync = struct();
-        clockSync.start = utils.clockSync(et);
-
-        switch domain
-            case 'houses'
-                stimTbl = utils.readStimuli(cfg, 'houses');
-                plan = utils.buildPhotoPreferencePlan(stimTbl, N_RATING, ...
-                    N_PWC_HOUSES, AREA_QUOTAS, rs);
-                if ~exist(cfg.paths.images, 'dir')
-                    error('hw:pref:noImages', ...
-                        'House image directory not found: %s', cfg.paths.images);
+        frozen = utils.runCheckpoint('peek', sess, run, domain);
+        if isempty(frozen)
+            switch domain
+                case 'houses'
+                    stimTbl = utils.readStimuli(cfg, 'houses');
+                    plan = utils.buildPhotoPreferencePlan(stimTbl, N_RATING, N_PWC_HOUSES, AREA_QUOTAS, rs);
+                    sections = resolveSections(TASK_MODE, SECTION_ORDER, sess.participant);
+                    chunks = utils.preferenceChunks(sections, numel(plan.ratingPhotoRows), size(plan.pwcPairs, 1));
+                case 'jobs'
+                    prefCfg = cfg;
+                    prefCfg.stimFiles.jobs = fullfile(cfg.paths.prepared, 'job_stimuli_ecological.csv');
+                    stimTbl = utils.readStimuli(prefCfg, 'jobs');
+                    plan = utils.buildJobPreferencePlan(stimTbl, N_PWC_JOBS, rs);
+                    sections = {'pwc'};
+                    chunks = utils.preferenceChunks(sections, 0, size(plan.pwcPairs, 1));
+                otherwise
+                    error('hw:pref:badDomain', 'Unknown domain "%s".', domain);
+            end
+            frozen = struct('plan', plan, 'sections', {sections}, 'chunks', chunks, ...
+                'blockCount', numel(chunks), 'rsState', rs.State, 'globalState', rng, 'layout', G);
+            utils.runCheckpoint('freeze', sess, run, domain, frozen);
+        end
+        plan = frozen.plan; sections = frozen.sections; chunks = frozen.chunks;
+        assert(isequal(G, frozen.layout), 'hw:pref:displayChanged', 'Display geometry changed on resume.');
+        rs.State = frozen.rsState; rng(frozen.globalState);
+        tex = [];
+        dataMat.(domain).layout = G;
+        dataMat.(domain).sectionOrder = sections;
+        dataMat.(domain).rating = struct('trials', []);
+        dataMat.(domain).pwc = struct('trials', []);
+        if strcmp(domain, 'houses')
+            tex = loadPhotoTextures(window, cfg, plan.photoTable, unique([plan.ratingPhotoRows; plan.pwcPairs(:)]));
+            dataMat.houses.photoTable = plan.photoTable;
+            dataMat.houses.areaQuotas = plan.areaQuotas;
+            dataMat.houses.pwcPairsPerArea = plan.pwcPairsPerArea;
+            showMessage(window, cfg, introText(sections));
+        else
+            dataMat.jobs.jobTable = plan.jobTable;
+            showMessage(window, cfg, ['Job choices\n\nYou will see two jobs at a time, showing only the industry ' ...
+                'and the job title.\n\nPress Z to choose the left job, or M to choose the right job.\n\nClick to begin.']);
+        end
+        recovery = utils.taskBlock('recover', sess, run, domain);
+        for k = 1:numel(recovery.blocks)
+            prior = recovery.blocks{k}; section = prior.metadata.section;
+            dataMat.(domain).(section).trials = [dataMat.(domain).(section).trials; prior.trials(:)];
+        end
+        domainEvents = recovery.events; parentAttempt = recovery.parentAttemptId;
+        if ~isempty(recovery.entryState)
+            rs.State = recovery.entryState.rsState; rng(recovery.entryState.globalState);
+        end
+        for b = recovery.nextBlock:numel(chunks)
+            chunk = chunks(b); section = chunk.section;
+            if strcmp(domain, 'houses') && (b == recovery.nextBlock || ~strcmp(chunks(b-1).section, section))
+                if strcmp(section, 'rating')
+                    showMessage(window, cfg, ['House photo ratings\n\nYou will see one house photo at a time.\n\n' ...
+                        'Use the line to show how much you like the style of the house in the photo.\n\nClick to begin.']);
+                else
+                    showMessage(window, cfg, ['House photo choices\n\nYou will see two photos of the same room or area at a time\n' ...
+                        '(kitchen with kitchen, bathroom with bathroom, and so on).\n\n' ...
+                        'Press Z to choose the left photo, or M to choose the right photo.\n\nClick to begin.']);
                 end
-                tex = loadPhotoTextures(window, cfg, plan.photoTable, ...
-                    unique([plan.ratingPhotoRows; plan.pwcPairs(:)]));
-
-                sections = resolveSections(TASK_MODE, SECTION_ORDER, sess.participant);
-                dataMat.houses.sectionOrder = sections;
-                dataMat.houses.photoTable = plan.photoTable;
-                dataMat.houses.areaQuotas = plan.areaQuotas;
-                dataMat.houses.pwcPairsPerArea = plan.pwcPairsPerArea;
-                dataMat.houses.rating = struct('trials', []);
-                dataMat.houses.pwc = struct('trials', []);
-                dataMat.houses.layout = G;
-                tl = utils.timeline('section', tl, 'houses:instructions');
-                showMessage(window, cfg, introText(sections));
-
-                for k = 1:numel(sections)
-                    switch sections{k}
-                        case 'rating'
-                            showMessage(window, cfg, ['House photo ratings\n\n' ...
-                                'You will see one house photo at a time.\n\n' ...
-                                'Use the line to show how much you like the style of the house in the photo.\n\n' ...
-                                'Click to begin.']);
-                            tl = utils.timeline('section', tl, 'houses:rating');
-                            [dataMat.houses.rating.trials, log, gazeStore] = ...
-                                runRatingTrials(window, cfg, plan, tex, et, log, ...
-                                gazeStore, rs, FIX_SEC, ISI_RANGE_SEC);
-                        case 'pwc'
-                            showMessage(window, cfg, ['House photo choices\n\n' ...
-                                'You will see two photos of the same room or area at a time\n' ...
-                                '(kitchen with kitchen, bathroom with bathroom, and so on).\n\n' ...
-                                'Press Z to choose the left photo, or M to choose the right photo.\n\n' ...
-                                'Click to begin.']);
-                            tl = utils.timeline('section', tl, 'houses:pwc');
-                            [dataMat.houses.pwc.trials, log, gazeStore] = ...
-                                runPwcTrials(window, cfg, plan, tex, 'houses', et, ...
-                                log, gazeStore, rs, FIX_SEC, ISI_RANGE_SEC);
-                    end
-                    if k < numel(sections)
-                        showMessage(window, cfg, ...
-                            'That section is finished.\n\nClick for the next section.');
-                    end
-                end
-                utils.progressLog(run, 'BEGIN releasing preference textures');
-                releaseTextures(tex);
-                utils.progressLog(run, 'END releasing preference textures');
-
-            case 'jobs'
-                prefCfg = cfg;
-                prefCfg.stimFiles.jobs = fullfile(cfg.paths.prepared, ...
-                    'job_stimuli_ecological.csv');
-                stimTbl = utils.readStimuli(prefCfg, 'jobs');
-                plan = utils.buildJobPreferencePlan(stimTbl, N_PWC_JOBS, rs);
-                dataMat.jobs.jobTable = plan.jobTable;
-                dataMat.jobs.pwc = struct('trials', []);
-                dataMat.jobs.layout = G;
-
-                tl = utils.timeline('section', tl, 'jobs:instructions');
-                showMessage(window, cfg, ['Job choices\n\n' ...
-                    'You will see two jobs at a time, showing only the industry ' ...
-                    'and the job title.\n\n' ...
-                    'Press Z to choose the left job, or M to choose the right job.\n\n' ...
-                    'Click to begin.']);
-                tl = utils.timeline('section', tl, 'jobs:pwc');
-                [dataMat.jobs.pwc.trials, log, gazeStore] = ...
-                    runPwcTrials(window, cfg, plan, [], 'jobs', et, log, ...
-                    gazeStore, rs, FIX_SEC, ISI_RANGE_SEC);
-
-            otherwise
-                error('hw:pref:badDomain', 'Unknown domain "%s".', domain);
+            end
+            entryState = struct('rsState', rs.State, 'globalState', rng);
+            attempt = utils.taskBlock('begin', sess, run, domain, b, entryState, parentAttempt);
+            log = utils.eventLog('init');
+            log = utils.eventLog('context', log, struct('block', b, 'attemptId', attempt.attemptId, 'section', section));
+            recording = utils.blockRecording('start', et);
+            gazeStore = recording.store;
+            if strcmp(section, 'rating')
+                [blockTrials, log, gazeStore] = runRatingTrials(window, cfg, plan, tex, ...
+                    et, log, gazeStore, rs, FIX_SEC, ISI_RANGE_SEC, chunk.indices);
+            else
+                [blockTrials, log, gazeStore] = runPwcTrials(window, cfg, plan, tex, domain, ...
+                    et, log, gazeStore, rs, FIX_SEC, ISI_RANGE_SEC, chunk.indices);
+            end
+            log = utils.eventLog('add', log, 'recording_stop', GetSecs, struct('trial', 0));
+            blockData = struct(); blockData.(domain).(section).trials = blockTrials;
+            payload = struct('trials', blockTrials, 'trialTable', buildTrialTable(blockData), ...
+                'events', utils.eventLog('table', log), 'clockSync', recording.clockSync);
+            payload.trialTable.globalTrial = chunk.globalIndices(:);
+            payload.metadata = struct('frozenPlan', frozen, 'section', section, 'layout', G, 'eyeTracking', dataMat.eyeTracking);
+            payload.nextState = struct('rsState', rs.State, 'globalState', rng);
+            utils.savingScreen(window, cfg, 0.1, 'Saving completed block', utils.didYouKnow(run.seed));
+            receipt = utils.taskBlock('finish', sess, run, domain, attempt, payload, et, gazeStore);
+            parentAttempt = receipt.attemptId; domainEvents{end+1} = payload.events;
+            dataMat.(domain).(section).trials = [dataMat.(domain).(section).trials; blockTrials(:)];
+            clear gazeStore recording payload blockTrials;
         end
-
-        utils.progressLog(run, 'TRIALS FINISHED domain=%s; building event table', domain);
-        tl = utils.timeline('section', tl, sprintf('%s:saving', domain));
-        dataMat.(domain).events = utils.eventLog('table', log);
-        utils.progressLog(run, 'BEGIN final clock sync domain=%s', domain);
-        clockSync.end = utils.clockSync(et);
-        utils.progressLog(run, 'END final clock sync');
-        utils.progressLog(run, 'BEGIN gaze flush bufferedSamples=%d chunks=%d', gazeStore.n, numel(gazeStore.samples));
-        gaze = utils.gazeBuffer('flush', et, gazeStore, run);
-        utils.progressLog(run, 'END gaze flush samples=%d', numel(gaze));
-        if ~isempty(gaze)
-            gf = strrep(run.gazeFile, '_gaze.mat', sprintf('_%s_gaze.mat', domain));
-            eyeTracking = dataMat.eyeTracking; %#ok<NASGU>
-            utils.progressLog(run, 'BEGIN gaze MAT save: %s', gf);
-            save(gf, 'gaze', 'clockSync', 'eyeTracking', '-v7.3');
-            utils.progressLog(run, 'END gaze MAT save');
-            dataMat.(domain).gazeFile = gf;
-            fprintf('Saved %d gaze samples.\n', numel(gaze));
-        end
-        dataMat.(domain).clockSync = clockSync;
-        % Buffer flushed for this domain; a fresh store begins with the next.
-        if d < numel(domainList) && et.enabled && ~isempty(et.obj)
-            try, et.obj.get_gaze_data(); catch, end
-        end
+        dataMat.(domain).events = utils.stackTables(domainEvents);
+        dataMat.(domain).checkpointRun = [run.runId '_' domain];
+        releaseTextures(tex);
     end
 
     utils.progressLog(run, 'BEGIN end-of-task message');
@@ -201,7 +185,11 @@ try
     utils.progressLog(run, 'BEGIN trial table construction');
     trialTable = buildTrialTable(dataMat);
     utils.progressLog(run, 'END trial table construction rows=%d', height(trialTable));
-    utils.saveRun(sess, run, dataMat, trialTable);
+    try
+        utils.saveRun(sess, run, dataMat, trialTable);
+    catch summaryError
+        utils.progressLog(run, 'Optional summary save failed: %s; block receipts remain authoritative', summaryError.message);
+    end
     utils.progressLog(run, 'END behavioral saves');
     utils.progressLog(run, 'BEGIN display cleanup');
     Screen('CloseAll');
@@ -209,12 +197,13 @@ try
     if standalone, utils.endRun(sess, run, 'complete'); end
 
 catch ME
+    utils.preserveGazeFailure(sess, run, et);
     utils.progressLog(run, 'TASK ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
     try
         tl = utils.timeline('stop', tl);
         dataMat.timing = utils.timeline('table', tl);
         dataMat.error = getReport(ME, 'extended', 'hyperlinks', 'off'); %#ok<NASGU>
-        save([run.fileStem '_crash.mat'], 'dataMat', 'ME', '-v7.3');
+        save([run.fileStem '_' utils.checkpointIO('id') '_crash.mat'], 'dataMat', 'ME', '-v7.3');
         if standalone, utils.endRun(sess, run, 'crashed'); end
     catch
     end
@@ -241,7 +230,7 @@ here = fileparts(mfilename('fullpath'));
 if isempty(here), here = pwd; end
 addpath(here);
 
-bootstrapRoot = fullfile(tempdir, 'housing_photo_pref_bootstrap');
+bootstrapRoot = fullfile(tempdir, 'housing_photo_pref_bootstrap', utils.checkpointIO('id'));
 sess = utils.startSession( ...
     'participant', PARTICIPANT, ...
     'session', SESSION, ...
@@ -251,38 +240,14 @@ sess = utils.startSession( ...
     'rig', RIG, ...
     'eyeTracking', EYETRACKING);
 cfg = sess.cfg;
-strayManifest = sess.manifestFile;
-
 cfg.paths.experiment = here;
-cfg.paths.stimuli    = fullfile(here, 'stimuli');
-cfg.paths.prepared   = fullfile(cfg.paths.stimuli, 'prepared');
-cfg.paths.images     = fullfile(cfg.paths.stimuli, 'house_images');
+cfg.paths.stimuli = fullfile(here, 'stimuli');
+cfg.paths.prepared = fullfile(cfg.paths.stimuli, 'prepared');
+cfg.paths.images = fullfile(cfg.paths.stimuli, 'house_images');
 cfg.stimFiles.houses = fullfile(cfg.paths.stimuli, 'house_stimuli.csv');
-cfg.paths.data       = fullfile(here, 'Data');
-cfg.paths.sessions   = fullfile(cfg.paths.data, 'sessions');
-cfg.paths.taskData.pref = fullfile(cfg.paths.data, 'pref');
-cfg.paths.gaze       = fullfile(cfg.paths.data, 'gaze');
-cfg.paths.crashed    = fullfile(cfg.paths.data, 'Crashes');
-dirs = {cfg.paths.sessions, cfg.paths.taskData.pref, cfg.paths.gaze, cfg.paths.crashed};
-for k = 1:numel(dirs)
-    if ~exist(dirs{k}, 'dir'), mkdir(dirs{k}); end
-end
 sess.cfg = cfg;
 sess.domains = {DOMAIN};
 sess.domainOrderStr = DOMAIN;
-sess.manifestFile = fullfile(cfg.paths.sessions, ...
-    sprintf('sub-%05d_manifest.mat', sess.participant));
-if ~strcmp(strayManifest, sess.manifestFile) && exist(strayManifest, 'file')
-    delete(strayManifest);
-end
-if ~exist(sess.manifestFile, 'file')
-    manifest = struct('participant', sess.participant, ...
-        'createdAt', char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')), ...
-        'runs', struct('task',{},'sessionNum',{},'runId',{},'domainOrderStr',{}, ...
-                       'startedAt',{},'finishedAt',{},'status',{},'dataFile',{}, ...
-                       'seed',{},'codeVersion',{}));
-    save(sess.manifestFile, 'manifest');
-end
 end
 
 
@@ -380,7 +345,7 @@ end
 
 
 function [trials, log, gazeStore] = runRatingTrials(window, cfg, plan, tex, ...
-    et, log, gazeStore, rs, fixSec, isiRange)
+    et, log, gazeStore, rs, fixSec, isiRange, indices)
 s = cfg.style;
 G = prefLayout(window);
 H = G.H;
@@ -389,9 +354,10 @@ lineLeft = G.lineLeft;
 lineRight = G.lineRight;
 lineLen = lineRight - lineLeft;
 imgRect = G.imgRect;
-trials = repmat(ratingTrialTemplate(), numel(plan.ratingPhotoRows), 1);
+trials = repmat(ratingTrialTemplate(), numel(indices), 1);
 
-for t = 1:numel(plan.ratingPhotoRows)
+for i = 1:numel(indices)
+    t = indices(i);
     pr = plan.ratingPhotoRows(t);
     info = struct('trial', t, 'photoRow', pr);
     HideCursor(window);
@@ -434,21 +400,21 @@ for t = 1:numel(plan.ratingPhotoRows)
         end
     end
 
-    trials(t).section = 'rating';
-    trials(t).trial = t;
-    trials(t).photoRow = pr;
-    trials(t).photoId = char(plan.photoTable.photoId(pr));
-    trials(t).houseIdx = plan.photoTable.houseIdx(pr);
-    trials(t).areaVar = char(plan.photoTable.areaVar(pr));
-    trials(t).imageFile = char(plan.photoTable.imageFile(pr));
-    trials(t).rating = (mx - lineLeft) / lineLen;
-    trials(t).rt = GetSecs - t0;
+    trials(i).section = 'rating';
+    trials(i).trial = t;
+    trials(i).photoRow = pr;
+    trials(i).photoId = char(plan.photoTable.photoId(pr));
+    trials(i).houseIdx = plan.photoTable.houseIdx(pr);
+    trials(i).areaVar = char(plan.photoTable.areaVar(pr));
+    trials(i).imageFile = char(plan.photoTable.imageFile(pr));
+    trials(i).rating = (mx - lineLeft) / lineLen;
+    trials(i).rt = GetSecs - t0;
 end
 end
 
 
 function [trials, log, gazeStore] = runPwcTrials(window, cfg, plan, tex, ...
-    domain, et, log, gazeStore, rs, fixSec, isiRange)
+    domain, et, log, gazeStore, rs, fixSec, isiRange, indices)
 s = cfg.style;
 G = prefLayout(window);
 H = G.H;
@@ -458,9 +424,10 @@ leftKey = KbName('z');
 rightKey = KbName('m');
 % Key responses; hide the cursor for the section. showMessage re-shows.
 HideCursor(window);
-trials = repmat(pwcTrialTemplate(), size(plan.pwcPairs, 1), 1);
+trials = repmat(pwcTrialTemplate(), numel(indices), 1);
 
-for t = 1:size(plan.pwcPairs, 1)
+for i = 1:numel(indices)
+    t = indices(i);
     leftRow = plan.pwcPairs(t,1);
     rightRow = plan.pwcPairs(t,2);
     info = struct('trial', t, 'leftRow', leftRow, 'rightRow', rightRow);
@@ -520,34 +487,34 @@ for t = 1:size(plan.pwcPairs, 1)
         unchosenRow = leftRow;
     end
 
-    trials(t).section = 'pwc';
-    trials(t).trial = t;
-    trials(t).responseSide = choice;
-    trials(t).rt = GetSecs - t0;
+    trials(i).section = 'pwc';
+    trials(i).trial = t;
+    trials(i).responseSide = choice;
+    trials(i).rt = GetSecs - t0;
     switch domain
         case 'houses'
-            trials(t).leftPhotoId = char(plan.photoTable.photoId(leftRow));
-            trials(t).rightPhotoId = char(plan.photoTable.photoId(rightRow));
-            trials(t).chosenPhotoId = char(plan.photoTable.photoId(chosenRow));
-            trials(t).unchosenPhotoId = char(plan.photoTable.photoId(unchosenRow));
-            trials(t).leftPhotoRow = leftRow;
-            trials(t).rightPhotoRow = rightRow;
-            trials(t).chosenPhotoRow = chosenRow;
-            trials(t).unchosenPhotoRow = unchosenRow;
-            trials(t).leftAreaVar = char(plan.photoTable.areaVar(leftRow));
-            trials(t).rightAreaVar = char(plan.photoTable.areaVar(rightRow));
-            trials(t).leftImageFile = char(plan.photoTable.imageFile(leftRow));
-            trials(t).rightImageFile = char(plan.photoTable.imageFile(rightRow));
+            trials(i).leftPhotoId = char(plan.photoTable.photoId(leftRow));
+            trials(i).rightPhotoId = char(plan.photoTable.photoId(rightRow));
+            trials(i).chosenPhotoId = char(plan.photoTable.photoId(chosenRow));
+            trials(i).unchosenPhotoId = char(plan.photoTable.photoId(unchosenRow));
+            trials(i).leftPhotoRow = leftRow;
+            trials(i).rightPhotoRow = rightRow;
+            trials(i).chosenPhotoRow = chosenRow;
+            trials(i).unchosenPhotoRow = unchosenRow;
+            trials(i).leftAreaVar = char(plan.photoTable.areaVar(leftRow));
+            trials(i).rightAreaVar = char(plan.photoTable.areaVar(rightRow));
+            trials(i).leftImageFile = char(plan.photoTable.imageFile(leftRow));
+            trials(i).rightImageFile = char(plan.photoTable.imageFile(rightRow));
         case 'jobs'
-            trials(t).leftJobIdx = leftRow;
-            trials(t).rightJobIdx = rightRow;
-            trials(t).chosenJobIdx = chosenRow;
-            trials(t).unchosenJobIdx = unchosenRow;
-            trials(t).leftIndustry = char(plan.jobTable.industry(leftRow));
-            trials(t).rightIndustry = char(plan.jobTable.industry(rightRow));
-            trials(t).leftTitle = char(plan.jobTable.title(leftRow));
-            trials(t).rightTitle = char(plan.jobTable.title(rightRow));
-            trials(t).chosenTitle = char(plan.jobTable.title(chosenRow));
+            trials(i).leftJobIdx = leftRow;
+            trials(i).rightJobIdx = rightRow;
+            trials(i).chosenJobIdx = chosenRow;
+            trials(i).unchosenJobIdx = unchosenRow;
+            trials(i).leftIndustry = char(plan.jobTable.industry(leftRow));
+            trials(i).rightIndustry = char(plan.jobTable.industry(rightRow));
+            trials(i).leftTitle = char(plan.jobTable.title(leftRow));
+            trials(i).rightTitle = char(plan.jobTable.title(rightRow));
+            trials(i).chosenTitle = char(plan.jobTable.title(chosenRow));
     end
 end
 ShowCursor('Arrow', window);

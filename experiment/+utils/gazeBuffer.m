@@ -5,11 +5,17 @@ function out = gazeBuffer(action, et, store, run)
 %   Tobii get_gaze_data() drains its buffer on every call, so all polls
 %   must go through this accumulator or samples are silently lost.
 
+persistent retained
 if nargin < 4, run = []; end
 
 switch lower(action)
+    case 'retained'
+        out = retained;
+    case 'release'
+        retained = []; out = [];
     case 'init'
         out = struct('samples', {{}}, 'latest', [], 'n', 0);
+        retained = out;
 
     case 'poll'
         out = store;
@@ -24,6 +30,7 @@ switch lower(action)
         out.samples{end+1} = s;
         out.n = out.n + numel(s);
         out.latest = s(end);
+        retained = out;
 
     case 'flush'
         flushLog(run, 'BEGIN final gaze poll');
