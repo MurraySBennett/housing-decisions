@@ -156,30 +156,68 @@ body = sprintf([ ...
     'session. The choice is saved with the data.'], ...
     attempt, ME.message);
 
-Screen('FillRect', window, s.bg);
-Screen('TextFont', window, s.fontContent);
-Screen('TextSize', window, s.sizeTitle);
-DrawFormattedText(window, headline, 'center', 0.18 * RectHeight(Screen('Rect', window)), s.text);
-Screen('TextSize', window, s.sizeContent);
-DrawFormattedText(window, body, 'center', 'center', s.textDim, 70, 0, 0, 1.5);
-Screen('Flip', window);
-
-retryKey    = KbName('r');
-continueKey = KbName('c');
-abortKey    = KbName('a');
-
-KbReleaseWait(-1);
 choice = 'abort';
-while true
-    [down, ~, keyCode] = KbCheck(-1);
-    if down
-        if keyCode(retryKey),    choice = 'retry';    break; end
-        if keyCode(continueKey), choice = 'continue'; break; end
-        if keyCode(abortKey),    choice = 'abort';    break; end
-    end
-    WaitSecs(0.01);
+
+% The on-screen prompt is the normal path, but it must never be the thing that
+% ends a session. On 2026-10-09 sub-00010 died exactly here, 50 s in: the
+% tracker failed to prepare, this ran to ask the operator what to do, and
+% Screen('FillRect') rejected the window handle -- the generic "Usage:" error
+% README's "Known gotchas" describes, from a handle OpenWindow had returned as
+% valid. The crash dump confirmed every colour and font argument was
+% well-formed, so the handle was the bad argument. A tracker failure is
+% recoverable; being unable to ASK about it turned it into a lost participant.
+onScreen = true;
+try
+    Screen('FillRect', window, s.bg);
+    Screen('TextFont', window, s.fontContent);
+    Screen('TextSize', window, s.sizeTitle);
+    DrawFormattedText(window, headline, 'center', 0.18 * RectHeight(Screen('Rect', window)), s.text);
+    Screen('TextSize', window, s.sizeContent);
+    DrawFormattedText(window, body, 'center', 'center', s.textDim, 70, 0, 0, 1.5);
+    Screen('Flip', window);
+catch drawME
+    onScreen = false;
+    fprintf(2, ['\n*** Could not draw the eye-tracker prompt on the stimulus screen:\n' ...
+                '    %s (%s)\n' ...
+                '    Asking in this window instead. The session is NOT lost.\n'], ...
+            drawME.message, drawME.identifier);
 end
-KbReleaseWait(-1);
+
+if onScreen
+    retryKey    = KbName('r');
+    continueKey = KbName('c');
+    abortKey    = KbName('a');
+
+    KbReleaseWait(-1);
+    while true
+        [down, ~, keyCode] = KbCheck(-1);
+        if down
+            if keyCode(retryKey),    choice = 'retry';    break; end
+            if keyCode(continueKey), choice = 'continue'; break; end
+            if keyCode(abortKey),    choice = 'abort';    break; end
+        end
+        WaitSecs(0.01);
+    end
+    KbReleaseWait(-1);
+else
+    % Hand the keyboard back first or input() reads nothing and this looks
+    % hung -- the same trap that had operators force-quitting MATLAB.
+    try
+        ListenChar(0);
+        ShowCursor;
+    catch
+        % Nothing to hand back; the console prompt below still works.
+    end
+    fprintf(2, '\n%s\n\n%s\n\n', headline, body);
+    while true
+        answer = strtrim(lower(input('Choose R (retry), C (continue untracked), A (abort): ', 's')));
+        if isempty(answer), continue; end
+        if     answer(1) == 'r', choice = 'retry';    break;
+        elseif answer(1) == 'c', choice = 'continue'; break;
+        elseif answer(1) == 'a', choice = 'abort';    break;
+        end
+    end
+end
 
 fprintf('Operator chose: %s\n', choice);
 end
