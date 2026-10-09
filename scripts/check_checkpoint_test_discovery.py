@@ -16,5 +16,5 @@ for path in sorted(root.glob('test_*.m')):
 if errors:
     print('\n'.join(errors))
     sys.exit(1)
-assert count == 39, f'Found {count} checkpoint tests; update the explicit runner count from 39 if intentionally changed.'
+assert count == 45, f'Found {count} checkpoint tests; update the explicit runner count from 45 if intentionally changed.'
 print(f'{count} MATLAB cases follow functiontests naming; runtime discovery still requires MATLAB.')

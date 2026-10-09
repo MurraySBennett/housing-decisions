@@ -124,8 +124,9 @@ with MATLAB, set HW_TOBII_ROOT and run `rig_checks` as described under Required
 acceptance below. A readable RA file also permits the storage benchmark without
 collecting new data.
 
-The 39 cases include actual auction trial-row conversion through block commit,
-reload and recovery, and the gaze-to-pixel validity accessor. They do not
+The 45 cases include actual auction trial-row conversion through block commit,
+reload and recovery, the gaze-to-pixel validity accessor, and the per-trial
+progress log's append, ordering and never-throw guarantees. They do not
 execute every interactive task screen or prove PTB timing, device streaming,
 browser intake behavior, or physical kill/restart. Python/Bash syntax,
 helper-reference and discovery checks cannot replace them.
@@ -171,11 +172,16 @@ tempdir second) and prints the path at the end.
 identifiers, class names and stack lines, which are the entire reason for
 running it.
 
-Expect **39 passing cases, 0 incomplete**. Zero incomplete is the number that
+Expect **45 passing cases, 0 incomplete**. Zero incomplete is the number that
 matters: the actual-SDK case is `assumeTrue`-skipped when the SDK is absent, and
-a skip reports as incomplete rather than as a failure. 39 passed with any
+a skip reports as incomplete rather than as a failure. 45 passed with any
 incomplete means the SDK was not really on the path and the result proves less
 than it appears to.
+
+Two lines reading `Progress log unavailable: ...` in that transcript are
+**expected, not a fault**: `test_trial_log` deliberately makes the per-trial log
+fail in order to prove a logging failure cannot end a session. They are only a
+problem if a case also reports failed.
 
 ### Step 2 — the storage benchmark, which is the save-crash test
 
