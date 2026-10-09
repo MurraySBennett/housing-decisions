@@ -155,12 +155,13 @@ try
             log = utils.eventLog('context', log, struct('block', b, 'attemptId', attempt.attemptId, 'section', section));
             recording = utils.blockRecording('start', et);
             gazeStore = recording.store;
+            blockInfo = struct('run', run, 'block', b, 'nBlocks', numel(chunks));
             if strcmp(section, 'rating')
                 [blockTrials, log, gazeStore] = runRatingTrials(window, cfg, plan, tex, ...
-                    et, log, gazeStore, rs, FIX_SEC, ISI_RANGE_SEC, chunk.indices);
+                    et, log, gazeStore, rs, FIX_SEC, ISI_RANGE_SEC, chunk.indices, blockInfo);
             else
                 [blockTrials, log, gazeStore] = runPwcTrials(window, cfg, plan, tex, domain, ...
-                    et, log, gazeStore, rs, FIX_SEC, ISI_RANGE_SEC, chunk.indices);
+                    et, log, gazeStore, rs, FIX_SEC, ISI_RANGE_SEC, chunk.indices, blockInfo);
             end
             log = utils.eventLog('add', log, 'recording_stop', GetSecs, struct('trial', 0));
             blockData = struct(); blockData.(domain).(section).trials = blockTrials;
@@ -349,7 +350,7 @@ end
 
 
 function [trials, log, gazeStore] = runRatingTrials(window, cfg, plan, tex, ...
-    et, log, gazeStore, rs, fixSec, isiRange, indices)
+    et, log, gazeStore, rs, fixSec, isiRange, indices, blockInfo)
 s = cfg.style;
 G = prefLayout(window);
 H = G.H;
@@ -413,12 +414,17 @@ for i = 1:numel(indices)
     trials(i).imageFile = char(plan.photoTable.imageFile(pr));
     trials(i).rating = (mx - lineLeft) / lineLen;
     trials(i).rt = GetSecs - t0;
+
+    utils.progressLog(blockInfo.run, ['TRIAL section=rating block=%d/%d ' ...
+        'trial=%d/%d photo=%s rating=%.3f rt=%.3f'], ...
+        blockInfo.block, blockInfo.nBlocks, i, numel(indices), ...
+        trials(i).photoId, trials(i).rating, trials(i).rt);
 end
 end
 
 
 function [trials, log, gazeStore] = runPwcTrials(window, cfg, plan, tex, ...
-    domain, et, log, gazeStore, rs, fixSec, isiRange, indices)
+    domain, et, log, gazeStore, rs, fixSec, isiRange, indices, blockInfo)
 s = cfg.style;
 G = prefLayout(window);
 H = G.H;
@@ -520,6 +526,13 @@ for i = 1:numel(indices)
             trials(i).rightTitle = char(plan.jobTable.title(rightRow));
             trials(i).chosenTitle = char(plan.jobTable.title(chosenRow));
     end
+
+    % Only domain-independent fields: the switch above names entirely
+    % different photo/job fields per domain.
+    utils.progressLog(blockInfo.run, ['TRIAL section=pwc block=%d/%d ' ...
+        'trial=%d/%d domain=%s side=%s rt=%.3f'], ...
+        blockInfo.block, blockInfo.nBlocks, i, numel(indices), ...
+        domain, trials(i).responseSide, trials(i).rt);
 end
 ShowCursor('Arrow', window);
 end

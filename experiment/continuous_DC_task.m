@@ -339,6 +339,10 @@ try
                                'trialInBlock', trialInBlock, 'nTrialsInBlock', nTrialsInBlock));
                     tr.pairIdx = order(pi);
                     if isempty(trials), trials = tr; else, trials(end+1) = tr; end %#ok<AGROW>
+                    utils.progressLog(run, ['TRIAL block=%d/%d type=choice level=%d ' ...
+                        'trial=%d/%d choseMoney=%d rt=%.3f timedOut=%d'], ...
+                        b, numel(blocks), lvl, trialInBlock, nTrialsInBlock, ...
+                        tr.choseMoney, tr.rt, tr.timedOut);
                 else
                     items = [p.moneyIdx, p.qualityIdx];
                     isMoney = [true, false];
@@ -353,6 +357,10 @@ try
                                    'trialInBlock', trialInBlock, 'nTrialsInBlock', nTrialsInBlock));
                         tr.pairIdx = order(pi);
                         if isempty(trials), trials = tr; else, trials(end+1) = tr; end %#ok<AGROW>
+                        utils.progressLog(run, ['TRIAL block=%d/%d type=price level=%d ' ...
+                            'trial=%d/%d isMoneyOption=%d price=%.2f rt=%.3f timedOut=%d'], ...
+                            b, numel(blocks), lvl, trialInBlock, nTrialsInBlock, ...
+                            isMoney(q), tr.price, tr.rt, tr.timedOut);
                     end
                 end
                 utils.checkForQuit;

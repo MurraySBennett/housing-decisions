@@ -1,7 +1,10 @@
 function logFile = progressLog(run, fmt, varargin)
 %UTILS.PROGRESSLOG Persistent, best-effort task-end diagnostics on local disk.
 % Each entry opens and closes the file; nothing waits for normal task exit.
-% No writes during trial timing. Never use the shared data root for this log.
+% Never use the shared data root for this log.
+% Timing rule: at most one write per trial, after that trial's response is
+% recorded and before the next trial begins. Never between a stimulus onset and
+% its response, and never inside a flip loop.
 logFile = '';
 try
     logDir = fullfile(tempdir, 'housing-wages-logs');
