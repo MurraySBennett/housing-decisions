@@ -179,8 +179,11 @@ try
             if secs > 0
                 hz = n / secs;
                 emit(fid, '    gaze: %.1f s span, effective %.1f Hz', secs, hz);
-                % config.m:220 sets 60 Hz. A large shortfall means dropped
-                % samples, which no error anywhere would have reported.
+                % cfg.et.sampleRateHz = 60 (config.m:233). A large shortfall
+                % means dropped samples, which no error would have reported.
+                % Calibration of this window: the 2026-10-09 pref block drained
+                % 6158 samples over 102.8 s = 59.9 Hz, so a healthy block sits
+                % near 60 and this band is wide enough not to cry wolf.
                 if hz < 45 || hz > 75
                     emit(fid, '    FLAG: effective rate is far from the configured 60 Hz.');
                     nFlag = nFlag + 1;
