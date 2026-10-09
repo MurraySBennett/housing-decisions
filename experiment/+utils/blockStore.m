@@ -23,7 +23,19 @@ switch lower(action)
         behavior.expectedSamples = numel(payload.gaze);
         utils.checkpointIO('write', fullfile(attempt.directory, 'behavior.mat'), struct('behavior', behavior));
         packed = utils.gazeCodec('pack', payload.gaze);
-        assert(isequaln(utils.gazeCodec('unpack', packed), payload.gaze), ...
+        % Compare the PLAIN representations, not reconstructed SDK objects.
+        % What this file stores is `packed` (below) -- no GazeData object is
+        % ever written -- so plain-to-plain is the fidelity that matters, and it
+        % checks every leaf of every sample just as the old form did.
+        %
+        % The old form unpacked all the way back to GazeData, which made the
+        % commit depend on gazeCodec's hardcoded SDK field names. On 2026-10-09
+        % that killed every block on the R2024b rig (GazeOrigin has no
+        % InTrackBoxCoordinateSystem there) AFTER behavior.mat was written and
+        % BEFORE gaze.mat, so each block lost its gaze to the emergency folder.
+        % The rigs carry different SDK builds with different spellings, so no
+        % hardcoded list belongs anywhere in the save path.
+        assert(utils.gazeCodec('verify', packed, payload.gaze), ...
             'hw:blockStore:roundtrip', 'Gaze packing changed values. Behavioral data is preserved.');
         gaze = struct('identity', attempt, 'packed', packed, ...
             'clockSync', payload.clockSync, 'metadata', payload.metadata, ...
