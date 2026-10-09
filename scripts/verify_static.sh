@@ -204,7 +204,17 @@ check_grep 'utils\.snapValue' experiment/continuous_DC_task.m 'contdc price snap
 # The value labels must read as ADVERTISED figures, not as the response.
 check_grep "'Offered wage'" experiment/+utils/attributes.m 'jobs value label'
 check_grep "'Listed price'" experiment/+utils/attributes.m 'houses value label'
-check_absent "'\\\$%\\.2f/hr'" experiment/+utils/formatCurrency.m 'cents on hourly wages'
+# Hourly wages now carry CENTS. This pin was the exact opposite until
+# 2026-10-09 -- whole dollars were chosen in the 2026-09-16 pilot round and
+# pinned here on purpose. The decision was reversed deliberately, not drifted
+# into: cfg.sampling.fitToWindow.jobs rank-fits all 64 post-industry stimuli
+# onto the participant's window, placing them ~1.6% apart, and at a low anchor
+# whole dollars collapsed 34 distinct wages onto 13 displayed values with ten
+# jobs reading "$8/hr". Two decimals restore all 34 at every anchor.
+# snapValue's 'hourly' case must stay in lockstep or recorded stops equalling
+# displayed.
+check_grep "'\\\$%\\.2f/hr'" experiment/+utils/formatCurrency.m 'cents on hourly wages'
+check_grep 'round\(v \* 100\) / 100' experiment/+utils/snapValue.m 'hourly responses snap to the cent'
 
 # Participants must be told about the quit key -- it always worked.
 check_grep 'quitNotice' experiment/auction_task.m 'auction quit notice'

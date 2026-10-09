@@ -10,7 +10,10 @@ end
 
 switch lower(char(priceStyle))
     case 'hourly'
-        v = round(v);
+        % Nearest cent, matching formatCurrency's '$%.2f/hr'. These two must
+        % move together or the recorded response stops equalling the displayed
+        % one, which is the whole contract of this function.
+        v = round(v * 100) / 100;
 
     case 'total'
         % Nearest thousand: the arc spans hundreds of thousands over ~900 px and cannot resolve a dollar.
