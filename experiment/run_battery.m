@@ -140,6 +140,16 @@ for k = 1:numel(thisSession)
             fprintf(2, '%s\n', getReport(ME, 'extended', 'hyperlinks', 'off'));
         end
 
+        % Replication after the fact, so a rig crash can be read without
+        % visiting the rig. Deliberately placed here: after the display is
+        % down and after the local dump is safe, so a slow or dead share
+        % cannot cost trial timing or the evidence. Before the prompt below,
+        % because a force-quit at that prompt must not lose the copy.
+        % mirrorDiagnostics never throws; it cannot displace ME.
+        mirrored = {};
+        if exist('crashFile', 'var') == 1, mirrored = {crashFile}; end
+        utils.mirrorDiagnostics(sess.cfg, run, mirrored);
+
         if k < numel(thisSession)
             go = input('Continue to the next run anyway? (y/n): ', 's');
             if ~strcmpi(strtrim(go), 'y'), rethrow(ME); end

@@ -114,6 +114,19 @@ if ~ensureWriteDirs(primaryDirs) || ~ensureWriteDirs(fallbackDirs)
         'Local data storage is not writable. Set HW_LOCAL_DATA_ROOT: %s', cfg.paths.data);
 end
 
+% --- Crash diagnostics mirroring ---------------------------------------
+% Copy the progress log and crash dump to the share AFTER a crash, so a rig
+% failure can be read without visiting the rig. This does not weaken the rule
+% above: the copy runs in the crash handler, after sca and after the local dump
+% is safe on disk, so it is replication after the fact and never touches the
+% share during capture. The per-trial log itself stays on local disk, as
+% progressLog.m requires.
+%
+% TEMPORARY. Set false once the end-of-block crash is diagnosed; it exists to
+% shorten the loop on that one bug, not as a permanent capture path.
+cfg.diagnostics.mirrorToShare = true;
+cfg.diagnostics.shareSubdir   = 'Diagnostics';
+
 % --- Stimulus files -----------------------------------------------------
 % Jobs file is named by arm to keep the link to prepare_stimuli.py's provenance JSON.
 cfg.stimuli.jobsArm  = lower(char(opt.jobsArm));
