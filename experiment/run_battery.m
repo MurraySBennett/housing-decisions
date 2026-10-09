@@ -150,10 +150,19 @@ for k = 1:numel(thisSession)
         if exist('crashFile', 'var') == 1, mirrored = {crashFile}; end
         utils.mirrorDiagnostics(sess.cfg, run, mirrored);
 
+        % Publish before leaving on an error too. A crashed session's completed
+        % blocks are exactly the ones someone needs to look at from elsewhere,
+        % and both branches below leave the script for good. NOT in the
+        % continue-anyway branch: that keeps going and the end-of-session
+        % publish will cover it. Idempotent in any case.
         if k < numel(thisSession)
             go = input('Continue to the next run anyway? (y/n): ', 's');
-            if ~strcmpi(strtrim(go), 'y'), rethrow(ME); end
+            if ~strcmpi(strtrim(go), 'y')
+                utils.publishToShare(sess.cfg);
+                rethrow(ME);
+            end
         else
+            utils.publishToShare(sess.cfg);
             rethrow(ME);
         end
     end
@@ -167,6 +176,14 @@ if ~isempty(timingRows)
     disp(T);
     fprintf('Session total: %.1f min\n', sum(T.seconds(T.section == "total")) / 60);
 end
+
+% Capture was local for the whole session, by design (config.m:96). Now that
+% every task has torn down its window and nothing is being timed, replicate the
+% local tree to the share so the data is reachable without visiting the rig.
+% Deliberately before the survey reminder below, which must stay the last thing
+% on the console. Never throws; a failure here leaves the local tree complete
+% and the next session's publish sweeps it up.
+utils.publishToShare(sess.cfg);
 
 % Last thing on the console deliberately: the session is not over. The intake
 % half of the Qualtrics response is still unanswered, and the participant is

@@ -114,6 +114,17 @@ if ~ensureWriteDirs(primaryDirs) || ~ensureWriteDirs(fallbackDirs)
         'Local data storage is not writable. Set HW_LOCAL_DATA_ROOT: %s', cfg.paths.data);
 end
 
+% --- Publishing to the share ------------------------------------------
+% The other half of the local-capture design above. Capture never touches the
+% share during a session; when the session ends, utils.publishToShare runs
+% scripts/sync_blocks to replicate the local tree so everyone can reach the
+% data without visiting the rig. Replication is still "after the fact" -- it is
+% automatic, not concurrent with capture, so the rule above is intact.
+%
+% Was manual until 2026-10-09, which meant it never ran and nothing reached the
+% share. Set false only if you intend to publish by hand.
+cfg.share.publishOnCompletion = true;
+
 % --- Crash diagnostics mirroring ---------------------------------------
 % Copy the progress log and crash dump to the share AFTER a crash, so a rig
 % failure can be read without visiting the rig. This does not weaken the rule
