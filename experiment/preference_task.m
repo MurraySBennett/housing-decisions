@@ -182,7 +182,7 @@ try
     end
 
     utils.progressLog(run, 'BEGIN end-of-task message');
-    showMessage(window, cfg, 'This task is finished.\n\nThank you.');
+    showMessage(window, cfg, 'This task is finished.\n\nThank you.\n\nClick to continue.', 60);
     utils.progressLog(run, 'END end-of-task message');
     tl = utils.timeline('stop', tl);
     dataMat.timing = utils.timeline('table', tl);
@@ -196,7 +196,20 @@ try
     end
     utils.progressLog(run, 'END behavioral saves');
     utils.progressLog(run, 'BEGIN display cleanup');
-    Screen('CloseAll');
+    % Match auction_task:476 and continuous_DC_task:434. This path was the odd
+    % one out at Screen('CloseAll') alone, and both omissions bite the NEXT
+    % module, not this one:
+    %   ListenChar(0) -- without it the keyboard stays captured after this task
+    %     returns, so MATLAB's Command Window silently ignores typing. A battery
+    %     waiting at run_battery:144's "continue anyway? (y/n)" then looks hung,
+    %     which is why operators have been force-quitting MATLAB.
+    %   clear PsychImaging -- sca resets Screen state but not PsychImaging's
+    %     persistent config, so the next task's OpenWindow can return a handle
+    %     that looks valid and is not, surfacing as a generic Screen "Usage:"
+    %     error on its first real draw rather than at OpenWindow. README.md
+    %     "Known gotchas" documents this and says both task files were fixed --
+    %     this third one was missed.
+    ListenChar(0); ShowCursor; Priority(0); sca; clear PsychImaging;
     utils.progressLog(run, 'END display cleanup; task returning');
     if standalone, utils.endRun(sess, run, 'complete'); end
 
@@ -602,9 +615,17 @@ DrawFormattedText(window, 'Press Q to stop', 42, scr(4) - 54, s.textDim);
 end
 
 
-function showMessage(window, cfg, msg)
+function showMessage(window, cfg, msg, maxSecs)
+% maxSecs is a safety net, not a design choice. Default Inf leaves the five
+% instruction screens click-gated exactly as before; only the end-of-task
+% screen passes a finite value. On 2026-10-09 a participant sat on that screen
+% indefinitely: its text was the one showMessage call in this file that did not
+% end in "Click to continue", so nothing on screen said an action was needed,
+% and the operator read a waiting task as a hung one.
+if nargin < 4 || isempty(maxSecs), maxSecs = Inf; end
 s = cfg.style;
 ShowCursor('Arrow', window);
+t0 = GetSecs;
 while true
     [~, ~, buttons] = utils.getMouse(window);
     Screen('FillRect', window, s.bg);
@@ -617,6 +638,7 @@ while true
         while any(buttons), [~,~,buttons] = utils.getMouse(window); end
         break
     end
+    if GetSecs - t0 >= maxSecs, break; end
 end
 end
 
