@@ -26,6 +26,13 @@ switch lower(action)
         utils.progressLog(run, 'BLOCK START %d attempt=%s', ordinal, out.attemptId);
     case 'finish'
         attempt = varargin{1}; payload = varargin{2}; et = varargin{3}; store = varargin{4};
+        % Which MATLAB ran this block. Stamped before responses.mat so all
+        % three artifacts carry it. It rides in metadata, never in the attempt
+        % identity: identity is compared with isequaln across entry/behavior/
+        % gaze/receipt (blockStore.m:73,150) and drives recovery, so adding a
+        % field there would change what counts as the same attempt.
+        payload.metadata.matlabRelease = version('-release');
+        payload.metadata.matlabVersion = version;
         % Preserve responses before even asking the tracker for its final buffer.
         responses = payload; responses.identity = attempt;
         utils.checkpointIO('write', fullfile(attempt.directory, 'responses.mat'), struct('responses', responses));
