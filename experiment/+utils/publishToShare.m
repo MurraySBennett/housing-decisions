@@ -57,7 +57,11 @@ try
     end
 
     % sync_blocks lives in scripts/, which is not on the path during a session.
-    repoRoot = fileparts(fileparts(mfilename('fullpath')));
+    % Three fileparts, not two: this file is experiment/+utils/, so two stops
+    % at experiment/ and the isfolder guard below then silently skips the
+    % addpath. Publishing only worked because rig_checks had already added
+    % scripts/ for the session.
+    repoRoot = fileparts(fileparts(fileparts(mfilename('fullpath'))));
     scriptsDir = fullfile(repoRoot, 'scripts');
     if isfolder(scriptsDir) && ~contains([path pathsep], [scriptsDir pathsep])
         addpath(scriptsDir);

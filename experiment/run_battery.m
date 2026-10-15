@@ -159,10 +159,12 @@ for k = 1:numel(thisSession)
             go = input('Continue to the next run anyway? (y/n): ', 's');
             if ~strcmpi(strtrim(go), 'y')
                 utils.publishToShare(sess.cfg);
+                utils.exportSession(sess.cfg);
                 rethrow(ME);
             end
         else
             utils.publishToShare(sess.cfg);
+            utils.exportSession(sess.cfg);
             rethrow(ME);
         end
     end
@@ -184,6 +186,10 @@ end
 % on the console. Never throws; a failure here leaves the local tree complete
 % and the next session's publish sweeps it up.
 utils.publishToShare(sess.cfg);
+
+% Then derive the per-run CSVs analysis actually reads. Publishing first, so a
+% problem here cannot stop the raw blocks reaching the share. Never throws.
+utils.exportSession(sess.cfg);
 
 % Last thing on the console deliberately: the session is not over. The intake
 % half of the Qualtrics response is still unanswered, and the participant is

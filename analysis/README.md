@@ -5,10 +5,15 @@ have to be runnable and checkable on a machine with no MATLAB.
 
 ## Block-checkpoint exports
 
-For the new format, run MATLAB `scripts/combine_blocks.m` on the immutable local
-run-kind root, writing to a separate derived directory. Point `--data` at that
-derived root. Do not put attempt fragments or incomplete exports in the task CSV
-directories. Discovery is nonrecursive; `blocks/`, `partial/`, and `legacy/` are
+This now happens by itself. `utils.exportSession` runs `combine_blocks` and
+`export_gaze_csv` at the end of every session and sends the result to the
+share, so the analysis root is `Experiment/Derived` (or `Derived_practice`) and
+no one has to remember a manual step. Run `scripts/combine_blocks.m` by hand
+only to re-derive, or for a tree that predates this.
+
+Either way the rule is the same: the derived directory is separate from the
+immutable raw run-kind root, and `--data` points at the derived root. Do not
+put attempt fragments or incomplete exports in the task CSV directories. Discovery is nonrecursive; `blocks/`, `partial/`, and `legacy/` are
 excluded. Duplicate logical runs across CSV files cause an error.
 
 The existing behavioral columns remain available. New columns identify the block,

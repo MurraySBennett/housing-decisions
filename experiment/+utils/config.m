@@ -105,6 +105,9 @@ cfg.paths.localData = cfg.paths.data;
 cfg.paths.checkpoints = fullfile(cfg.paths.data, 'blocks');
 cfg.paths.runs = fullfile(cfg.paths.data, 'runs');
 cfg.paths.fallbackData = fullfile(cfg.paths.data, 'emergency');
+% Derived exports are a sibling of Data, never inside it: combine_blocks
+% asserts the raw and derived trees are separate.
+cfg.paths.derived = fullfile(fileparts(localRoot), 'Derived', cfg.runKind);
 cfg.paths = dataPathSet(cfg.paths, cfg.paths.data, '');
 cfg.paths = dataPathSet(cfg.paths, cfg.paths.fallbackData, 'fallback');
 primaryDirs = [writeDirsFor(cfg.paths, '') {cfg.paths.checkpoints, cfg.paths.runs}];
@@ -124,6 +127,22 @@ end
 % Was manual until 2026-10-09, which meant it never ran and nothing reached the
 % share. Set false only if you intend to publish by hand.
 cfg.share.publishOnCompletion = true;
+
+% --- Deriving the analysis exports -------------------------------------
+% Publishing sends the recovery layer: sessions, runs and block checkpoints.
+% It does not send the per-run CSVs analysis reads, because those are derived
+% from the blocks rather than captured. utils.exportSession runs that
+% derivation at the end of the session so nobody has to remember to.
+% Was a manual scripts/combine_blocks call until 2026-10-15, with the same
+% result as the manual publish before it: the share held no analysable data
+% for any session after 2026-10-06.
+derivedName = 'Derived';
+if strcmp(cfg.runKind, 'practice')
+    derivedName = 'Derived_practice';
+end
+cfg.paths.shareDerived = optOrEnv('', 'HW_DERIVED_ROOT', ...
+    fullfile(fileparts(cfg.paths.shareData), derivedName));
+cfg.share.exportOnCompletion = true;
 
 % --- Crash diagnostics mirroring ---------------------------------------
 % Copy the progress log and crash dump to the share AFTER a crash, so a rig

@@ -68,6 +68,15 @@ as evidence a participant is new.
 
 ## Offline replication and exports
 
+Both halves run automatically at the end of a session, and the commands below
+are for re-running them by hand. `utils.publishToShare` calls `sync_blocks` to
+send the raw tree; `utils.exportSession` then calls `combine_blocks` and
+`export_gaze_csv` to derive the analysis CSVs into `cfg.paths.derived` and send
+those to `cfg.paths.shareDerived`. Gate either with
+`cfg.share.publishOnCompletion` / `cfg.share.exportOnCompletion`. Neither ever
+throws: a failure leaves the local tree authoritative and the next session
+sweeps it up.
+
 Run from the repository root in MATLAB, with the experiment closed:
 
 ```matlab
