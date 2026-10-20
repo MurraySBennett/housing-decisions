@@ -112,7 +112,9 @@ check_grep 'cfg\.auction\.nTrials' experiment/README.md 'auction trial knob docs
 check_grep 'cfg\.contdc\.nPairs\.houses' experiment/README.md 'house pair knob docs'
 check_grep 'cfg\.contdc\.nPairs\.houses[[:space:]]*=[[:space:]]*20' experiment/+utils/config.m 'houses contdc has 20 pairs per level'
 check_grep 'cfg\.contdc\.nPairs\.jobs[[:space:]]*=[[:space:]]*20' experiment/+utils/config.m 'jobs contdc has 20 pairs per level'
-check_grep 'n_pairs[[:space:]]*<-[[:space:]]*c\(jobs = 20, houses = 20\)' analysis/R/simulate_demo_data.R 'simulated data matches contdc pair counts'
+check_grep 'contdc_n_pairs[[:space:]]*=[[:space:]]*c\(jobs = 20L, houses = 20L\)' analysis/R/design.R 'R design mirror matches contdc pair counts'
+check_grep 'auction_n_trials[[:space:]]*=[[:space:]]*24L' analysis/R/design.R 'R design mirror matches auction trial count'
+check_grep 'attr_levels[[:space:]]*=[[:space:]]*c\(2L, 4L, 6L\)' analysis/R/design.R 'R design mirror matches attribute levels'
 check_grep 'JOBS_ARM' experiment/README.md 'jobs arm knob docs'
 
 # --- Restyle and theme invariants ---------------------------------------
@@ -477,6 +479,22 @@ check_grep 'dataMat\.timing = utils\.timeline' experiment/preference_task.m 'pre
 check_grep '_timing\.csv' experiment/run_battery.m 'battery writes the session timing CSV'
 
 if ! python3 scripts/check_utils_calls.py; then
+  fail=1
+fi
+
+# --- nothing load-bearing may be left untracked ------------------------
+# exportSession.m called scripts/export_gaze_csv.m for six days while that file
+# existed only in the author's working tree. Every clone broke at the end of a
+# session; the author's did not, and no check could tell the difference, because
+# every check here -- check_utils_calls.py included -- resolves against the
+# filesystem rather than against git. An uncommitted file reads as present.
+#
+# This is the one check that cannot be fooled that way. It is deliberately
+# blunt: a source file you have not committed is a file nobody else has.
+untracked="$(git ls-files --others --exclude-standard -- '*.m' '*.R' '*.py' 2>/dev/null || true)"
+if [[ -n "$untracked" ]]; then
+  printf 'untracked source files (every clone but this one is missing them):\n' >&2
+  printf '  %s\n' $untracked >&2
   fail=1
 fi
 
