@@ -13,7 +13,7 @@ end
 signature = struct('schemaVersion', 1, 'assignment', sess.assignment, ...
     'config', plain(c), 'codeVersion', sess.codeVersion, 'sources', [], 'stimuli', struct());
 root = fileparts(fileparts(mfilename('fullpath')));
-files = [dir(fullfile(root, '*.m')); dir(fullfile(root, '+utils', '*.m'))];
+files = [dir(fullfile(root, '*.m')); dir(fullfile(root, '+utils', '*.m')); dir(fullfile(root, '+utils', 'private', '*.m'))];
 [~, order] = sort({files.name}); files = files(order);
 signature.sources = cell(numel(files), 2);
 for k = 1:numel(files)

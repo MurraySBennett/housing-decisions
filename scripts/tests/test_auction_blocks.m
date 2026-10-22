@@ -8,10 +8,10 @@ rs = RandStream('twister','Seed',23); rand(rs,1,5); % practice consumption
 entry = struct('plan',struct('stimIdx',{[1 2 3],[1 4 5]},'block',{2,3}), ...
     'wonStimIdx',8,'rsState',rs.State,'globalState',rng);
 c = rmfield(a,{'attemptId','directory','startedAt'}); c.blockOrdinal = 2; c.parentAttemptId = a.attemptId;
-utils.blockStore('begin',f.cfg,c,entry);
+utils.beginBlock(f.cfg,c,entry);
 expected = rand(rs,1,4);
 abandoned = entry; abandoned.plan(2).stimIdx = [4 5]; abandoned.wonStimIdx = [8 1]; %#ok<NASGU>
-state = utils.blockStore('recover',f.cfg,c.logicalRunId);
+state = utils.scanBlocks(f.cfg,c.logicalRunId);
 verifyEqual(testCase,state.entryState.plan(2).stimIdx,[1 4 5]);
 verifyEqual(testCase,state.entryState.wonStimIdx,8);
 rs.State = state.entryState.rsState;
@@ -23,7 +23,7 @@ stubs = fullfile(fileparts(mfilename('fullpath')),'fixtures','ptb_fake');
 addpath(stubs,'-begin'); cleaner = onCleanup(@() removeStubs(stubs)); %#ok<NASGU>
 clear Screen GetSecs WaitSecs DrawFormattedText;
 tracker = FakeGazeTracker(); et = struct('enabled',true,'obj',tracker,'operations',[]);
-r = utils.blockRecording('start',et);
+r = utils.startRecording(et);
 s = utils.gazeBuffer('poll',et,r.store); before = [s.samples{:}];
 cfg.et = struct('driftCheck',true,'driftTolDeg',1,'recalOnFail',false);
 cfg.style = struct('bg',[0 0 0],'sizeContent',20,'textDim',[1 1 1],'target',[1 1 1]);
@@ -52,11 +52,11 @@ cfg.paths.checkpoints = fullfile(root,'blocks');
 c = struct('schemaVersion',1,'logicalRunId','auction-integration','participant',9999, ...
     'session',1,'task','auction','domain','houses','runKind','practice', ...
     'blockOrdinal',1,'parentAttemptId','');
-a = utils.blockStore('begin',cfg,c,struct('seed',3));
+a = utils.beginBlock(cfg,c,struct('seed',3));
 p = struct('trials',tr,'trialTable',T,'events',table(),'metadata',struct(), ...
     'gaze',[],'clockSync',struct(),'nextState',struct('seed',4));
-utils.blockStore('commit',cfg,a,p);
-s = utils.blockStore('recover',cfg,c.logicalRunId);
+utils.commitBlock(cfg,a,p);
+s = utils.scanBlocks(cfg,c.logicalRunId);
 verifyEqual(testCase,s.nextBlock,2);
 saved = load(fullfile(a.directory,'behavior.mat'),'behavior');
 verifyEqual(testCase,saved.behavior.trialTable,T);

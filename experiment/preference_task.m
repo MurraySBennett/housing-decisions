@@ -128,7 +128,7 @@ try
             showMessage(window, cfg, ['Job choices\n\nYou will see two jobs at a time, showing only the industry ' ...
                 'and the job title.\n\nPress Z to choose the left job, or M to choose the right job.\n\nClick to begin.']);
         end
-        recovery = utils.taskBlock('recover', sess, run, domain);
+        recovery = utils.recoverBlocks(sess, run, domain);
         for k = 1:numel(recovery.blocks)
             prior = recovery.blocks{k}; section = prior.metadata.section;
             dataMat.(domain).(section).trials = [dataMat.(domain).(section).trials; prior.trials(:)];
@@ -150,10 +150,18 @@ try
                 end
             end
             entryState = struct('rsState', rs.State, 'globalState', rng);
-            attempt = utils.taskBlock('begin', sess, run, domain, b, entryState, parentAttempt);
+            % Open this block's immutable attempt. The identity written
+            % here is what utils.scanBlocks chains completed blocks by.
+            attempt = utils.beginBlock(sess.cfg, struct('schemaVersion', 1, ...
+                'participant', sess.participant, 'session', sess.sessionNum, ...
+                'task', run.task, 'domain', domain, 'runKind', sess.runKind, ...
+                'logicalRunId', [run.runId '_' domain], 'blockOrdinal', b, ...
+                'parentAttemptId', parentAttempt), entryState);
+            fprintf('Starting %s [%s] block %d, attempt %s\n', run.task, domain, b, attempt.attemptId);
+            utils.progressLog(run, 'BLOCK START %d attempt=%s', b, attempt.attemptId);
             log = utils.eventLog('init', 20000); % same preallocation as the other two tasks
             log = utils.eventLog('context', log, struct('block', b, 'attemptId', attempt.attemptId, 'section', section));
-            recording = utils.blockRecording('start', et);
+            recording = utils.startRecording(et);
             gazeStore = recording.store;
             blockInfo = struct('run', run, 'block', b, 'nBlocks', numel(chunks));
             if strcmp(section, 'rating')
@@ -171,10 +179,22 @@ try
             payload.metadata = struct('frozenPlan', frozen, 'section', section, 'layout', G, 'eyeTracking', dataMat.eyeTracking);
             payload.nextState = struct('rsState', rs.State, 'globalState', rng);
             utils.savingScreen(window, cfg, 0.1, 'Saving completed block', utils.didYouKnow(run.seed));
-            receipt = utils.taskBlock('finish', sess, run, domain, attempt, payload, et, gazeStore);
+            % Stamp which MATLAB ran this block (metadata only -- identity
+            % is compared with isequaln and must not change), keep a
+            % pre-drain copy of the responses, then drain and commit.
+            payload.metadata.matlabRelease = version('-release');
+            payload.metadata.matlabVersion = version;
+            responses = payload; responses.identity = attempt;
+            utils.checkpointIO('write', fullfile(attempt.directory, 'responses.mat'), struct('responses', responses));
+            drained = utils.drainRecording(et, gazeStore, payload.clockSync, run);
+            payload.gaze = drained.gaze; payload.clockSync = drained.clockSync;
+            utils.progressLog(run, 'BEGIN block commit block=%d samples=%d', b, numel(payload.gaze));
+            receipt = utils.commitBlock(sess.cfg, attempt, payload);
+            utils.gazeBuffer('release');
+            utils.progressLog(run, 'END block commit block=%d attempt=%s', b, attempt.attemptId);
             parentAttempt = receipt.attemptId; domainEvents{end+1} = payload.events;
             dataMat.(domain).(section).trials = [dataMat.(domain).(section).trials; blockTrials(:)];
-            clear gazeStore recording payload blockTrials;
+            clear gazeStore recording drained payload blockTrials;
         end
         dataMat.(domain).events = utils.stackTables(domainEvents);
         dataMat.(domain).checkpointRun = [run.runId '_' domain];

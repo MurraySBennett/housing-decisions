@@ -10,7 +10,7 @@ for k = 1:numel(run.domains)
     domain = run.domains{k};
     frozen = utils.frozenPlan(sess, run, domain);
     if isempty(frozen) || ~isfield(frozen, 'blockCount'), done = false; return; end
-    state = utils.blockStore('recover', sess.cfg, [run.runId '_' domain]);
+    state = utils.scanBlocks(sess.cfg, [run.runId '_' domain]);
     if numel(state.receipts) ~= frozen.blockCount, done = false; return; end
 end
 end

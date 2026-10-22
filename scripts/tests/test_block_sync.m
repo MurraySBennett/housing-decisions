@@ -23,7 +23,7 @@ report = sync_blocks(f.root, fullfile(root,'remote'));
 verifyTrue(testCase, all(strcmp({report.status},'complete')));
 verifyEqual(testCase,utils.checkpointIO('hash',fullfile(a.directory,'behavior.mat')),before);
 cfg.paths.checkpoints = fullfile(root,'remote','blocks');
-r = utils.blockStore('scan',cfg,a.logicalRunId);
+r = utils.scanBlocks(cfg,a.logicalRunId);
 verifyEqual(testCase,r.nextBlock,2);
 end
 function testSessionCalibrationAndTimingSurviveTransfer(testCase)

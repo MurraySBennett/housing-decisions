@@ -25,7 +25,7 @@ function testAbandonedAttemptInventory(testCase)
 root = tempname; mkdir(root); cleaner = onCleanup(@() rmdir(root,'s')); %#ok<NASGU>
 [f,a] = checkpoint_fixture(fullfile(root,'raw'));
 c = rmfield(a,{'attemptId','directory','startedAt'});
-failed = utils.blockStore('begin',f.cfg,c,struct('seed',1));
+failed = utils.beginBlock(f.cfg,c,struct('seed',1));
 out = fullfile(root,'derived'); combine_blocks(f.root,out);
 s = load(fullfile(out,'cont_dc',[f.run.runId '.mat']),'dataMat');
 inv = s.dataMat.attemptInventory;

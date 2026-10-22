@@ -116,7 +116,7 @@ out = evalc('utils.publishToShare(c.cfg);');
 % block store must be readable from the share side with the same scan idiom
 % test_block_sync.m:26 uses.
 shareCfg.paths.checkpoints = fullfile(c.share, 'blocks');
-state = utils.blockStore('scan', shareCfg, [c.runId '_' c.domain]);
+state = utils.scanBlocks(shareCfg, [c.runId '_' c.domain]);
 verifyEqual(testCase, state.nextBlock, 2, ...
     'the committed block did not arrive on the share');
 verifyFalse(testCase, contains(out, 'NOT PUBLISHED'), out);
@@ -170,8 +170,8 @@ end
 
 function testGazeExportsRunWithoutATracker(testCase)
 % The tracker is off in the fixture, and that must not stop the tail. Gaze
-% blocks are still written as validated empty stubs (taskBlock.m:40-41,
-% blockStore.m:25), combine_blocks still emits the per-domain gaze MAT
+% blocks are still written as validated empty stubs (the tasks' responses write,
+% commitBlock.m), combine_blocks still emits the per-domain gaze MAT
 % (combine_blocks.m:62), and export_gaze_csv reports 0 samples rather than
 % warning or throwing. A no-tracker run therefore exercises the whole tail.
 c = tailCase();

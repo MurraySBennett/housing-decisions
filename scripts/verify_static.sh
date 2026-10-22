@@ -77,9 +77,9 @@ check_grep 'w\.idx[[:space:]]*=[[:space:]]*find\(valid[[:space:]]*&' experiment/
 check_grep 'pick\.trial' experiment/+utils/incentives.m 'incentive selected trial'
 check_grep 'detailAoiRects' experiment/auction_task.m 'auction detail AOI rects saved'
 check_grep 'layoutDetailAOIs' experiment/auction_task.m 'auction detail AOI helper'
-check_grep 'utils\.blockRecording' experiment/auction_task.m 'auction block recording'
-check_grep 'utils\.blockRecording' experiment/continuous_DC_task.m 'contdc block recording'
-check_grep 'utils\.clockSync' experiment/+utils/blockRecording.m 'per-block clock sync'
+check_grep 'utils\.startRecording' experiment/auction_task.m 'auction block recording'
+check_grep 'utils\.startRecording' experiment/continuous_DC_task.m 'contdc block recording'
+check_grep 'utils\.clockSync' experiment/+utils/drainRecording.m 'per-block clock sync'
 check_grep 'actualSampleRateHz' experiment/+utils/setupEyeTracker.m 'actual sample-rate field'
 check_grep 'get_gaze_output_frequency' experiment/+utils/setupEyeTracker.m 'query Tobii sample rate'
 check_file experiment/+utils/clockSync.m

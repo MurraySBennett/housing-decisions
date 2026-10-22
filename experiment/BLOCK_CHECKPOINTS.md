@@ -1,8 +1,27 @@
 # Block checkpoints: operator and validation guide
 
-This format is under validation. Do not deploy it for participants until the
-MATLAB/SDK checks and rig rehearsals below pass. Static checks are insufficient.
-Old participant files remain unchanged; damaged files are not repaired by this change.
+This format is what `run_battery` runs: every session captures through it.
+Old participant files remain unchanged; damaged files are not repaired by this
+format. The rehearsal checklist at the bottom is what to re-run after any
+change to the save or recovery path.
+
+## Which code does what
+
+One named function per job; none of them take an 'action' string:
+
+- `utils.openRun` / `utils.runSignature` — the frozen run identity, and the
+  refusal to resume a run under changed code/config/stimuli.
+- `utils.frozenPlan` — the per-domain plan, frozen once, replayed on resume.
+- `utils.beginBlock` — open an immutable attempt, record its entry state.
+- `utils.startRecording` / `utils.drainRecording` — one bounded gaze
+  recording per block, with clock anchors at both ends.
+- `utils.commitBlock` — THE write path: behavior.mat, gaze.mat, then the
+  two-phase descriptor (prepared.mat, receipt.mat). Read this one file to
+  know everything a block writes.
+- `utils.scanBlocks` — read-only authority on which blocks count.
+- `utils.recoverBlocks` — scan plus what a resuming task needs: republished
+  descriptors and the loaded behaviors.
+- `utils.runComplete` — every domain has all its frozen blocks committed.
 
 ## Where the data and logs go
 
@@ -30,7 +49,12 @@ Inside the selected run-kind root:
 - `behavior.mat`, `gaze.mat`: verified finalized artifacts. Gaze contains typed
   numeric columns, schema and sample association; no downsampling or rounding.
 - `prepared.mat`, `receipt.mat`: hashes, identity and counts. A receipt confirms
-  the bundle; recovery can reconstruct it from a valid finalized pair after a kill.
+  the bundle. A kill between the two descriptors is healed on recovery
+  (receipt.mat is republished from prepared.mat). A kill that lost BOTH
+  descriptors means that block is redone from its entry state — it is not
+  reconstructed from behavior/gaze alone (policy 2026-10-22; the old
+  orphan-rebuild branch was the least readable code in the store and bought
+  one rare kill window).
 - `sessions/`: immutable resolved battery/task context and elicitation; current
   manifests and timing. `session_history/` retains byte-identical versions during
   replication; incompatible calibration/assignment changes stop the transfer.
@@ -133,9 +157,12 @@ with MATLAB, set HW_TOBII_ROOT and run `rig_checks` as described under Required
 acceptance below. A readable RA file also permits the storage benchmark without
 collecting new data.
 
-The 45 cases include actual auction trial-row conversion through block commit,
-reload and recovery, the gaze-to-pixel validity accessor, and the per-trial
-progress log's append, ordering and never-throw guarantees. They do not
+The suite covers actual auction trial-row conversion through block commit,
+reload and recovery, the gaze validity accessor, the crash-dump contract, the
+flat CSV export the R QC pipeline reads, and the per-trial progress log's
+append, ordering and never-throw guarantees. The runner asserts a FLOOR on
+discovered cases (`verify_block_checkpoints.m`), not an exact count, so adding
+a test never breaks the rig check. The cases do not
 execute every interactive task screen or prove PTB timing, device streaming,
 browser intake behavior, or physical kill/restart. Python/Bash syntax,
 helper-reference and discovery checks cannot replace them.
@@ -181,11 +208,12 @@ tempdir second) and prints the path at the end.
 identifiers, class names and stack lines, which are the entire reason for
 running it.
 
-Expect **45 passing cases, 0 incomplete**. Zero incomplete is the number that
-matters: the actual-SDK case is `assumeTrue`-skipped when the SDK is absent, and
-a skip reports as incomplete rather than as a failure. 45 passed with any
-incomplete means the SDK was not really on the path and the result proves less
-than it appears to.
+Expect **all discovered cases passing, 0 incomplete** (the discovered count
+grows as tests are added; the runner enforces a floor, not an equality).
+Zero incomplete is the number that matters on the rig: the actual-SDK case is
+`assumeTrue`-skipped when the SDK is absent, and a skip reports as incomplete
+rather than as a failure. All-passed with any incomplete means the SDK was not
+really on the path and the result proves less than it appears to.
 
 Two lines reading `Progress log unavailable: ...` in that transcript are
 **expected, not a fault**: `test_trial_log` deliberately makes the per-trial log

@@ -247,7 +247,7 @@ try
         wonStimIdx = [];
         log = utils.eventLog('init', 20000);
         if isempty(frozen)
-        recording = utils.blockRecording('start', et);
+        recording = utils.startRecording(et);
         gazeStore = recording.store;
         tl = utils.timeline('section', tl, sprintf('%s:practice', domain));
         if ~(cfg.testing.enabled && cfg.testing.skipInstructions)
@@ -267,7 +267,7 @@ try
                 numel(plan), nParts));
         end
 
-        practiceRecording = utils.blockRecording('finish', et, gazeStore, recording.clockSync, run);
+        practiceRecording = utils.drainRecording(et, gazeStore, recording.clockSync, run);
         practice = struct('trials', trials, 'events', utils.eventLog('table', log), ...
             'gaze', utils.gazeCodec('pack', practiceRecording.gaze), 'clockSync', practiceRecording.clockSync);
         frozen = struct();
@@ -292,8 +292,11 @@ try
         end
         assert(isequal(winRect, frozen.screenRect), 'hw:auction:displayChanged', 'Display geometry changed on resume.');
         rs.State = frozen.rsState; rng(frozen.globalState);
-        recovery = utils.taskBlock('recover', sess, run, domain);
-        trials = [frozen.practiceTrials recovery.trials];
+        recovery = utils.recoverBlocks(sess, run, domain);
+        trials = frozen.practiceTrials;
+        for k = 1:numel(recovery.blocks)
+            trials = [trials reshape(recovery.blocks{k}.trials, 1, [])]; %#ok<AGROW>
+        end
         domainEvents = recovery.events;
         parentAttempt = recovery.parentAttemptId;
         if ~isempty(recovery.entryState)
@@ -317,10 +320,18 @@ try
                 firstTrial = numel(trials) + 1;
                 entryState = struct('plan', plan, 'wonStimIdx', wonStimIdx, ...
                     'rsState', rs.State, 'globalState', rng);
-                attempt = utils.taskBlock('begin', sess, run, domain, b, entryState, parentAttempt);
+                % Open this block's immutable attempt. The identity written
+                % here is what utils.scanBlocks chains completed blocks by.
+                attempt = utils.beginBlock(sess.cfg, struct('schemaVersion', 1, ...
+                    'participant', sess.participant, 'session', sess.sessionNum, ...
+                    'task', run.task, 'domain', domain, 'runKind', sess.runKind, ...
+                    'logicalRunId', [run.runId '_' domain], 'blockOrdinal', b, ...
+                    'parentAttemptId', parentAttempt), entryState);
+                fprintf('Starting %s [%s] block %d, attempt %s\n', run.task, domain, b, attempt.attemptId);
+                utils.progressLog(run, 'BLOCK START %d attempt=%s', b, attempt.attemptId);
                 log = utils.eventLog('init', 20000);
                 log = utils.eventLog('context', log, struct('block', b, 'attemptId', attempt.attemptId));
-                recording = utils.blockRecording('start', et);
+                recording = utils.startRecording(et);
                 gazeStore = recording.store; clockSync = recording.clockSync;
             end
             log = utils.eventLog('context', log, struct('trial', t));
@@ -392,9 +403,21 @@ try
                 payload.nextState = struct('plan', plan, 'wonStimIdx', wonStimIdx, ...
                     'rsState', rs.State, 'globalState', rng);
                 utils.savingScreen(window, cfg, 0.1, 'Saving completed block', utils.didYouKnow(run.seed));
-                receipt = utils.taskBlock('finish', sess, run, domain, attempt, payload, et, gazeStore);
+                % Stamp which MATLAB ran this block (metadata only -- identity
+                % is compared with isequaln and must not change), keep a
+                % pre-drain copy of the responses, then drain and commit.
+                payload.metadata.matlabRelease = version('-release');
+                payload.metadata.matlabVersion = version;
+                responses = payload; responses.identity = attempt;
+                utils.checkpointIO('write', fullfile(attempt.directory, 'responses.mat'), struct('responses', responses));
+                drained = utils.drainRecording(et, gazeStore, payload.clockSync, run);
+                payload.gaze = drained.gaze; payload.clockSync = drained.clockSync;
+                utils.progressLog(run, 'BEGIN block commit block=%d samples=%d', b, numel(payload.gaze));
+                receipt = utils.commitBlock(sess.cfg, attempt, payload);
+                utils.gazeBuffer('release');
+                utils.progressLog(run, 'END block commit block=%d attempt=%s', b, attempt.attemptId);
                 parentAttempt = receipt.attemptId; domainEvents{end+1} = payload.events;
-                clear gazeStore recording payload blockTrials;
+                clear gazeStore recording drained payload blockTrials;
             end
         end
 

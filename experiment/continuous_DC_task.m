@@ -269,8 +269,11 @@ try
             domain, numel(unique(neededIdx)), win.n);
         tex = utils.loadStimulusTextures(window, cfg, inWindow, A, neededIdx, true);
 
-        recovery = utils.taskBlock('recover', sess, run, domain);
-        trials = recovery.trials;
+        recovery = utils.recoverBlocks(sess, run, domain);
+        trials = struct([]);
+        for k = 1:numel(recovery.blocks)
+            trials = [trials reshape(recovery.blocks{k}.trials, 1, [])]; %#ok<AGROW>
+        end
         domainEvents = recovery.events;
         parentAttempt = recovery.parentAttemptId;
         if ~isempty(recovery.entryState)
@@ -291,9 +294,17 @@ try
             showBlockIntro(window, cfg, task, lvl, b, numel(blocks));
 
             entryState = struct('rsState', rs.State, 'globalState', rng);
-            attempt = utils.taskBlock('begin', sess, run, domain, b, entryState, parentAttempt);
+            % Open this block's immutable attempt. The identity written
+            % here is what utils.scanBlocks chains completed blocks by.
+            attempt = utils.beginBlock(sess.cfg, struct('schemaVersion', 1, ...
+                'participant', sess.participant, 'session', sess.sessionNum, ...
+                'task', run.task, 'domain', domain, 'runKind', sess.runKind, ...
+                'logicalRunId', [run.runId '_' domain], 'blockOrdinal', b, ...
+                'parentAttemptId', parentAttempt), entryState);
+            fprintf('Starting %s [%s] block %d, attempt %s\n', run.task, domain, b, attempt.attemptId);
+            utils.progressLog(run, 'BLOCK START %d attempt=%s', b, attempt.attemptId);
             log = utils.eventLog('context', log, struct('block', b, 'attemptId', attempt.attemptId));
-            recording = utils.blockRecording('start', et);
+            recording = utils.startRecording(et);
             gazeStore = recording.store; clockSync = recording.clockSync;
             order = randperm(rs, numel(pairs));
 
@@ -377,10 +388,22 @@ try
             payload.clockSync = clockSync;
             payload.nextState = struct('rsState', rs.State, 'globalState', rng);
             utils.savingScreen(window, cfg, 0.1, 'Saving completed block', utils.didYouKnow(run.seed));
-            receipt = utils.taskBlock('finish', sess, run, domain, attempt, payload, et, gazeStore);
+            % Stamp which MATLAB ran this block (metadata only -- identity
+            % is compared with isequaln and must not change), keep a
+            % pre-drain copy of the responses, then drain and commit.
+            payload.metadata.matlabRelease = version('-release');
+            payload.metadata.matlabVersion = version;
+            responses = payload; responses.identity = attempt;
+            utils.checkpointIO('write', fullfile(attempt.directory, 'responses.mat'), struct('responses', responses));
+            drained = utils.drainRecording(et, gazeStore, payload.clockSync, run);
+            payload.gaze = drained.gaze; payload.clockSync = drained.clockSync;
+            utils.progressLog(run, 'BEGIN block commit block=%d samples=%d', b, numel(payload.gaze));
+            receipt = utils.commitBlock(sess.cfg, attempt, payload);
+            utils.gazeBuffer('release');
+            utils.progressLog(run, 'END block commit block=%d attempt=%s', b, attempt.attemptId);
             parentAttempt = receipt.attemptId;
             domainEvents{end+1} = payload.events;
-            clear gazeStore recording payload blockData blockTrials;
+            clear gazeStore recording drained payload blockData blockTrials;
         end
 
         utils.progressLog(run, 'TRIALS FINISHED domain=%s; BEGIN releasing textures', domain);

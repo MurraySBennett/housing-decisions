@@ -22,19 +22,19 @@ end
 function testRestartSubscriptionRetainsEveryPoll(testCase)
 tracker = FakeGazeTracker();
 et = struct('enabled',true,'obj',tracker,'operations',[]);
-r = utils.blockRecording('start',et);
+r = utils.startRecording(et);
 s = utils.gazeBuffer('poll',et,r.store);
 s = utils.gazeBuffer('poll',et,s);
-r = utils.blockRecording('finish',et,s,r.clockSync,struct('runId','synthetic-recording-test'));
+r = utils.drainRecording(et,s,r.clockSync,struct('runId','synthetic-recording-test'));
 verifyEqual(testCase,[r.gaze.SystemTimeStamp],uint64([201:202 301:303 401:404]));
 verifyTrue(testCase,tracker.stopped);
 retained = utils.gazeBuffer('retained');
 verifyEqual(testCase,retained.n,9);
 utils.gazeBuffer('release');
-r = utils.blockRecording('start',et);
+r = utils.startRecording(et);
 verifyFalse(testCase,tracker.stopped);
 verifyEqual(testCase,r.store.n,0);
-r = utils.blockRecording('finish',et,r.store,r.clockSync,struct('runId','synthetic-recording-test'));
+r = utils.drainRecording(et,r.store,r.clockSync,struct('runId','synthetic-recording-test'));
 verifyEqual(testCase,[r.gaze.SystemTimeStamp],uint64(601:606));
 utils.gazeBuffer('release');
 end

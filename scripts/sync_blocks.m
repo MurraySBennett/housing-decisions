@@ -34,13 +34,13 @@ for k = 1:numel(runs)
     id = runs(k).name;
     if startsWith(id,'.'), continue; end
     try
-        state = utils.blockStore('scan', cfg, id);
+        state = utils.scanBlocks(cfg, id);
         for j = 1:numel(state.receipts)
             receipt = state.receipts(j); source = receipt.artifactDirectory;
             relative = source(numel(localRoot)+2:end); target = fullfile(shareRoot,relative);
             % Also validate destination lineage: a second valid attempt is a conflict.
             targetCfg.paths.checkpoints = fullfile(shareRoot,'blocks');
-            existing = utils.blockStore('scan', targetCfg, id);
+            existing = utils.scanBlocks(targetCfg, id);
             if numel(existing.receipts) >= receipt.blockOrdinal
                 assert(strcmp(existing.receipts(receipt.blockOrdinal).attemptId, receipt.attemptId), ...
                     'hw:sync:conflict', 'Destination has a different completed attempt.');
@@ -48,7 +48,7 @@ for k = 1:numel(runs)
             for name = {'entry.mat','behavior.mat','gaze.mat','prepared.mat','receipt.mat'}
                 utils.checkpointIO('copy',fullfile(source,name{1}),fullfile(target,name{1}));
             end
-            utils.blockStore('scan', targetCfg, id);
+            utils.scanBlocks(targetCfg, id);
         end
         status = 'complete';
         pending = cellfun(@(e) e.attempt.blockOrdinal >= state.nextBlock, state.incomplete);

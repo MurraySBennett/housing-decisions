@@ -23,7 +23,7 @@ utils.checkpointIO('write',fullfile(root,'runs',id,'houses-plan.mat'),struct('fr
 c = struct('schemaVersion',1,'participant',9999,'session',1,'task','contdc', ...
     'domain','houses','runKind','practice','logicalRunId',[id '_houses'], ...
     'blockOrdinal',1,'parentAttemptId','');
-a = utils.blockStore('begin',f.cfg,c,struct('seed',1));
+a = utils.beginBlock(f.cfg,c,struct('seed',1));
 tr = struct('level',2,'taskType','choice','pairIdx',1,'timedOut',false,'choseMoney',true, ...
     'isMoneyOption',NaN,'price',NaN);
 p = struct('trials',tr,'trialTable',table("houses",1,'VariableNames',{'domain','trial'}), ...
@@ -31,5 +31,5 @@ p = struct('trials',tr,'trialTable',table("houses",1,'VariableNames',{'domain','
 for fn = reshape(fieldnames(overrides),1,[])
     p.(fn{1}) = overrides.(fn{1});
 end
-utils.blockStore('commit',f.cfg,a,p);
+utils.commitBlock(f.cfg,a,p);
 end

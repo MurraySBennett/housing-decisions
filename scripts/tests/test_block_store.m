@@ -13,43 +13,43 @@ end
 function testValidCommitAndStaleReceipt(testCase)
 cfg = testCase.TestData.cfg;
 c = context();
-a = utils.blockStore('begin', cfg, c, struct('seed', 4));
+a = utils.beginBlock(cfg, c, struct('seed', 4));
 p = payload();
-r = utils.blockStore('commit', cfg, a, p);
-s = utils.blockStore('recover', cfg, c.logicalRunId);
+r = utils.commitBlock(cfg, a, p);
+s = utils.scanBlocks(cfg, c.logicalRunId);
 verifyEqual(testCase, s.nextBlock, 2);
 verifyEqual(testCase, s.receipts(1).attemptId, a.attemptId);
 f = fullfile(a.directory, 'behavior.mat');
 before = utils.checkpointIO('hash', f);
 delete(fullfile(a.directory, 'receipt.mat'));
-s = utils.blockStore('recover', cfg, c.logicalRunId);
+s = utils.scanBlocks(cfg, c.logicalRunId);
 verifyEqual(testCase, s.nextBlock, 2);
 verifyEqual(testCase, utils.checkpointIO('hash', f), before);
 verifyEqual(testCase, s.receipts(1).files, r.files);
 end
 function testIncompleteRetryIsSeparate(testCase)
 cfg = testCase.TestData.cfg; c = context();
-a = utils.blockStore('begin', cfg, c, struct('seed', 4));
-s = utils.blockStore('recover', cfg, c.logicalRunId);
+a = utils.beginBlock(cfg, c, struct('seed', 4));
+s = utils.scanBlocks(cfg, c.logicalRunId);
 verifyEqual(testCase, s.nextBlock, 1);
 verifyEqual(testCase, s.entryState.seed, 4);
-b = utils.blockStore('begin', cfg, c, s.entryState);
+b = utils.beginBlock(cfg, c, s.entryState);
 verifyNotEqual(testCase, a.attemptId, b.attemptId);
 verifyTrue(testCase, isfolder(a.directory));
 end
 function testCorruptArtifactNotComplete(testCase)
 cfg = testCase.TestData.cfg; c = context();
-a = utils.blockStore('begin', cfg, c, struct());
-utils.blockStore('commit', cfg, a, payload());
+a = utils.beginBlock(cfg, c, struct());
+utils.commitBlock(cfg, a, payload());
 fid = fopen(fullfile(a.directory, 'gaze.mat'), 'w'); fwrite(fid, 'truncated'); fclose(fid);
-verifyError(testCase, @() utils.blockStore('recover', cfg, c.logicalRunId), 'hw:blockStore:corrupt');
+verifyError(testCase, @() utils.scanBlocks(cfg, c.logicalRunId), 'hw:blockStore:corrupt');
 end
 function testDisabledTracker(testCase)
 cfg = testCase.TestData.cfg; c = context();
-a = utils.blockStore('begin', cfg, c, struct());
+a = utils.beginBlock(cfg, c, struct());
 p = payload(); p.gaze = [];
-utils.blockStore('commit', cfg, a, p);
-s = utils.blockStore('scan', cfg, c.logicalRunId);
+utils.commitBlock(cfg, a, p);
+s = utils.scanBlocks(cfg, c.logicalRunId);
 verifyEqual(testCase, s.receipts(1).sampleCount, 0);
 end
 function c = context
@@ -72,36 +72,61 @@ verifyEqual(testCase, cfg.paths.data, fullfile(testCase.TestData.root, 'local', 
 verifyFalse(testCase, isfolder(fullfile(testCase.TestData.root, 'not-created-share')));
 verifyTrue(testCase, isfolder(cfg.paths.checkpoints));
 end
-function testBeforeDescriptorIsRecoverable(testCase)
+function testMissingDescriptorsMeanRedo(testCase)
+% POLICY (2026-10-22): with BOTH descriptors gone -- a kill between gaze.mat
+% and prepared.mat -- the block is REDONE, not resurrected from its artifacts.
+% The old orphan-reconstruction branch rebuilt a receipt from behavior+gaze;
+% it was the hardest-to-read part of the store and bought one rare kill
+% window. Losing it costs repeating one block. The entry state survives, so
+% the redo starts from the exact state the lost attempt started from.
 cfg = testCase.TestData.cfg; c = context();
-a = utils.blockStore('begin',cfg,c,struct('seed',4));
-utils.blockStore('commit',cfg,a,payload());
+a = utils.beginBlock(cfg,c,struct('seed',4));
+utils.commitBlock(cfg,a,payload());
 delete(fullfile(a.directory,'receipt.mat')); delete(fullfile(a.directory,'prepared.mat'));
-s = utils.blockStore('recover',cfg,c.logicalRunId);
-verifyEqual(testCase,s.nextBlock,2);
+s = utils.scanBlocks(cfg,c.logicalRunId);
+verifyEqual(testCase,s.nextBlock,1);
+verifyEqual(testCase,s.entryState.seed,4);
+end
+
+function testRecoverRepublishesDescriptors(testCase)
+% recoverBlocks finishes two-phase descriptor publication: a receipt.mat lost
+% after prepared.mat was written comes back on the next recovery, and the
+% loaded behaviors ride along for the task to reassemble its trials.
+cfg = testCase.TestData.cfg; c = context(); c.logicalRunId = 'myrun_houses';
+a = utils.beginBlock(cfg,c,struct('seed',4));
+utils.commitBlock(cfg,a,payload());
+delete(fullfile(a.directory,'receipt.mat'));
+sess = struct('cfg', cfg);
+run = struct('runId', 'myrun', 'task', 'contdc');
+out = utils.recoverBlocks(sess, run, 'houses');
+verifyTrue(testCase, isfile(fullfile(a.directory,'receipt.mat')), ...
+    'recovery must republish the receipt from prepared.mat');
+verifyEqual(testCase, numel(out.blocks), 1);
+verifyEqual(testCase, out.blocks{1}.trials.trial, 1);
+verifyEqual(testCase, out.nextBlock, 2);
 end
 function testBehaviorOnlyDoesNotComplete(testCase)
 cfg = testCase.TestData.cfg; c = context();
-a = utils.blockStore('begin',cfg,c,struct('seed',4));
+a = utils.beginBlock(cfg,c,struct('seed',4));
 p = payload(); behavior = rmfield(p,'gaze'); behavior.identity = a;
 utils.checkpointIO('write',fullfile(a.directory,'behavior.mat'),struct('behavior',behavior));
-s = utils.blockStore('recover',cfg,c.logicalRunId);
+s = utils.scanBlocks(cfg,c.logicalRunId);
 verifyEqual(testCase,s.nextBlock,1);
 verifyEqual(testCase,s.entryState.seed,4);
 end
 function testTwoValidAttemptsConflict(testCase)
 cfg = testCase.TestData.cfg; c = context();
-a = utils.blockStore('begin',cfg,c,struct('seed',4));
-b = utils.blockStore('begin',cfg,c,struct('seed',4));
-utils.blockStore('commit',cfg,a,payload()); utils.blockStore('commit',cfg,b,payload());
-verifyError(testCase,@() utils.blockStore('recover',cfg,c.logicalRunId),'hw:blockStore:conflict');
+a = utils.beginBlock(cfg,c,struct('seed',4));
+b = utils.beginBlock(cfg,c,struct('seed',4));
+utils.commitBlock(cfg,a,payload()); utils.commitBlock(cfg,b,payload());
+verifyError(testCase,@() utils.scanBlocks(cfg,c.logicalRunId),'hw:blockStore:conflict');
 end
 function testUnsupportedGazeKeepsBehavior(testCase)
 cfg = testCase.TestData.cfg; c = context();
-a = utils.blockStore('begin',cfg,c,struct('seed',4));
+a = utils.beginBlock(cfg,c,struct('seed',4));
 p = payload(); p.gaze = struct('unsupported',{{1,2}});
 try
-    utils.blockStore('commit',cfg,a,p);
+    utils.commitBlock(cfg,a,p);
     verifyFail(testCase,'Unknown leaf silently accepted.');
 catch ME
     verifyTrue(testCase,startsWith(ME.identifier,'hw:gazeCodec:'));

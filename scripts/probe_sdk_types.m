@@ -4,7 +4,7 @@ function probe_sdk_types()
 %   Run on the rig with HW_TOBII_ROOT set. Needs no tracker, no display, no
 %   participant and no Psychtoolbox. Prints a report; writes nothing.
 %
-%   utils.gazeCodec reconstructs GazeData objects, and utils.blockStore asserts
+%   utils.gazeCodec reconstructs GazeData objects, and utils.commitBlock asserts
 %   that reconstruction is exact on EVERY block commit. Three facts decide
 %   whether that assert can pass, and none of them is checkable away from the
 %   SDK:
@@ -70,11 +70,11 @@ catch ME
     return
 end
 
-% --- 3. Value or handle class (blockStore.m:26) -----------------------
-fprintf('\n--- 3. Value vs handle semantics: isequaln assert at blockStore.m:26\n');
+% --- 3. Value or handle class (commitBlock.m roundtrip) -----------------------
+fprintf('\n--- 3. Value vs handle semantics: isequaln assert in utils.commitBlock\n');
 if isa(g, 'handle')
     fprintf('    HANDLE class. isequaln compares identity, not content.\n');
-    fprintf('    -> blockStore.m:26 can never pass. Every block commit fails.\n');
+    fprintf('    -> commitBlock's roundtrip assert can never pass. Every block commit fails.\n');
 else
     fprintf('    Value class (not a handle). isequaln compares content: OK.\n');
 end
@@ -117,7 +117,7 @@ catch ME
 end
 
 % --- 6. The decisive test: the real round-trip ------------------------
-fprintf('\n--- 6. DECISIVE: the round-trip blockStore.m:26 asserts on every commit\n');
+fprintf('\n--- 6. DECISIVE: the round-trip utils.commitBlock asserts on every commit\n');
 try
     g(2) = g(1);
     packed = utils.gazeCodec('pack', g);

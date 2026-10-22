@@ -19,11 +19,11 @@ function testPlainRoundtripIgnoresSdkSpelling(testCase)
 % could not catch it: it builds its own GazeData with the 18-arg constructor,
 % so it only ever round-trips the spelling this file already assumes. The lab's
 % rigs carry different Tobii builds -- the R2024b rig's GazeOrigin has no
-% InTrackBoxCoordinateSystem -- and blockStore's commit used to unpack all the
+% InTrackBoxCoordinateSystem -- and the block commit used to unpack all the
 % way back to an SDK object, so an unknown spelling killed every block.
 %
 % This uses snake_case names the hardcoded eyeArgs list does NOT match, and
-% asserts the pair blockStore actually relies on still round-trips. It needs no
+% asserts the pair commitBlock actually relies on still round-trips. It needs no
 % SDK, so it runs everywhere, which is the point.
 t = bitshift(uint64(1), 53) + uint64(3);
 eye = struct('gaze_point', struct('on_display_area', single([.4 .6]), 'validity', int32(1)), ...
@@ -35,7 +35,7 @@ s(2).LeftEye.gaze_origin.in_track_box_coordinate_system = single([.5 .5 .5]);
 
 packed = utils.gazeCodec('pack', s);
 
-% This is the exact call blockStore's commit now makes.
+% This is the exact call utils.commitBlock now makes.
 verifyTrue(testCase, utils.gazeCodec('verify', packed, s));
 verifyTrue(testCase, isequaln(utils.gazeCodec('unpackplain', packed), s));
 

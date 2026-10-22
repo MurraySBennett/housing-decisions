@@ -25,7 +25,7 @@ for k = 1:numel(files)
         if isfile(planFile)
             f = load(planFile,'frozen'); expected = f.frozen.blockCount;
         end
-        states{d} = utils.blockStore('scan',cfg,[run.runId '_' domain]);
+        states{d} = utils.scanBlocks(cfg,[run.runId '_' domain]);
         complete = complete && numel(states{d}.receipts) == expected;
     end
     assert(complete || p.Results.allowPartial, 'hw:combine:incomplete', ...

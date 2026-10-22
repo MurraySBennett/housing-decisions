@@ -107,7 +107,7 @@ switch lower(action)
             end
         end
         if strcmpi(action, 'validate'), out = true; return; end
-        % Stop before SDK reconstruction. This is what blockStore's fidelity
+        % Stop before SDK reconstruction. This is what commitBlock's fidelity
         % check uses: the stored artifact is the packed columns, so the thing
         % that must be proved lossless is the plain representation, and proving
         % it must not depend on how this SDK build spells its nested fields.
@@ -126,7 +126,7 @@ switch lower(action)
             % Verify the reconstruction on sample 1 only, as a fast local
             % failure for a constructor that cannot round-trip its own
             % properties. Note this is NOT the save path's guarantee any more:
-            % blockStore commits with 'verify', which never comes through here.
+            % commitBlock commits with 'verify', which never comes through here.
             [check, ~] = describe(out(1), {});
             assert(isequaln(check, plain(1)), 'hw:gazeCodec:type', ...
                 'SDK reconstruction changed properties; retain the original data.');
@@ -187,7 +187,7 @@ function args = eyeArgs(e)
 % every block commit on 2026-10-09 -- it read
 % GazeOrigin.InTrackBoxCoordinateSystem, which that rig's build does not have.
 %
-% NOTE: nothing in the save path calls this any more. blockStore verifies with
+% NOTE: nothing in the save path calls this any more. commitBlock verifies with
 % 'unpackplain' against 'plain', so a spelling this list still does not know
 % can no longer kill a session -- it can only fail an explicit reconstruction.
 gp = pick(e, {'GazePoint', 'gaze_point'});
