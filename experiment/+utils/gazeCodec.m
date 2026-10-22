@@ -217,6 +217,7 @@ end
 
 function v = validityValue(x)
 % Real builds wrap validity in an object with a .value; the fake uses a plain
-% numeric. d1cd402 fixed the same split in gazeToPixels.
-if isstruct(x) && isfield(x, 'value'), v = x.value; else, v = x; end
+% numeric. d1cd402 fixed the same split in gazeToPixels. The unwrapping lives
+% in utils.gazeValidity; an unreadable validity passes through unchanged.
+v = utils.gazeValidity(x);
 end

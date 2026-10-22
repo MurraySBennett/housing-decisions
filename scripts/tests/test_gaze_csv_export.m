@@ -191,3 +191,51 @@ d = testCase.TestData.dir;
 mkdir(fullfile(d, 'gaze'));
 verifyWarning(testCase, @() export_gaze_csv(d), 'hw:exportGaze:nothing');
 end
+
+function testPrefPlanDoesNotAbortExport(testCase)
+% Every task freezes its own shape into <domain>-plan.mat. The preference
+% plan (buildPhotoPreferencePlan) is a scalar struct with no stimIdx, and on
+% Moon's 2026-10-22 session reading it as the auction plan threw
+% MATLAB:nonExistentField and aborted the WHOLE derivation -- permanently,
+% since the same file re-throws on every later sweep. A pref run must export
+% its gaze and simply produce no trial-plan CSV.
+d = testCase.TestData.dir;
+rawRoot = fullfile(d, 'raw');
+auctionId = 'sub-00017_ses-01_task-auction_dom-houses';
+prefId = 'sub-00017_ses-01_task-pref_dom-houses';
+writeRun(d, auctionId, 'houses', 2, 'plain', false);
+writeRawPlan(rawRoot, auctionId, 'houses');
+writeRun(d, prefId, 'houses', 2, 'plain', false);
+prefPlan = struct('photoTable', table((1:3)', 'VariableNames', {'row'}), ...
+    'ratingPhotoRows', (1:3)', 'pwcPairs', [1 2; 2 3]);
+utils.checkpointIO('write', fullfile(rawRoot, 'runs', prefId, 'houses-plan.mat'), ...
+    struct('frozen', struct('plan', prefPlan, 'blockCount', 1)));
+
+export_gaze_csv(d, 'rawRoot', rawRoot);
+
+verifyTrue(testCase, isfile(fullfile(d, 'plan', [auctionId '_houses_trial_plan.csv'])), ...
+    'the auction plan CSV must still be written');
+verifyFalse(testCase, isfile(fullfile(d, 'plan', [prefId '_houses_trial_plan.csv'])), ...
+    'a pref run has no auction plan and must not produce a plan CSV');
+verifyTrue(testCase, isfile(fullfile(d, 'gaze_qc', [prefId '_houses_gaze.csv'])), ...
+    'the pref run''s gaze must still export');
+end
+
+function testOneBadRunDoesNotAbortOthers(testCase)
+% The exporter sweeps the whole derived tree, and exportSession's catch is
+% derivation-wide: before per-run isolation existed, one malformed run meant
+% NOTHING exported, for this session and every later one. The bad run sorts
+% first so that, without isolation, it would take the good run down with it.
+d = testCase.TestData.dir;
+badId = 'sub-00001_ses-01_task-auction_dom-houses';
+goodId = 'sub-00018_ses-01_task-auction_dom-houses';
+mkdir(fullfile(d, 'gaze'));
+fid = fopen(fullfile(d, 'gaze', [badId '_houses_gaze.mat']), 'w');
+fwrite(fid, 'this is not a MAT-file'); fclose(fid);
+writeRun(d, goodId, 'houses', 2, 'plain', false);
+
+export_gaze_csv(d);
+
+verifyTrue(testCase, isfile(fullfile(d, 'gaze_qc', [goodId '_houses_gaze.csv'])), ...
+    'a malformed run must not abort the runs after it');
+end

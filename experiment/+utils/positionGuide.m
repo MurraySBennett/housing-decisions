@@ -295,11 +295,10 @@ end
 function tf = validityIsValid(v)
 %VALIDITYISVALID  True/false for a validity the real SDK wraps in an object.
 %   Errors when the value cannot be read at all, which the caller treats as
-%   "unknown" and falls through, rather than as "invalid".
+%   "unknown" and falls through, rather than as "invalid". The unwrapping
+%   lives in utils.gazeValidity; only the fail-loud policy is this function's.
 
-if ~isnumeric(v) && ~islogical(v)
-    v = v.value;
-end
+v = utils.gazeValidity(v);
 assert(isscalar(v) && (isnumeric(v) || islogical(v)), ...
     'hw:positionGuide:validity', 'Unreadable validity.');
 tf = double(v) == 1;

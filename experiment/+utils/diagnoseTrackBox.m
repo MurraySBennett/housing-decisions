@@ -135,7 +135,7 @@ for name = {'InTrackBoxCoordinateSystem', 'in_track_box_coordinate_system', ...
         else
             fprintf('  %s = <%s>', name{1}, class(val));
             try
-                fprintf(' .value = %s', mat2str(double(val.value)));
+                fprintf(' .value = %s', mat2str(double(utils.gazeValidity(val))));
             catch
             end
             fprintf('\n');

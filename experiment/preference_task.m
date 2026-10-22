@@ -151,7 +151,7 @@ try
             end
             entryState = struct('rsState', rs.State, 'globalState', rng);
             attempt = utils.taskBlock('begin', sess, run, domain, b, entryState, parentAttempt);
-            log = utils.eventLog('init');
+            log = utils.eventLog('init', 20000); % same preallocation as the other two tasks
             log = utils.eventLog('context', log, struct('block', b, 'attemptId', attempt.attemptId, 'section', section));
             recording = utils.blockRecording('start', et);
             gazeStore = recording.store;

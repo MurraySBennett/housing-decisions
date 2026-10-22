@@ -47,14 +47,8 @@ function tf = validityIsValid(v)
 %
 % Fails closed: an unreadable validity counts as invalid, which leaves the
 % sample as NaN and trips driftCheck's "too few valid samples" warning,
-% rather than throwing in the middle of a block.
-if ~isnumeric(v) && ~islogical(v)
-    try
-        v = v.value;
-    catch
-        tf = false;
-        return
-    end
-end
+% rather than throwing in the middle of a block. The unwrapping itself lives
+% in utils.gazeValidity; only the fail-closed policy is this function's.
+v = utils.gazeValidity(v);
 tf = isscalar(v) && (isnumeric(v) || islogical(v)) && double(v) == 1;
 end

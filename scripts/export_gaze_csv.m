@@ -53,6 +53,11 @@ for r = 1:numel(roots)
     base = roots{r};
     files = dir(fullfile(base, 'gaze', '*_gaze.mat'));
     for k = 1:numel(files)
+    % One run per iteration, and one run's failure stays that run's failure:
+    % the catch at the bottom of this loop prints it and moves on. Without it,
+    % one malformed run aborted the WHOLE sweep -- and since every later
+    % session re-sweeps the same tree, it aborted every later export too.
+    try
         s = load(fullfile(files(k).folder, files(k).name), 'gazeExport');
         if ~isfield(s, 'gazeExport'), continue; end
         g = s.gazeExport;
@@ -106,6 +111,10 @@ for r = 1:numel(roots)
         if ~isempty(meta.warning)
             fprintf('  NOTE: %s\n', meta.warning);
         end
+    catch runME
+        fprintf(2, '%s: EXPORT FAILED: %s (%s)\n', ...
+            files(k).name, runME.message, runME.identifier);
+    end
     end
 
     % The event log is per run, not per domain.
@@ -393,6 +402,11 @@ if ~isfile(f), return; end
 s = load(f, 'frozen');
 if ~isfield(s, 'frozen') || ~isfield(s.frozen, 'plan'), return; end
 plan = s.frozen.plan;
+% Every task freezes its own shape into <domain>-plan.mat. Only the auction
+% plan has per-trial stimIdx rows; the preference plan is a scalar struct of
+% photo rows and pairs (buildPhotoPreferencePlan), and contdc freezes no plan
+% at all. Anything that is not the auction shape simply has no plan CSV.
+if ~isstruct(plan) || ~isfield(plan, 'stimIdx'), return; end
 rows = cell(1, numel(plan));
 for t = 1:numel(plan)
     idx = plan(t).stimIdx(:);
