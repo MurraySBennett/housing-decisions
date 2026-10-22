@@ -1,5 +1,23 @@
 # Housing & Wages: Search, Pricing, and Choice
 
+## Start here: the only commands an operator needs
+
+Running sessions does not involve the tests, ever. The contract is: **main is
+always green** — the test suite runs before anything is pushed, so the rig
+just pulls and runs. Your whole command surface is:
+
+```matlab
+preflight      % before a participant: rig, geometry, schedule
+run_battery    % the session itself
+rig_checks     % only when asked, after a pull or when something is off --
+               % you do not interpret its output, just send the log it names
+```
+
+Everything under `scripts/tests/` is maintenance machinery; you can ignore
+that folder completely (its README says the same).
+
+---
+
 Project rundown, design decisions, and analysis plan. Read this before
 touching `run_battery.m`. Last revised after the image-loading and
 stimulus-reuse fixes — a lot has changed underneath this since it was
