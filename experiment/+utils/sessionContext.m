@@ -3,7 +3,7 @@ function context = sessionContext(action,sess,varargin)
 prefix = sprintf('sub-%05d_ses-%02d',sess.participant,sess.sessionNum);
 context = struct('participant',sess.participant,'session',sess.sessionNum, ...
     'runKind',sess.runKind,'assignment',sess.assignment, ...
-    'signature',utils.runCheckpoint('signature',sess));
+    'signature',utils.runSignature(sess));
 switch lower(action)
     case 'battery'
         context.battery = varargin{1};

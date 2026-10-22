@@ -83,7 +83,7 @@ try
 
         utils.trace('domain %s: loading stimuli', domain);
         A = utils.attributes(domain);
-        frozen = utils.runCheckpoint('peek', sess, run, domain);
+        frozen = utils.frozenPlan(sess, run, domain);
         if isempty(frozen)
         stimuli = utils.readStimuli(cfg, domain);
         utils.trace('domain %s: %d stimuli loaded', domain, height(stimuli));
@@ -238,7 +238,7 @@ try
         frozen.neededIdx = neededIdx;
         frozen.blockCount = numel(blocks);
         frozen.rsState = rs.State; frozen.globalState = rng; frozen.screenRect = winRect;
-        utils.runCheckpoint('freeze', sess, run, domain, frozen);
+        utils.frozenPlan(sess, run, domain, frozen);
         else
             anchor = frozen.anchor;
             anchorRT = frozen.anchorRT;

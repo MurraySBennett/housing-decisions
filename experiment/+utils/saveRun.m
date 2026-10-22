@@ -13,7 +13,7 @@ dataMat.domainOrder   = sess.domains;
 dataMat.runKind       = sess.runKind;
 dataMat.seed          = run.seed;
 dataMat.codeVersion   = sess.codeVersion;
-% Which MATLAB actually ran this. Deliberately NOT in runCheckpoint's
+% Which MATLAB actually ran this. Deliberately NOT in openRun's
 % signature: the fingerprint stops a run continuing across a change, and a
 % release upgrade mid-participant is the operator's call, not a hard stop.
 dataMat.matlabRelease = version('-release');

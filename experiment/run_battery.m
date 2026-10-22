@@ -86,7 +86,7 @@ for k = 1:numel(thisSession)
     row = thisSession{k};
 
     run = utils.beginRun(sess, row.task, row.domains);
-    if utils.runCheckpoint('complete', sess, run)
+    if utils.runComplete(sess, run)
         fprintf('Skipping verified completed task: %s\n', run.runId);
         utils.endRun(sess, run, 'complete');
         continue;

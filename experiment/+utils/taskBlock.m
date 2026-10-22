@@ -2,7 +2,7 @@ function out = taskBlock(action, sess, run, domain, varargin)
 %UTILS.TASKBLOCK Shared adapter for task-specific block state and artifacts.
 switch lower(action)
     case 'recover'
-        out = utils.runCheckpoint('resolve', sess, run, domain);
+        out = utils.blockStore('recover', sess.cfg, [run.runId '_' domain]);
         out.trials = struct([]); out.events = {}; out.blocks = {};
         for k = 1:numel(out.receipts)
             b = load(fullfile(out.receipts(k).artifactDirectory, 'behavior.mat'), 'behavior');

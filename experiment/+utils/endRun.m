@@ -63,7 +63,7 @@ manifest.runs(idx).status     = status;
 
 utils.progressLog(run, 'BEGIN manifest save status=%s: %s', status, sess.manifestFile);
 if strcmp(status, 'complete')
-    assert(utils.runCheckpoint('complete', sess, run), 'hw:endRun:incomplete', ...
+    assert(utils.runComplete(sess, run), 'hw:endRun:incomplete', ...
         'Cannot mark a run complete without all verified block receipts.');
 end
 utils.checkpointIO('write', sess.manifestFile, struct('manifest', manifest), true);

@@ -388,7 +388,7 @@ function T = trialPlanRows(rawRoot, runId, domain)
 %TRIALPLANROWS The frozen auction plan, one row per trial x presented option.
 %
 % The auction CSV records only bidStimIdx and rejectedStimIdx -- the option bid
-% on and the ones rejected -- never the full twelve presented. runCheckpoint.m
+% on and the ones rejected -- never the full twelve presented. utils.frozenPlan
 % freezes the whole plan, so this is the only route to within-trial duplicate
 % detection and real exposure counts.
 %

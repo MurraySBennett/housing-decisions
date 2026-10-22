@@ -20,7 +20,7 @@ for k = 1:numel(old.manifest.runs)
     end
 end
 
-run = utils.runCheckpoint('open', sess, taskName, domains);
+run = utils.openRun(sess, taskName, domains);
 rng(run.seed, 'twister');
 
 % --- Append a provisional entry to the manifest -----------------------

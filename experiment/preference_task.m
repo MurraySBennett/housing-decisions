@@ -87,7 +87,7 @@ try
     for d = 1:numel(domainList)
         domain = lower(domainList{d});
         tl = utils.timeline('section', tl, sprintf('%s:load', domain));
-        frozen = utils.runCheckpoint('peek', sess, run, domain);
+        frozen = utils.frozenPlan(sess, run, domain);
         if isempty(frozen)
             switch domain
                 case 'houses'
@@ -107,7 +107,7 @@ try
             end
             frozen = struct('plan', plan, 'sections', {sections}, 'chunks', chunks, ...
                 'blockCount', numel(chunks), 'rsState', rs.State, 'globalState', rng, 'layout', G);
-            utils.runCheckpoint('freeze', sess, run, domain, frozen);
+            utils.frozenPlan(sess, run, domain, frozen);
         end
         plan = frozen.plan; sections = frozen.sections; chunks = frozen.chunks;
         assert(isequal(G, frozen.layout), 'hw:pref:displayChanged', 'Display geometry changed on resume.');
