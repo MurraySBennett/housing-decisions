@@ -372,7 +372,7 @@ check_grep 'priceMap' experiment/+utils/fitToWindow.m 'fitted prices keep the or
 check_grep 'priceMap' experiment/+utils/applyWindow.m 'the selection path fills priceMap too'
 # Surplus is only interpretable against the participant's own anchor.
 check_grep 'out\.surplus / base' experiment/+utils/incentives.m 'bonus scale is anchor-relative'
-check_grep 'w\.anchor' experiment/+utils/collectWins.m 'wins carry the anchor'
+check_grep 'w\.anchor' experiment/+utils/incentives.m 'wins carry the anchor'
 
 # --- The auction bid screen shows the option it is pricing --------------
 # Bidding used to be a separate full screen with nothing on it but the arc,

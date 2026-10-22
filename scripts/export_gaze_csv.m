@@ -404,8 +404,9 @@ if ~isfield(s, 'frozen') || ~isfield(s.frozen, 'plan'), return; end
 plan = s.frozen.plan;
 % Every task freezes its own shape into <domain>-plan.mat. Only the auction
 % plan has per-trial stimIdx rows; the preference plan is a scalar struct of
-% photo rows and pairs (buildPhotoPreferencePlan), and contdc freezes no plan
-% at all. Anything that is not the auction shape simply has no plan CSV.
+% photo rows and pairs (buildPhotoPreferencePlan), and contdc's frozen struct
+% has no .plan field (caught above). Anything that is not the auction shape
+% simply has no plan CSV.
 if ~isstruct(plan) || ~isfield(plan, 'stimIdx'), return; end
 rows = cell(1, numel(plan));
 for t = 1:numel(plan)

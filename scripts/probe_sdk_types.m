@@ -74,7 +74,7 @@ end
 fprintf('\n--- 3. Value vs handle semantics: isequaln assert in utils.commitBlock\n');
 if isa(g, 'handle')
     fprintf('    HANDLE class. isequaln compares identity, not content.\n');
-    fprintf('    -> commitBlock's roundtrip assert can never pass. Every block commit fails.\n');
+    fprintf('    -> commitBlock''s roundtrip assert can never pass. Every block commit fails.\n');
 else
     fprintf('    Value class (not a handle). isequaln compares content: OK.\n');
 end

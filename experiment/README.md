@@ -15,7 +15,7 @@ crashed, what happened next" in three files each.
 The development checkpoint format saves verified local blocks and resumes the
 first unfinished block. See [operator instructions and release checks](BLOCK_CHECKPOINTS.md)
 for locations, logging, offline sync, combining, and required MATLAB/rig validation.
-This format is not yet cleared for participant deployment.
+This format is what `run_battery` runs; every session captures through it.
 
 ## What this is
 

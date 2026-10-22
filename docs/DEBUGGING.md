@@ -75,7 +75,7 @@ append-per-line and survives hard kills.
 
 ## Everything else
 
-- `docs/CODE-GUIDE.md` — what each top-level script is for.
+- `experiment/README.md` — design rationale and what each task is.
 - `experiment/BLOCK_CHECKPOINTS.md` — the checkpoint format, operator
   procedures, and the rehearsal checklist.
 - `experiment/rig_checks.m` — the one command to run on a rig when anything
