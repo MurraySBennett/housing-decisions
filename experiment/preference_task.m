@@ -122,10 +122,10 @@ try
             dataMat.houses.photoTable = plan.photoTable;
             dataMat.houses.areaQuotas = plan.areaQuotas;
             dataMat.houses.pwcPairsPerArea = plan.pwcPairsPerArea;
-            showMessage(window, cfg, introText(sections));
+            showClickMessage(window, cfg, introText(sections));
         else
             dataMat.jobs.jobTable = plan.jobTable;
-            showMessage(window, cfg, ['Job choices\n\nYou will see two jobs at a time, showing only the industry ' ...
+            showClickMessage(window, cfg, ['Job choices\n\nYou will see two jobs at a time, showing only the industry ' ...
                 'and the job title.\n\nPress Z to choose the left job, or M to choose the right job.\n\nClick to begin.']);
         end
         recovery = utils.recoverBlocks(sess, run, domain);
@@ -141,10 +141,10 @@ try
             chunk = chunks(b); section = chunk.section;
             if strcmp(domain, 'houses') && (b == recovery.nextBlock || ~strcmp(chunks(b-1).section, section))
                 if strcmp(section, 'rating')
-                    showMessage(window, cfg, ['House photo ratings\n\nYou will see one house photo at a time.\n\n' ...
+                    showClickMessage(window, cfg, ['House photo ratings\n\nYou will see one house photo at a time.\n\n' ...
                         'Use the line to show how much you like the style of the house in the photo.\n\nClick to begin.']);
                 else
-                    showMessage(window, cfg, ['House photo choices\n\nYou will see two photos of the same room or area at a time\n' ...
+                    showClickMessage(window, cfg, ['House photo choices\n\nYou will see two photos of the same room or area at a time\n' ...
                         '(kitchen with kitchen, bathroom with bathroom, and so on).\n\n' ...
                         'Press Z to choose the left photo, or M to choose the right photo.\n\nClick to begin.']);
                 end
@@ -202,7 +202,7 @@ try
     end
 
     utils.progressLog(run, 'BEGIN end-of-task message');
-    showMessage(window, cfg, 'This task is finished.\n\nThank you.\n\nClick to continue.', 60);
+    showClickMessage(window, cfg, 'This task is finished.\n\nThank you.\n\nClick to continue.', 60);
     utils.progressLog(run, 'END end-of-task message');
     tl = utils.timeline('stop', tl);
     dataMat.timing = utils.timeline('table', tl);
@@ -479,7 +479,7 @@ leftRect = G.leftRect;
 rightRect = G.rightRect;
 leftKey = KbName('z');
 rightKey = KbName('m');
-% Key responses; hide the cursor for the section. showMessage re-shows.
+% Key responses; hide the cursor for the section. showClickMessage re-shows.
 HideCursor(window);
 trials = repmat(pwcTrialTemplate(), numel(indices), 1);
 
@@ -649,11 +649,11 @@ DrawFormattedText(window, 'Press Q to stop', 42, scr(4) - 54, s.textDim);
 end
 
 
-function showMessage(window, cfg, msg, maxSecs)
+function showClickMessage(window, cfg, msg, maxSecs)
 % maxSecs is a safety net, not a design choice. Default Inf leaves the five
 % instruction screens click-gated exactly as before; only the end-of-task
 % screen passes a finite value. On 2026-10-09 a participant sat on that screen
-% indefinitely: its text was the one showMessage call in this file that did not
+% indefinitely: its text was the one showClickMessage call in this file that did not
 % end in "Click to continue", so nothing on screen said an action was needed,
 % and the operator read a waiting task as a hung one.
 if nargin < 4 || isempty(maxSecs), maxSecs = Inf; end
@@ -701,6 +701,9 @@ end
 
 
 function T = buildTrialTable(dataMat)
+%BUILDTRIALTABLE One row per preference trial: domain, section (rating|pwc),
+% trial, stimulus/pair identity, response, RT. The pref-specific shape --
+% each task owns its own builder because the shapes differ by design.
 rows = {};
 for dom = {'houses','jobs'}
     domain = dom{1};

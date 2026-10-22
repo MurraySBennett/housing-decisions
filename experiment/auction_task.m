@@ -474,7 +474,7 @@ try
         utils.progressLog(run, 'END payout display');
     else
         utils.progressLog(run, 'BEGIN end-of-task message');
-        showMessage(window, cfg, 'Thank you. That is the end of this task.', 2.5);
+        utils.showMessage(window, cfg, 'Thank you. That is the end of this task.', 2.5);
         utils.progressLog(run, 'END end-of-task message');
     end
 
@@ -1165,13 +1165,13 @@ for k = 1:numel(checks)
         if choice == checks(k).correct
             break
         end
-        showMessage(window, cfg, 'Not quite. Please try that one again.', 1.2);
+        utils.showMessage(window, cfg, 'Not quite. Please try that one again.', 1.2);
     end
 end
 
 result = struct('shown', true, 'passed', true, ...
     'responses', {responses}, 'attempts', attempts);
-showMessage(window, cfg, 'Good. Next is one practice round.', 1.2);
+utils.showMessage(window, cfg, 'Good. Next is one practice round.', 1.2);
 
 end
 
@@ -1237,15 +1237,6 @@ end
 
 
 %% ======================================================================
-function onset = showMessage(window, cfg, msg, secs)
-s = cfg.style;
-Screen('FillRect', window, s.bg);
-Screen('TextFont', window, s.fontContent);
-Screen('TextSize', window, s.sizeHeading);
-DrawFormattedText(window, msg, 'center', 'center', s.text, 55, 0, 0, 1.6);
-onset = Screen('Flip', window);
-WaitSecs(secs);
-end
 
 
 %% ======================================================================
@@ -1293,7 +1284,7 @@ if strcmp(reason, 'timeout')
 else
     msg = 'There are no more options in this market.';
 end
-onset = showMessage(window, cfg, msg, 1.4);
+onset = utils.showMessage(window, cfg, msg, 1.4);
 end
 
 
@@ -1361,6 +1352,9 @@ end
 
 %% ======================================================================
 function T = buildTrialTable(dataMat)
+%BUILDTRIALTABLE One row per auction search episode, via utils.auctionTrialTable
+% (bid, bidStimIdx, rejected set, timings). The auction-specific shape -- each
+% task owns its own builder because the shapes differ by design.
 tables = {};
 for d = 1:numel(dataMat.domains)
     dom = dataMat.domains{d};

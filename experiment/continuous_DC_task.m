@@ -434,7 +434,7 @@ try
     end
 
     utils.progressLog(run, 'BEGIN end-of-task message');
-    showMessage(window, cfg, 'Thank you. That is the end of this task.', 2.5);
+    utils.showMessage(window, cfg, 'Thank you. That is the end of this task.', 2.5);
     utils.progressLog(run, 'END end-of-task message');
 
     savingFact = utils.didYouKnow(run.seed);
@@ -861,15 +861,6 @@ end
 
 
 %% ======================================================================
-function showMessage(window, cfg, msg, secs)
-s = cfg.style;
-Screen('FillRect', window, s.bg);
-Screen('TextFont', window, s.fontContent);
-Screen('TextSize', window, s.sizeHeading);
-DrawFormattedText(window, msg, 'center', 'center', s.text, 55, 0, 0, 1.6);
-Screen('Flip', window);
-WaitSecs(secs);
-end
 
 
 %% ======================================================================
@@ -895,6 +886,9 @@ end
 
 %% ======================================================================
 function T = buildTrialTable(dataMat)
+%BUILDTRIALTABLE One row per contdc trial: domain, level, taskType
+% (choice|pricing), pair identity, response, price, RT. The contdc-specific
+% shape -- each task owns its own builder because the shapes differ by design.
 rows = {};
 for d = 1:numel(dataMat.domains)
     dom = dataMat.domains{d};
