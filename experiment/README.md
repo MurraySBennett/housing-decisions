@@ -6,6 +6,10 @@ stimulus-reuse fixes — a lot has changed underneath this since it was
 first written, including the whole package moving from `+hw` to `+utils`.
 If you see `hw.` anywhere in comments or old notes, it means `utils.` now.
 
+**Debugging a rig problem?** Start with [docs/DEBUGGING.md](../docs/DEBUGGING.md)
+— it traces "where did this trial's data get written" and "the session
+crashed, what happened next" in three files each.
+
 ## Block checkpoint storage
 
 The development checkpoint format saves verified local blocks and resumes the

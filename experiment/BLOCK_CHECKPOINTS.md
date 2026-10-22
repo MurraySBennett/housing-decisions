@@ -5,6 +5,10 @@ Old participant files remain unchanged; damaged files are not repaired by this
 format. The rehearsal checklist at the bottom is what to re-run after any
 change to the save or recovery path.
 
+For the two most common debugging questions traced end to end — where a
+trial's data went, and what happens after a crash — see
+[docs/DEBUGGING.md](../docs/DEBUGGING.md).
+
 ## Which code does what
 
 One named function per job; none of them take an 'action' string:

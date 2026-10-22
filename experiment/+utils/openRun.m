@@ -32,7 +32,7 @@ run = struct('schemaVersion', 1, 'runId', id, 'logicalRunId', id, ...
     'dataDir', sess.cfg.paths.taskData.(task));
 run.fileStem = fullfile(run.dataDir, id);
 run.gazeFile = fullfile(sess.cfg.paths.gaze, [id '_gaze.mat']);
-run.seed = utils.taskSeed(sess.participant, sess.sessionNum, [task '_' run.domainStr]);
+run.seed = taskSeed(sess.participant, sess.sessionNum, [task '_' run.domainStr]);
 run.rngState = rng; % diagnostic; actual block entry states are explicit.
 record = struct('signature', signature, 'run', run);
 utils.checkpointIO('write', file, struct('record', record));
@@ -43,4 +43,21 @@ function run = localPaths(run, cfg)
 run.dataDir = cfg.paths.taskData.(run.task);
 run.fileStem = fullfile(run.dataDir, run.runId);
 run.gazeFile = fullfile(cfg.paths.gaze, [run.runId '_gaze.mat']);
+end
+
+function seed = taskSeed(participant, sessionNum, taskName)
+%TASKSEED Deterministic 32-bit seed from participant/session/task.
+% Same inputs always give the same seed, so a session is replayable;
+% different inputs are extremely unlikely to collide.
+key = sprintf('%d|%d|%s', participant, sessionNum, lower(char(taskName)));
+% Simple FNV-1a hash -- no toolbox or Java dependency.
+h = uint32(2166136261);
+prime = uint32(16777619);
+b = uint32(double(key));
+for k = 1:numel(b)
+    h = bitxor(h, b(k));
+    h = uint32(mod(double(h) * double(prime), 2^32));
+end
+% MATLAB's Twister accepts 0..2^32-1.
+seed = double(h);
 end
