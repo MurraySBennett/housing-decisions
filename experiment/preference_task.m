@@ -214,21 +214,35 @@ try
     if standalone, utils.endRun(sess, run, 'complete'); end
 
 catch ME
+    % THE CRASH PATH, task side: preserve evidence, release the display, and
+    % let ME leave this block unchanged. run_battery owns everything after
+    % that: manifest, diagnostics mirror, publish, export. This block is
+    % byte-identical in auction_task, continuous_DC_task and preference_task
+    % -- read one and you have read all three (test_crash_dump enforces it).
     utils.preserveGazeFailure(sess, run, et);
     utils.progressLog(run, 'TASK ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
-    try
-        tl = utils.timeline('stop', tl);
-        dataMat.timing = utils.timeline('table', tl);
-        dataMat.error = getReport(ME, 'extended', 'hyperlinks', 'off'); %#ok<NASGU>
-        save([run.fileStem '_' utils.checkpointIO('id') '_crash.mat'], 'dataMat', 'ME', '-v7.3');
-        if standalone, utils.endRun(sess, run, 'crashed'); end
-    catch
-    end
-    if et.enabled && ~isempty(et.obj)
-        try, et.obj.stop_gaze_data(); catch, end
-    end
+    ListenChar(0); ShowCursor; Priority(0);
+    % sca resets Screen state but not PsychImaging's persistent config; both
+    % must run or the next OpenWindow in this MATLAB session fails.
     sca;
     clear PsychImaging;
+    % The dump is separately guarded: a failure writing it must never replace
+    % ME as what leaves this block. Default v7 save, never -v7.3 -- the
+    % off-rig reader (scripts/read_crash_dump.py) can only open v7.
+    try
+        crashFile = fullfile(cfg.paths.crashed, [run.runId '_' utils.checkpointIO('id') '_crash.mat']);
+        save(crashFile, 'ME', 'dataMat', 'sess', 'run');
+        fprintf(2, '\nCrashed. Partial data saved to:\n  %s\n', crashFile);
+    catch dumpME
+        fprintf(2, '\nCrashed, and the crash dump could not be written (%s).\n', dumpME.message);
+    end
+    if standalone
+        try
+            utils.endRun(sess, run, 'crashed');
+        catch manifestME
+            fprintf(2, 'Could not mark the run crashed in the manifest: %s\n', manifestME.message);
+        end
+    end
     rethrow(ME);
 end
 end

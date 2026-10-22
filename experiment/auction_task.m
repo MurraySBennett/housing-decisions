@@ -478,17 +478,21 @@ try
     if standalone, utils.endRun(sess, run, 'complete'); end
 
 catch ME
+    % THE CRASH PATH, task side: preserve evidence, release the display, and
+    % let ME leave this block unchanged. run_battery owns everything after
+    % that: manifest, diagnostics mirror, publish, export. This block is
+    % byte-identical in auction_task, continuous_DC_task and preference_task
+    % -- read one and you have read all three (test_crash_dump enforces it).
     utils.preserveGazeFailure(sess, run, et);
     utils.progressLog(run, 'TASK ERROR before cleanup\n%s', getReport(ME, 'extended', 'hyperlinks', 'off'));
     ListenChar(0); ShowCursor; Priority(0);
-    % sca resets Screen state but not PsychImaging's persistent config; both must run or the next OpenWindow in this MATLAB session fails.
+    % sca resets Screen state but not PsychImaging's persistent config; both
+    % must run or the next OpenWindow in this MATLAB session fails.
     sca;
     clear PsychImaging;
-    % Best-effort and separately guarded, matching preference_task. These were
-    % bare, so a failure writing the dump or updating the manifest propagated
-    % INSTEAD of ME: the battery above then caught the bookkeeping error and the
-    % real reason the session died was gone. rethrow(ME) must always be what
-    % leaves this block.
+    % The dump is separately guarded: a failure writing it must never replace
+    % ME as what leaves this block. Default v7 save, never -v7.3 -- the
+    % off-rig reader (scripts/read_crash_dump.py) can only open v7.
     try
         crashFile = fullfile(cfg.paths.crashed, [run.runId '_' utils.checkpointIO('id') '_crash.mat']);
         save(crashFile, 'ME', 'dataMat', 'sess', 'run');
